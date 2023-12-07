@@ -251,7 +251,7 @@ contract SecuritizationLockDistribution is
         override(ISecuritizationPoolExtension, SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](10);
+        bytes4[] memory _functionSignatures = new bytes4[](15);
 
         _functionSignatures[0] = this.totalRedeemedCurrency.selector;
         _functionSignatures[1] = this.lockedDistributeBalances.selector;
@@ -263,6 +263,11 @@ contract SecuritizationLockDistribution is
         _functionSignatures[7] = this.supportsInterface.selector;
         _functionSignatures[8] = this.redeemSOTOrder.selector;
         _functionSignatures[9] = this.redeemJOTOrder.selector;
+        _functionSignatures[10] = this.setRedeemDisabled.selector;
+        _functionSignatures[11] = this.totalJOTRedeem.selector;
+        _functionSignatures[12] = this.totalSOTRedeem.selector;
+        _functionSignatures[13] = this.userRedeemSOTOrder.selector;
+        _functionSignatures[14] = this.userRedeemJOTOrder.selector;
 
         return _functionSignatures;
     }

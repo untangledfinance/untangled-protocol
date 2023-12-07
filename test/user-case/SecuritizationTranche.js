@@ -191,10 +191,11 @@ describe('SecuritizationTranche', () => {
 
     // Faucet stable coin to lender/investor
     await stableCoin.transfer(lenderSignerA.address, parseEther('10000')); // $10k
+    await stableCoin.transfer(lenderSignerB.address, parseEther('10000')); // $10k
   });
 
   describe('Redeem Orders', () => {
-    it('buy JOT and SOT', async () => {
+    before('Lender A buy JOT and SOT', async () => {
       // Lender buys JOT Token
       await stableCoin.connect(lenderSignerA).approve(mintedNormalTGEContract.address, stableCoinAmountToBuyJOT);
       await securitizationManager
@@ -208,11 +209,53 @@ describe('SecuritizationTranche', () => {
         .connect(lenderSignerA)
         .buyTokens(mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT);
     });
+    before('Lender B buy JOT and SOT', async () => {
+      // Lender buys JOT Token
+      await stableCoin.connect(lenderSignerB).approve(mintedNormalTGEContract.address, stableCoinAmountToBuyJOT);
+      await securitizationManager
+          .connect(lenderSignerB)
+          .buyTokens(mintedNormalTGEContract.address, stableCoinAmountToBuyJOT);
+      // Lender try to buy SOT with amount violates min first loss
+      await stableCoin
+          .connect(lenderSignerB)
+          .approve(mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT);
+      await securitizationManager
+          .connect(lenderSignerB)
+          .buyTokens(mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT);
+    });
 
-    it('should make redeem order for JOT', async () => {
-      const jotBalance = await jotContract.balanceOf(lenderSignerA.address); // 1 JOT
-      await jotContract.connect(lenderSignerA).approve(securitizationPoolContract.address, jotBalance);
-      await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(jotBalance)
+    it('Investor A should make redeem order for JOT', async () => {
+      const jotLenderABalance = await jotContract.balanceOf(lenderSignerA.address); // 1 JOT
+      await jotContract.connect(lenderSignerA).approve(securitizationPoolContract.address, jotLenderABalance);
+      await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(parseEther('1'));
+      const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
+      expect(totalJOTRedeem).to.equal(parseEther('1'));
+      const jotRedeemOrderLenderA = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerA.address);
+      expect(jotRedeemOrderLenderA).to.equal(parseEther('1'));
+    });
+    it('Investor A should change redeem order for JOT', async () => {
+      await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(parseEther('0.5'));
+      const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
+      expect(totalJOTRedeem).to.equal(parseEther('0.5'));
+      const jotRedeemOrderLenderA = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerA.address);
+      expect(jotRedeemOrderLenderA).to.equal(parseEther('0.5'));
+    });
+    it('Investor B should make redeem order for JOT', async () => {
+      const jotLenderBBalance = await jotContract.balanceOf(lenderSignerB.address); // 1 jot
+      await jotContract.connect(lenderSignerB).approve(securitizationPoolContract.address, jotLenderBBalance);
+      await securitizationPoolContract.connect(lenderSignerB).redeemJOTOrder(parseEther('0.5'));
+
+      const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
+      expect(totalJOTRedeem).to.equal(parseEther('1'));
+      const jotRedeemOrderLenderB = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerB.address);
+      expect(jotRedeemOrderLenderB).to.equal(parseEther('0.5'));
+    });
+    it('should disable redeem order for JOT', async () => {
+      await securitizationPoolContract.connect(poolCreatorSigner).setRedeemDisabled(true);
+      await expect(
+          securitizationPoolContract.connect(lenderSignerB).redeemJOTOrder(parseEther('1'))
+      ).to.be.revertedWith('redeem-not-allowed');
+
     });
   });
 });

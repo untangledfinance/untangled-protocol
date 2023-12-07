@@ -27,6 +27,12 @@ interface ISecuritizationPoolStorage {
         uint256 debtCeiling;
     }
 
+    struct UserOrder {
+        uint256 redeemSOTAmount;
+        uint256 redeemJOTAmount;
+    }
+
+
     struct Storage {
         bool validatorRequired;
         uint64 firstAssetTimestamp;
@@ -39,7 +45,7 @@ interface ISecuritizationPoolStorage {
         address secondTGEAddress;
         address sotToken;
         address jotToken;
-        
+
         address underlyingCurrency;
         uint256 reserve; // Money in pool
         uint32 minFirstLossCushion;
@@ -64,6 +70,12 @@ interface ISecuritizationPoolStorage {
         mapping(address => uint256) totalLockedRedeemBalances;
         uint256 totalRedeemedCurrency; // Total $ (cUSD) has been redeemed
         address poolNAV;
+
+        // redeem
+        bool redeemDisabled;
+        uint256 totalSOTRedeem;
+        uint256 totalJOTRedeem;
+        mapping(address => UserOrder) userRedeems;
     }
 
     function amountOwedToOriginator() external view returns (uint256);

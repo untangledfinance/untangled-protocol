@@ -8,12 +8,15 @@ import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/se
 import {ISecuritizationLockDistribution} from './ISecuritizationLockDistribution.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
+import {Configuration} from '../../libraries/Configuration.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
 
+import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationTranche} from './ISecuritizationTranche.sol';
 
 // RegistryInjection,
 // ERC165Upgradeable,
@@ -29,7 +32,8 @@ contract SecuritizationLockDistribution is
     SecuritizationPoolExtension,
     SecuritizationPoolStorage,
     SecuritizationAccessControl,
-    ISecuritizationLockDistribution
+    ISecuritizationLockDistribution,
+    ISecuritizationTranche
 {
     using ConfigHelper for Registry;
 
@@ -62,6 +66,27 @@ contract SecuritizationLockDistribution is
         return $.totalRedeemedCurrency;
     }
 
+    function totalJOTRedeem() public view override returns (uint256) {
+        Storage storage $ = _getStorage();
+        return $.totalJOTRedeem;
+    }
+
+    function totalSOTRedeem() public view override returns (uint256) {
+        Storage storage $ = _getStorage();
+        return $.totalJOTRedeem;
+    }
+
+    function userRedeemSOTOrder(address usr) public view override returns (uint256) {
+        Storage storage $ = _getStorage();
+        return $.userRedeems[usr].redeemSOTAmount;
+    }
+
+    function userRedeemJOTOrder(address usr) public view override returns (uint256) {
+        Storage storage $ = _getStorage();
+        return $.userRedeems[usr].redeemJOTAmount;
+    }
+
+
     // // token address -> user -> locked
     // mapping(address => mapping(address => uint256)) public override lockedDistributeBalances;
 
@@ -72,6 +97,15 @@ contract SecuritizationLockDistribution is
     // mapping(address => uint256) public override totalLockedRedeemBalances;
 
     // uint256 public override totalRedeemedCurrency; // Total $ (cUSD) has been redeemed
+
+    modifier orderAllowed() {
+        Storage storage $ = _getStorage();
+        require(
+            $.redeemDisabled == false,
+            "redeem-not-allowed"
+        );
+        _;
+    }
 
     // Increase by value
     function increaseLockedDistributeBalance(
@@ -162,6 +196,54 @@ contract SecuritizationLockDistribution is
         _unpause();
     }
 
+    function setRedeemDisabled(bool _redeemDisabled) public {
+        registry().requirePoolAdminOrOwner(address(this), _msgSender());
+        Storage storage $ = _getStorage();
+        $.redeemDisabled = _redeemDisabled;
+    }
+    function redeemSOTOrder(uint256 newRedeemAmount) public orderAllowed() {
+        address usr = _msgSender();
+        Storage storage $ = _getStorage();
+        uint256 currentRedeemAmount = $.userRedeems[usr].redeemSOTAmount;
+        $.userRedeems[usr].redeemSOTAmount = newRedeemAmount;
+        $.totalSOTRedeem = $.totalSOTRedeem - currentRedeemAmount + newRedeemAmount;
+
+        uint256 delta;
+        if (newRedeemAmount > currentRedeemAmount) {
+            delta = newRedeemAmount - currentRedeemAmount;
+            require(INoteToken($.sotToken).transferFrom(usr, address(this), delta), "token-transfer-to-pool-failed");
+            return;
+        }
+
+        delta = currentRedeemAmount - newRedeemAmount;
+        if (delta > 0) {
+            require(INoteToken($.sotToken).transfer(usr, delta), "token-transfer-out-failed");
+        }
+        emit RedeemSOTOrder(usr, newRedeemAmount);
+    }
+
+    function redeemJOTOrder(uint256 newRedeemAmount) public orderAllowed() {
+        address usr = _msgSender();
+        Storage storage $ = _getStorage();
+        uint256 currentRedeemAmount = $.userRedeems[usr].redeemJOTAmount;
+        $.userRedeems[usr].redeemJOTAmount = newRedeemAmount;
+        $.totalJOTRedeem = $.totalJOTRedeem - currentRedeemAmount + newRedeemAmount;
+
+        uint256 delta;
+        if (newRedeemAmount > currentRedeemAmount) {
+            delta = newRedeemAmount - currentRedeemAmount;
+            require(INoteToken($.jotToken).transferFrom(usr, address(this), delta), "token-transfer-to-pool-failed");
+            return;
+        }
+
+        delta = currentRedeemAmount - newRedeemAmount;
+        if (delta > 0) {
+            require(INoteToken($.jotToken).transfer(usr, delta), "token-transfer-out-failed");
+        }
+
+        emit RedeemJOTOrder(usr, newRedeemAmount);
+    }
+
     function getFunctionSignatures()
         public
         view
@@ -169,7 +251,7 @@ contract SecuritizationLockDistribution is
         override(ISecuritizationPoolExtension, SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](8);
+        bytes4[] memory _functionSignatures = new bytes4[](10);
 
         _functionSignatures[0] = this.totalRedeemedCurrency.selector;
         _functionSignatures[1] = this.lockedDistributeBalances.selector;
@@ -179,6 +261,8 @@ contract SecuritizationLockDistribution is
         _functionSignatures[5] = this.increaseLockedDistributeBalance.selector;
         _functionSignatures[6] = this.decreaseLockedDistributeBalance.selector;
         _functionSignatures[7] = this.supportsInterface.selector;
+        _functionSignatures[8] = this.redeemSOTOrder.selector;
+        _functionSignatures[9] = this.redeemJOTOrder.selector;
 
         return _functionSignatures;
     }

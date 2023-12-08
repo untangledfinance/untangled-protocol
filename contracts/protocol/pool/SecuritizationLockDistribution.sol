@@ -73,7 +73,7 @@ contract SecuritizationLockDistribution is
 
     function totalSOTRedeem() public view override returns (uint256) {
         Storage storage $ = _getStorage();
-        return $.totalJOTRedeem;
+        return $.totalSOTRedeem;
     }
 
     function userRedeemSOTOrder(address usr) public view override returns (uint256) {

@@ -7,8 +7,8 @@ const dayjs = require('dayjs');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { setup } = require('../setup');
 const { presignedMintMessage } = require('../shared/uid-helper');
-const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('../constants.js');
-const { getPoolByAddress } = require('../utils');
+const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE, BACKEND_ADMIN } = require('../constants.js');
+const { getPoolByAddress, unlimitedAllowance } = require('../utils');
 const { SaleType } = require('../shared/constants.js');
 
 const ONE_DAY_IN_SECONDS = 86400;
@@ -31,10 +31,11 @@ describe('SecuritizationTranche', () => {
     lenderSignerA,
     lenderSignerB,
     secondLenderSigner,
+    backendAdminSigner,
     relayer;
 
   const stableCoinAmountToBuyJOT = parseEther('1');
-  const stableCoinAmountToBuySOT = parseEther('9');
+  const stableCoinAmountToBuySOT = parseEther('1');
 
   before('create fixture', async () => {
     // Init wallets
@@ -47,6 +48,7 @@ describe('SecuritizationTranche', () => {
       lenderSignerB,
       secondLenderSigner,
       relayer,
+      backendAdminSigner
     ] = await ethers.getSigners();
 
     // Init contracts
@@ -100,6 +102,7 @@ describe('SecuritizationTranche', () => {
 
     // Grant role originator
     await securitizationPoolContract.connect(poolCreatorSigner).grantRole(ORIGINATOR_ROLE, originatorSigner.address);
+    await securitizationPoolContract.connect(poolCreatorSigner).grantRole(BACKEND_ADMIN, backendAdminSigner.address);
 
     // Init JOT sale
     const jotCap = parseEther('1000'); // $1000
@@ -223,73 +226,153 @@ describe('SecuritizationTranche', () => {
           .connect(lenderSignerB)
           .buyTokens(mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT);
     });
+    describe('Redeem Order', () => {
+      it('Investor A should make redeem order for 1 JOT', async () => {
+        await jotContract.connect(lenderSignerA).approve(securitizationPoolContract.address, unlimitedAllowance);
+        await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(parseEther('1'));
+        const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
+        expect(totalJOTRedeem).to.equal(parseEther('1'));
+        const jotRedeemOrderLenderA = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerA.address);
+        expect(jotRedeemOrderLenderA).to.equal(parseEther('1'));
+      });
+      it('Investor A should change redeem order for 0.5 JOT', async () => {
+        await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(parseEther('0.5'));
+        const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
+        expect(totalJOTRedeem).to.equal(parseEther('0.5'));
+        const jotRedeemOrderLenderA = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerA.address);
+        expect(jotRedeemOrderLenderA).to.equal(parseEther('0.5'));
+        const jotLenderABalance = await jotContract.balanceOf(lenderSignerA.address);
+        expect(jotLenderABalance).to.equal(parseEther('0.5'));
+      });
+      it('Investor B should make redeem order for 1 JOT', async () => {
+        const jotLenderBBalance = await jotContract.balanceOf(lenderSignerB.address); // 1 jot
+        await jotContract.connect(lenderSignerB).approve(securitizationPoolContract.address, jotLenderBBalance);
+        await securitizationPoolContract.connect(lenderSignerB).redeemJOTOrder(parseEther('1'));
 
-    it('Investor A should make redeem order for JOT', async () => {
-      const jotLenderABalance = await jotContract.balanceOf(lenderSignerA.address); // 1 JOT
-      await jotContract.connect(lenderSignerA).approve(securitizationPoolContract.address, jotLenderABalance);
-      await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(parseEther('1'));
-      const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
-      expect(totalJOTRedeem).to.equal(parseEther('1'));
-      const jotRedeemOrderLenderA = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerA.address);
-      expect(jotRedeemOrderLenderA).to.equal(parseEther('1'));
-    });
-    it('Investor A should change redeem order for JOT', async () => {
-      await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(parseEther('0.5'));
-      const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
-      expect(totalJOTRedeem).to.equal(parseEther('0.5'));
-      const jotRedeemOrderLenderA = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerA.address);
-      expect(jotRedeemOrderLenderA).to.equal(parseEther('0.5'));
-    });
-    it('Investor B should make redeem order for JOT', async () => {
-      const jotLenderBBalance = await jotContract.balanceOf(lenderSignerB.address); // 1 jot
-      await jotContract.connect(lenderSignerB).approve(securitizationPoolContract.address, jotLenderBBalance);
-      await securitizationPoolContract.connect(lenderSignerB).redeemJOTOrder(parseEther('0.5'));
+        const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
+        expect(totalJOTRedeem).to.equal(parseEther('1.5'));
+        const jotRedeemOrderLenderB = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerB.address);
+        expect(jotRedeemOrderLenderB).to.equal(parseEther('1'));
+      });
+      it('Investor A should make redeem order for 1 SOT', async () => {
+        await sotContract.connect(lenderSignerA).approve(securitizationPoolContract.address, unlimitedAllowance);
+        await securitizationPoolContract.connect(lenderSignerA).redeemSOTOrder(parseEther('1'));
+        const totalSOTRedeem = await securitizationPoolContract.totalSOTRedeem();
+        expect(totalSOTRedeem).to.equal(parseEther('1'));
+        const sotRedeemOrderLenderA = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerA.address);
+        expect(sotRedeemOrderLenderA).to.equal(parseEther('1'));
+      });
+      it('Investor A should change redeem order for 0.5 SOT', async () => {
+        await securitizationPoolContract.connect(lenderSignerA).redeemSOTOrder(parseEther('0.5'));
+        const totalSOTRedeem = await securitizationPoolContract.totalSOTRedeem();
+        expect(totalSOTRedeem).to.equal(parseEther('0.5'));
+        const sotRedeemOrderLenderA = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerA.address);
+        expect(sotRedeemOrderLenderA).to.equal(parseEther('0.5'));
+      });
+      it('Investor B should make redeem order for 1 SOT', async () => {
+        const sotLenderBBalance = await sotContract.balanceOf(lenderSignerB.address); // 1 sot
+        await sotContract.connect(lenderSignerB).approve(securitizationPoolContract.address, sotLenderBBalance);
+        await securitizationPoolContract.connect(lenderSignerB).redeemSOTOrder(parseEther('1'));
 
-      const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
-      expect(totalJOTRedeem).to.equal(parseEther('1'));
-      const jotRedeemOrderLenderB = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerB.address);
-      expect(jotRedeemOrderLenderB).to.equal(parseEther('0.5'));
-    });
-    it('Investor A should make redeem order for SOT', async () => {
-      const sotLenderABalance = await sotContract.balanceOf(lenderSignerA.address); // 1 SOT
-      await sotContract.connect(lenderSignerA).approve(securitizationPoolContract.address, sotLenderABalance);
-      await securitizationPoolContract.connect(lenderSignerA).redeemSOTOrder(parseEther('1'));
-      const totalSOTRedeem = await securitizationPoolContract.totalSOTRedeem();
-      expect(totalSOTRedeem).to.equal(parseEther('1'));
-      const sotRedeemOrderLenderA = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerA.address);
-      expect(sotRedeemOrderLenderA).to.equal(parseEther('1'));
-    });
-    it('Investor A should change redeem order for SOT', async () => {
-      await securitizationPoolContract.connect(lenderSignerA).redeemSOTOrder(parseEther('0.5'));
-      const totalSOTRedeem = await securitizationPoolContract.totalSOTRedeem();
-      expect(totalSOTRedeem).to.equal(parseEther('0.5'));
-      const sotRedeemOrderLenderA = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerA.address);
-      expect(sotRedeemOrderLenderA).to.equal(parseEther('0.5'));
-    });
-    it('Investor B should make redeem order for SOT', async () => {
-      const sotLenderBBalance = await sotContract.balanceOf(lenderSignerB.address); // 1 sot
-      await sotContract.connect(lenderSignerB).approve(securitizationPoolContract.address, sotLenderBBalance);
-      await securitizationPoolContract.connect(lenderSignerB).redeemSOTOrder(parseEther('0.5'));
+        const totalSOTRedeem = await securitizationPoolContract.totalSOTRedeem();
+        expect(totalSOTRedeem).to.equal(parseEther('1.5'));
+        const sotRedeemOrderLenderB = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerB.address);
+        expect(sotRedeemOrderLenderB).to.equal(parseEther('1'));
+      });
+      it('only pool creator can disable redeem request', async () => {
+        await expect(securitizationPoolContract.connect(lenderSignerA).setRedeemDisabled(true)).to.be.revertedWith('Registry: Not an pool admin or pool owner');
+        await securitizationPoolContract.connect(poolCreatorSigner).setRedeemDisabled(true);
 
-      const totalSOTRedeem = await securitizationPoolContract.totalSOTRedeem();
-      expect(totalSOTRedeem).to.equal(parseEther('1'));
-      const sotRedeemOrderLenderB = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerB.address);
-      expect(sotRedeemOrderLenderB).to.equal(parseEther('0.5'));
-    });
-    it('only pool creator can disable redeem request', async () => {
-      await expect(securitizationPoolContract.connect(lenderSignerA).setRedeemDisabled(true)).to.be.revertedWith('Registry: Not an pool admin or pool owner');
-      await securitizationPoolContract.connect(poolCreatorSigner).setRedeemDisabled(true);
+      });
+      it('should revert when redeem disabled', async () => {
+        await expect(
+            securitizationPoolContract.connect(lenderSignerB).redeemJOTOrder(parseEther('1'))
+        ).to.be.revertedWith('redeem-not-allowed');
 
-    });
-    it('should revert when redeem disabled', async () => {
-      await expect(
-        securitizationPoolContract.connect(lenderSignerB).redeemJOTOrder(parseEther('1'))
-      ).to.be.revertedWith('redeem-not-allowed');
+        await expect(
+            securitizationPoolContract.connect(lenderSignerB).redeemSOTOrder(parseEther('1'))
+        ).to.be.revertedWith('redeem-not-allowed');
 
-      await expect(
-        securitizationPoolContract.connect(lenderSignerB).redeemSOTOrder(parseEther('1'))
-      ).to.be.revertedWith('redeem-not-allowed');
+      });
+      it('enable redeem order', async () => {
+        await securitizationPoolContract.connect(poolCreatorSigner).setRedeemDisabled(false);
+      });
+      it('Investor A should change redeem order for 1 JOT', async () => {
+        await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(parseEther('1'));
+        const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
+        expect(totalJOTRedeem).to.equal(parseEther('2'));
+        const jotRedeemOrderLenderA = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerA.address);
+        expect(jotRedeemOrderLenderA).to.equal(parseEther('1'));
+        const jotLenderABalance = await jotContract.balanceOf(lenderSignerA.address);
+        expect(jotLenderABalance).to.equal(parseEther('0'));
+      });
+      it('Investor A change redeem order for 1 SOT', async () => {
+        await securitizationPoolContract.connect(lenderSignerA).redeemSOTOrder(parseEther('1'));
+        const totalSOTRedeem = await securitizationPoolContract.totalSOTRedeem();
+        expect(totalSOTRedeem).to.equal(parseEther('2'));
+        const sotRedeemOrderLenderA = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerA.address);
+        expect(sotRedeemOrderLenderA).to.equal(parseEther('1'));
+      });
 
     });
+
+    describe('Disburse', () => {
+      it('SOT: should revert if not backend admin', async () => {
+        await expect(securitizationPoolContract
+            .connect(poolCreatorSigner)
+            .disburseAllForSOT(
+                [lenderSignerA.address, lenderSignerB.address],
+                [parseEther('0.5'), parseEther('1')],
+                [parseEther('0.5'), parseEther('1')]
+            )).to.be.revertedWith("AccessControl: caller is not an originator")
+      });
+
+      it('SOT: should run successfully', async () => {
+        await securitizationPoolContract
+            .connect(backendAdminSigner)
+            .disburseAllForSOT(
+                [lenderSignerA.address, lenderSignerB.address],
+                [parseEther('0.5'), parseEther('1')],
+                [parseEther('0.5'), parseEther('1')]
+            )
+        const totalSOTRedeem = await securitizationPoolContract.totalSOTRedeem();
+        expect(totalSOTRedeem).to.equal(parseEther('0.5'));
+        const sotRedeemOrderLenderA = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerA.address);
+        expect(sotRedeemOrderLenderA).to.equal(parseEther('0.5'));
+        const sotRedeemOrderLenderB = await securitizationPoolContract.userRedeemSOTOrder(lenderSignerB.address);
+        expect(sotRedeemOrderLenderB).to.equal(parseEther('0'));
+        const reserve = await securitizationPoolContract.reserve();
+        expect(reserve).to.equal(parseEther('2.5')); // $2 SOT raised + $2 JOT raised - $1.5 redeemed
+      });
+
+      it('JOT: should revert if not backend admin', async () => {
+        await expect(securitizationPoolContract
+            .connect(poolCreatorSigner)
+            .disburseAllForJOT(
+                [lenderSignerA.address, lenderSignerB.address],
+                [parseEther('0.5'), parseEther('1')],
+                [parseEther('0.5'), parseEther('1')]
+            )).to.be.revertedWith("AccessControl: caller is not an originator")
+      });
+
+      it('JOT: should run successfully', async () => {
+        await securitizationPoolContract
+            .connect(backendAdminSigner)
+            .disburseAllForJOT(
+                [lenderSignerA.address, lenderSignerB.address],
+                [parseEther('0.5'), parseEther('1')],
+                [parseEther('0.5'), parseEther('1')]
+            )
+        const totalJOTRedeem = await securitizationPoolContract.totalJOTRedeem();
+        expect(totalJOTRedeem).to.equal(parseEther('0.5'));
+        const sotRedeemOrderLenderA = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerA.address);
+        expect(sotRedeemOrderLenderA).to.equal(parseEther('0.5'));
+        const sotRedeemOrderLenderB = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerB.address);
+        expect(sotRedeemOrderLenderB).to.equal(parseEther('0'));
+        const reserve = await securitizationPoolContract.reserve();
+        expect(reserve).to.equal(parseEther('1')); 
+      });
+    });
+
   });
 });

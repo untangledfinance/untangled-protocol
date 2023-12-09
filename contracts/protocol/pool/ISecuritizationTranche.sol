@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 interface ISecuritizationTranche {
     event RedeemSOTOrder(address usr, uint256 newRedeemAmount);
     event RedeemJOTOrder(address usr, uint256 newRedeemAmount);
+    event UpdateReserve(uint256 currencyAmount);
+
     /// @notice redeemJOTOrder function can be used to place or revoke a redeem
     /// @param newRedeemAmount new amount of tokens to be redeemed
     function redeemJOTOrder(uint256 newRedeemAmount) external;
@@ -11,6 +13,10 @@ interface ISecuritizationTranche {
     /// @notice redeemSOTOrder function can be used to place or revoke a redeem
     /// @param newRedeemAmount new amount of tokens to be redeemed
     function redeemSOTOrder(uint256 newRedeemAmount) external;
+
+    function disburseAllForSOT(address[] memory toAddresses, uint256[] memory amounts, uint256[] memory redeemedAmount) external;
+
+    function disburseAllForJOT(address[] memory toAddresses, uint256[] memory amounts, uint256[] memory redeemedAmount) external;
 
     /// @notice Pause redeem request
     function setRedeemDisabled(bool _redeemDisabled) external;

@@ -4,12 +4,16 @@ pragma solidity 0.8.19;
 import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
 import {ERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import {ERC20BurnableUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol';
+import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
 
+import { BACKEND_ADMIN } from './types.sol';
 import {ISecuritizationLockDistribution} from './ISecuritizationLockDistribution.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
+import {UntangledMath} from '../../libraries/UntangledMath.sol';
 
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
@@ -17,6 +21,9 @@ import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
 import {ISecuritizationTranche} from './ISecuritizationTranche.sol';
+import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
+
+import "hardhat/console.sol";
 
 // RegistryInjection,
 // ERC165Upgradeable,
@@ -244,6 +251,54 @@ contract SecuritizationLockDistribution is
         emit RedeemJOTOrder(usr, newRedeemAmount);
     }
 
+    function disburseAllForSOT(address[] memory toAddresses, uint256[] memory amounts, uint256[] memory redeemedAmount) onlyRole(BACKEND_ADMIN) public {
+        Storage storage $ = _getStorage();
+        uint256 userLength = toAddresses.length;
+        uint256 totalAmount = 0;
+        uint256 totalSOTRedeemed = 0;
+
+        for (uint256 i = 0; i < userLength; i = UntangledMath.uncheckedInc(i)) {
+            totalAmount += amounts[i];
+            totalSOTRedeemed += redeemedAmount[i];
+            require(
+                IERC20Upgradeable($.underlyingCurrency).transferFrom($.pot, toAddresses[i], amounts[i]),
+                'SecuritizationPool: currency-transfer-failed'
+            );
+            $.userRedeems[toAddresses[i]].redeemSOTAmount -= redeemedAmount[i];
+            ERC20BurnableUpgradeable($.sotToken).burn(redeemedAmount[i]);
+        }
+
+        $.reserve = $.reserve - totalAmount;
+        $.totalSOTRedeem = $.totalSOTRedeem - totalSOTRedeemed;
+
+        require(ISecuritizationTGE(address(this)).checkMinFirstLost(), 'MinFirstLoss is not satisfied');
+        emit UpdateReserve($.reserve);
+    }
+
+    function disburseAllForJOT(address[] memory toAddresses, uint256[] memory amounts, uint256[] memory redeemedAmount) onlyRole(BACKEND_ADMIN) public {
+        Storage storage $ = _getStorage();
+        uint256 userLength = toAddresses.length;
+        uint256 totalAmount = 0;
+        uint256 totalJOTRedeemed = 0;
+
+        for (uint256 i = 0; i < userLength; i = UntangledMath.uncheckedInc(i)) {
+            totalAmount += amounts[i];
+            totalJOTRedeemed += redeemedAmount[i];
+            require(
+                IERC20Upgradeable($.underlyingCurrency).transferFrom($.pot, toAddresses[i], amounts[i]),
+                'SecuritizationPool: currency-transfer-failed'
+            );
+            $.userRedeems[toAddresses[i]].redeemJOTAmount -= redeemedAmount[i];
+            ERC20BurnableUpgradeable($.jotToken).burn(redeemedAmount[i]);
+        }
+
+        $.reserve = $.reserve - totalAmount;
+        $.totalJOTRedeem = $.totalJOTRedeem - totalJOTRedeemed;
+
+        require(ISecuritizationTGE(address(this)).checkMinFirstLost(), 'MinFirstLoss is not satisfied');
+        emit UpdateReserve($.reserve);
+    }
+
     function getFunctionSignatures()
         public
         view
@@ -251,7 +306,7 @@ contract SecuritizationLockDistribution is
         override(ISecuritizationPoolExtension, SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](15);
+        bytes4[] memory _functionSignatures = new bytes4[](17);
 
         _functionSignatures[0] = this.totalRedeemedCurrency.selector;
         _functionSignatures[1] = this.lockedDistributeBalances.selector;
@@ -268,6 +323,8 @@ contract SecuritizationLockDistribution is
         _functionSignatures[12] = this.totalSOTRedeem.selector;
         _functionSignatures[13] = this.userRedeemSOTOrder.selector;
         _functionSignatures[14] = this.userRedeemJOTOrder.selector;
+        _functionSignatures[15] = this.disburseAllForSOT.selector;
+        _functionSignatures[16] = this.disburseAllForJOT.selector;
 
         return _functionSignatures;
     }

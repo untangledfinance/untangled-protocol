@@ -70,6 +70,8 @@ interface ISecuritizationTGE {
 
     function redeem(address usr, address notesToken, uint256 currencyAmount, uint256 tokenAmount) external;
 
+    function checkMinFirstLost() external view returns (bool);
+
     /// @notice checks if the redemption process has finished
     function hasFinishedRedemption() external view returns (bool);
 

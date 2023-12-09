@@ -50,11 +50,6 @@ contract SecuritizationPoolStorage is
         return _getStorage().pot;
     }
 
-    // function _setAmountOwedToOriginator(uint256 _amountOwedToOriginator) internal {
-    //     Storage storage $ = _getStorage();
-    //     $.amountOwedToOriginator = _amountOwedToOriginator;
-    // }
-
     function amountOwedToOriginator() public view returns (uint256) {
         return _getStorage().amountOwedToOriginator;
     }

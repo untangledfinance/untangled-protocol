@@ -224,10 +224,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
     /// @inheritdoc ILoanKernel
     /// @dev A loan, stop lending/loan terms or allow the loan loss
     function concludeLoan(address creditor, bytes32 agreementId, address termContract) public override whenNotPaused {
-        require(
-            _msgSender() == address(registry.getLoanRepaymentRouter()),
-            'LoanKernel: Only LoanRepaymentRouter'
-        );
+        require(_msgSender() == address(registry.getLoanRepaymentRouter()), 'LoanKernel: Only LoanRepaymentRouter');
         require(creditor != address(0), 'Invalid creditor account.');
         require(agreementId != bytes32(0), 'Invalid agreement id.');
         require(termContract != address(0), 'Invalid terms contract.');
@@ -257,14 +254,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         for (uint256 i = 0; i < creditorsLength; i = UntangledMath.uncheckedInc(i)) {
             concludeLoan(creditors[i], agreementIds[i], termContract);
         }
-    }
-
-    function _tokenIdsValidate(
-        bytes32[] calldata tokenIds,
-        address[] calldata validators,
-        bytes[] memory validateSignatures
-    ) private {
-        // ...
     }
 
     /**
@@ -337,7 +326,9 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                 x = UntangledMath.uncheckedInc(x);
             }
 
-            expectedAssetsValue += ISecuritizationPool(fillDebtOrderParam.orderAddresses[uint8(FillingAddressesIndex.SECURITIZATION_POOL)]).collectAssets(fillDebtOrderParam.latInfo[i].tokenIds);
+            expectedAssetsValue += ISecuritizationPool(poolAddress).collectAssets(
+                fillDebtOrderParam.latInfo[i].tokenIds
+            );
         }
 
         // Start collect asset checkpoint and withdraw

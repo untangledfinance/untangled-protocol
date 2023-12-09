@@ -14,8 +14,6 @@ import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Ini
 import {ISecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 import {StorageSlot} from '@openzeppelin/contracts/utils/StorageSlot.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title Untangled's SecuritizationPool contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
@@ -83,15 +81,7 @@ contract SecuritizationPool is Initializable, RegistryInjection, ERC165Upgradeab
     }
 
     /** CONSTRUCTOR */
-    function initialize(
-        Registry registry_,
-        bytes memory params
-    )
-        public
-        // address _currency,
-        // uint32 _minFirstLossCushion
-        initializer
-    {
+    function initialize(Registry registry_, bytes memory params) public initializer {
         __ERC165_init_unchained();
 
         address poolImpl = address(_getImplementation());
@@ -108,23 +98,6 @@ contract SecuritizationPool is Initializable, RegistryInjection, ERC165Upgradeab
             'minFirstLossCushion is greater than 100'
         );
         require(newPoolParams.currency != address(0), 'SecuritizationPool: Invalid currency');
-
-        // __ReentrancyGuard_init_unchained();
-
-        // __SecuritizationAccessControl_init_unchained(_msgSender());
-        // // __UntangledBase__init(_msgSender());
-
-        // // _setRoleAdmin(ORIGINATOR_ROLE, OWNER_ROLE);
-        // _setRegistry(registry_);
-
-        // __SecuritizationTGE_init_unchained(
-        //     address(this),
-        //     CycleState.INITIATED,
-        //     newPoolParams.currency,
-        //     newPoolParams.minFirstLossCushion
-        // );
-
-        // __SecuritizationPoolAsset_init_unchained(newPoolParams);
 
         _setRegistry(registry_);
 

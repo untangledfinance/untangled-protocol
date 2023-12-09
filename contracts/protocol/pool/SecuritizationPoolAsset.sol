@@ -112,17 +112,6 @@ contract SecuritizationPoolAsset is
         return _getStorage().riskScores.length;
     }
 
-    // function hasFinishedRedemption() public view override returns (bool) {
-    //     if (sotToken != address(0)) {
-    //         require(IERC20Upgradeable(sotToken).totalSupply() == 0, 'SecuritizationPool: SOT still remain');
-    //     }
-    //     if (jotToken != address(0)) {
-    //         require(IERC20Upgradeable(jotToken).totalSupply() == 0, 'SecuritizationPool: JOT still remain');
-    //     }
-
-    //     return true;
-    // }
-
     /** UTILITY FUNCTION */
     function _removeNFTAsset(address tokenAddress, uint256 tokenId) private returns (bool) {
         NFTAsset[] storage _nftAssets = _getStorage().nftAssets;
@@ -272,7 +261,7 @@ contract SecuritizationPoolAsset is
     }
 
     /// @inheritdoc ISecuritizationPool
-    function collectAssets(uint256[] calldata tokenIds) external override  whenNotPaused returns(uint256) {
+    function collectAssets(uint256[] calldata tokenIds) external override whenNotPaused returns (uint256) {
         registry().requireLoanKernel(_msgSender());
         uint256 tokenIdsLength = tokenIds.length;
         uint256 expectedAssetsValue = 0;

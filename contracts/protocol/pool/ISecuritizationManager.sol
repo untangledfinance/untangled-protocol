@@ -9,6 +9,8 @@ interface ISecuritizationManager {
     event NewNotesTokenCreated(address indexed instanceAddress);
     event NewPoolCreated(address indexed instanceAddress);
     event UpdatePotToPool(address indexed pot, address indexed pool);
+    event SotDeployed(address indexed sotAddress, address tgeAddress, address poolAddress);
+    event JotDeployed(address indexed jotAddress, address tgeAddress, address poolAddress);
 
     function registry() external view returns (Registry);
 

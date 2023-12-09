@@ -27,16 +27,12 @@ import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
 
-import 'hardhat/console.sol';
-
 abstract contract SecuritizationManagerBase is ISecuritizationManager {
     Registry public override registry;
 
     mapping(address => bool) public override isExistingPools;
     address[] public override pools;
 
-    // mapping(address => address) public poolToSOT;
-    // mapping(address => address) public poolToJOT;
     mapping(address => address) public override potToPool;
 
     mapping(address => bool) public override isExistingTGEs;
@@ -51,6 +47,15 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
     using ConfigHelper for Registry;
 
     event UpdateAllowedUIDTypes(uint256[] uids);
+    //noteSaleAddress, investor, amount, tokenAmount
+    event TokensPurchased(address indexed investor, address indexed tgeAddress, uint256 amount, uint256 tokenAmount);
+    event NoteTokenPurchased(
+        address indexed investor,
+        address indexed tgeAddress,
+        address poolAddress,
+        uint256 amount,
+        uint256 tokenAmount
+    );
 
     bytes4 public constant POOL_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,bytes)'));
 
@@ -85,9 +90,6 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
         registry = _registry;
     }
-
-    //noteSaleAddress, investor, amount, tokenAmount
-    event TokensPurchased(address indexed investor, address indexed tgeAddress, uint256 amount, uint256 tokenAmount);
 
     modifier onlyPoolExisted(address pool) {
         require(isExistingPools[pool], 'SecuritizationManager: Pool does not exist');
@@ -136,25 +138,12 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         bytes32 salt,
         address poolOwner,
         bytes memory params
-    )
-        external
-        // address currency,
-        // uint32 minFirstLossCushion,
-        whenNotPaused
-        onlyRole(POOL_ADMIN)
-        returns (address)
-    {
+    ) external whenNotPaused onlyRole(POOL_ADMIN) returns (address) {
         // impl from eip1987
         // _implementation
         address poolImplAddress = address(registry.getSecuritizationPool());
 
-        bytes memory _initialData = abi.encodeWithSelector(
-            POOL_INIT_FUNC_SELECTOR,
-            registry,
-            params
-            // currency,
-            // minFirstLossCushion
-        );
+        bytes memory _initialData = abi.encodeWithSelector(POOL_INIT_FUNC_SELECTOR, registry, params);
 
         address poolAddress = _deployInstance(poolImplAddress, _initialData, salt);
         SecuritizationAccessControl poolInstance = SecuritizationAccessControl(poolAddress);
@@ -162,7 +151,6 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         isExistingPools[poolAddress] = true;
         pools.push(poolAddress);
 
-        // ...
         poolInstance.grantRole(OWNER_ROLE, poolOwner);
         poolInstance.renounceRole(OWNER_ROLE, address(this));
         ISecuritizationTGE(poolAddress).setUpPoolNAV();
@@ -215,12 +203,10 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             INoteToken(underlyingCurrency).decimals(),
             ticker
         );
-        // poolToSOT[pool] = sotToken;
         require(sotToken != address(0), 'SOT token must be created');
 
         address tgeAddress = registry.getTokenGenerationEventFactory().createNewSaleInstance(
             issuerTokenController,
-            // pool,
             sotToken,
             underlyingCurrency,
             saleType,
@@ -234,6 +220,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
         emit NewTGECreated(tgeAddress);
         emit NewNotesTokenCreated(sotToken);
+        emit SotDeployed(sotToken, tgeAddress, address(pool));
         return tgeAddress;
     }
 
@@ -246,11 +233,22 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         NewRoundSaleParam memory saleParam,
         IncreasingInterestParam memory increasingInterestParam
     ) public onlyIssuer(tgeParam.pool) {
-        address tgeAddress = _initialTGEForSOT(tgeParam.issuerTokenController, tgeParam.pool, tgeParam.saleType, tgeParam.longSale, tgeParam.ticker);
+        address tgeAddress = _initialTGEForSOT(
+            tgeParam.issuerTokenController,
+            tgeParam.pool,
+            tgeParam.saleType,
+            tgeParam.longSale,
+            tgeParam.ticker
+        );
         MintedIncreasingInterestTGE tge = MintedIncreasingInterestTGE(tgeAddress);
         uint8 saleType = tgeParam.saleType;
         if (saleType == uint8(ITokenGenerationEventFactory.SaleType.MINTED_INCREASING_INTEREST_SOT)) {
-            tge.setInterestRange(increasingInterestParam.initialInterest, increasingInterestParam.finalInterest, increasingInterestParam.timeInterval, increasingInterestParam.amountChangeEachInterval);
+            tge.setInterestRange(
+                increasingInterestParam.initialInterest,
+                increasingInterestParam.finalInterest,
+                increasingInterestParam.timeInterval,
+                increasingInterestParam.amountChangeEachInterval
+            );
         }
         tge.startNewRoundSale(saleParam.openingTime, saleParam.closingTime, saleParam.rate, saleParam.cap);
         tge.setMinBidAmount(tgeParam.minBidAmount);
@@ -265,7 +263,13 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         NewRoundSaleParam memory saleParam,
         uint256 initialJOTAmount
     ) public onlyIssuer(tgeParam.pool) {
-        address tgeAddress = _initialTGEForJOT(tgeParam.issuerTokenController, tgeParam.pool, tgeParam.saleType, tgeParam.longSale, tgeParam.ticker);
+        address tgeAddress = _initialTGEForJOT(
+            tgeParam.issuerTokenController,
+            tgeParam.pool,
+            tgeParam.saleType,
+            tgeParam.longSale,
+            tgeParam.ticker
+        );
         MintedNormalTGE tge = MintedNormalTGE(tgeAddress);
         tge.startNewRoundSale(saleParam.openingTime, saleParam.closingTime, saleParam.rate, saleParam.cap);
         tge.setHasStarted(true);
@@ -289,11 +293,8 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             ticker
         );
 
-        // poolToJOT[pool] = jotToken;
-
         address tgeAddress = registry.getTokenGenerationEventFactory().createNewSaleInstance(
             issuerTokenController,
-            // pool,
             jotToken,
             underlyingCurrency,
             saleType,
@@ -307,6 +308,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
         emit NewTGECreated(tgeAddress);
         emit NewNotesTokenCreated(jotToken);
+        emit JotDeployed(jotToken, tgeAddress, address(pool));
         return tgeAddress;
     }
 
@@ -335,24 +337,26 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
         ICrowdSale tge = ICrowdSale(tgeAddress);
         uint256 tokenAmount = tge.buyTokens(_msgSender(), _msgSender(), currencyAmount);
+        address pool = tge.pool();
 
         if (INoteToken(tge.token()).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
             if (MintedNormalTGE(tgeAddress).currencyRaised() >= MintedNormalTGE(tgeAddress).initialAmount()) {
                 // Currency Raised For JOT > initialJOTAmount => SOT sale start
-                address sotTGEAddress = ISecuritizationPoolStorage(tge.pool()).tgeAddress();
+                address sotTGEAddress = ISecuritizationPoolStorage(pool).tgeAddress();
                 if (sotTGEAddress != address(0)) {
                     ICrowdSale(sotTGEAddress).setHasStarted(true);
                 }
             }
         }
 
-        ISecuritizationTGE(tge.pool()).increaseReserve(currencyAmount);
+        ISecuritizationTGE(pool).increaseReserve(currencyAmount);
         address poolOfPot = registry.getSecuritizationManager().potToPool(_msgSender());
         if (poolOfPot != address(0)) {
             ISecuritizationTGE(poolOfPot).decreaseReserve(currencyAmount);
         }
 
-        // emit TokensPurchased(_msgSender(), tgeAddress, currencyAmount, tokenAmount);
+        emit TokensPurchased(_msgSender(), tgeAddress, currencyAmount, tokenAmount);
+        emit NoteTokenPurchased(_msgSender(), tgeAddress, address(pool), currencyAmount, tokenAmount);
     }
 
     function setAllowedUIDTypes(uint256[] calldata ids) external onlyRole(DEFAULT_ADMIN_ROLE) {

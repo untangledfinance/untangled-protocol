@@ -12,8 +12,6 @@ import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {IERC5008} from './IERC5008.sol';
 import {VALIDATOR_ROLE, LoanAssetInfo} from './types.sol';
 
-import 'hardhat/console.sol';
-
 abstract contract LATValidator is IERC5008, EIP712Upgradeable {
     using SignatureCheckerUpgradeable for address;
     using ECDSAUpgradeable for bytes32;

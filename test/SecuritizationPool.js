@@ -323,7 +323,6 @@ describe('SecuritizationPool', () => {
 
     describe('#Securitization Manager', async () => {
         it('Should set up TGE for SOT successfully', async () => {
-
             const openingTime = dayjs(new Date()).unix();
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
@@ -334,9 +333,7 @@ describe('SecuritizationPool', () => {
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'SOT_';
 
-            const transaction = await securitizationManager
-              .connect(poolCreatorSigner)
-              .setUpTGEForSOT(
+            const transaction = await securitizationManager.connect(poolCreatorSigner).setUpTGEForSOT(
                 {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
@@ -351,8 +348,8 @@ describe('SecuritizationPool', () => {
                     finalInterest,
                     timeInterval,
                     amountChangeEachInterval,
-                },
-              );
+                }
+            );
 
             const receipt = await transaction.wait();
 
@@ -368,7 +365,6 @@ describe('SecuritizationPool', () => {
         });
 
         it('Should set up TGE for JOT successfully', async () => {
-
             const openingTime = dayjs(new Date()).unix();
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
@@ -377,9 +373,7 @@ describe('SecuritizationPool', () => {
             const prefixOfNoteTokenSaleName = 'JOT_';
 
             // JOT only has SaleType.NORMAL_SALE
-            const transaction = await securitizationManager
-              .connect(poolCreatorSigner)
-              .setUpTGEForJOT(
+            const transaction = await securitizationManager.connect(poolCreatorSigner).setUpTGEForJOT(
                 {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
@@ -389,8 +383,8 @@ describe('SecuritizationPool', () => {
                     ticker: prefixOfNoteTokenSaleName,
                 },
                 { openingTime: openingTime, closingTime: closingTime, rate: rate, cap: totalCapOfToken },
-                initialJOTAmount,
-              );
+                initialJOTAmount
+            );
             const receipt = await transaction.wait();
 
             const [tgeAddress] = receipt.events.find((e) => e.event == 'NewTGECreated').args;
@@ -416,10 +410,11 @@ describe('SecuritizationPool', () => {
 
         it('Should buy tokens failed if exceeds debt ceiling', async () => {
             await stableCoin.connect(lenderSigner).approve(jotMintedIncreasingInterestTGE.address, unlimitedAllowance);
-            await expect(securitizationManager
-                .connect(lenderSigner)
-                .buyTokens(jotMintedIncreasingInterestTGE.address, parseEther('100')))
-                .to.be.revertedWith("Crowdsale: Exceeds Debt Ceiling")
+            await expect(
+                securitizationManager
+                    .connect(lenderSigner)
+                    .buyTokens(jotMintedIncreasingInterestTGE.address, parseEther('100'))
+            ).to.be.revertedWith('Crowdsale: Exceeds Debt Ceiling');
         });
         it('set debt ceiling', async () => {
             await securitizationPoolContract.connect(poolCreatorSigner).setDebtCeiling(parseEther('300'));
@@ -427,13 +422,14 @@ describe('SecuritizationPool', () => {
             // Set again
             await securitizationPoolContract.connect(poolCreatorSigner).setDebtCeiling(parseEther('200'));
             expect(await securitizationPoolContract.debtCeiling()).equal(parseEther('200'));
-        })
+        });
         it('Should buy tokens failed if under min bid amount', async () => {
             await stableCoin.connect(lenderSigner).approve(jotMintedIncreasingInterestTGE.address, unlimitedAllowance);
-            await expect(securitizationManager
-              .connect(lenderSigner)
-              .buyTokens(jotMintedIncreasingInterestTGE.address, parseEther('30')))
-              .to.be.revertedWith('Crowdsale: Less than minBidAmount')
+            await expect(
+                securitizationManager
+                    .connect(lenderSigner)
+                    .buyTokens(jotMintedIncreasingInterestTGE.address, parseEther('30'))
+            ).to.be.revertedWith('Crowdsale: Less than minBidAmount');
         });
         it('Should buy tokens successfully', async () => {
             await stableCoin.connect(lenderSigner).approve(jotMintedIncreasingInterestTGE.address, unlimitedAllowance);
@@ -685,7 +681,6 @@ describe('SecuritizationPool', () => {
     });
 
     describe('Pool value after loan kernel executed', async () => {
-
         it('#getAssetInterestRate', async () => {
             const result = await securitizationPoolValueService.getAssetInterestRate(
                 securitizationPoolContract.address,
@@ -733,7 +728,6 @@ describe('SecuritizationPool', () => {
             expect(result.hasValidRiskScore).equal(true);
             expect(result.riskScoreIdx.toNumber()).equal(0);
         });
-
     });
 
     describe('Upgradeables', async () => {
@@ -754,11 +748,11 @@ describe('SecuritizationPool', () => {
 
             expect(spV2Impl.address).to.be.eq(newSpImpl);
 
-
-            securitizationPoolContract = new Contract(securitizationPoolContract.address, [
-                ...await getPoolAbi(),
-                ...(await artifacts.readArtifact('SecuritizationPoolV2')).abi,
-            ], ethers.provider);
+            securitizationPoolContract = new Contract(
+                securitizationPoolContract.address,
+                [...(await getPoolAbi()), ...(await artifacts.readArtifact('SecuritizationPoolV2')).abi],
+                ethers.provider
+            );
 
             const result = await securitizationPoolContract.hello();
 
@@ -814,7 +808,6 @@ describe('SecuritizationPool', () => {
             expect(result.hasValidRiskScore).equal(true);
             expect(result.riskScoreIdx.toNumber()).equal(0);
         });
-
     });
 
     describe('#Securitization Pool', async () => {

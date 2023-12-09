@@ -45,7 +45,7 @@ const setUpTokenGenerationEventFactory = async (registry, factoryAdmin) => {
     await tokenGenerationEventFactory.setTGEImplAddress(1, mintedNormalTGEImpl.address);
 
     await tokenGenerationEventFactory.setTGEImplAddress(2, mintedNormalTGEImpl.address);
-    
+
     await registry.setTokenGenerationEventFactory(tokenGenerationEventFactory.address);
 
     return { tokenGenerationEventFactory };
@@ -76,11 +76,9 @@ const setUpPoolNAVFactory = async (registry, factoryAdmin) => {
     await registry.setPoolNAVFactory(poolNAVFactory.address);
 
     return { poolNAVFactory };
-}
-
+};
 
 const initPool = async (securitizationPoolImpl) => {
-
     // SecuritizationAccessControl,
     // SecuritizationPoolStorage,
     // SecuritizationTGE,
@@ -107,9 +105,7 @@ const initPool = async (securitizationPoolImpl) => {
     await securitizationPoolImpl.registerExtension(securitizationLockDistributionImpl.address);
 
     return securitizationPoolImpl;
-}
-
-
+};
 
 const setUpSecuritizationPoolImpl = async (registry) => {
     const SecuritizationPool = await ethers.getContractFactory('SecuritizationPool');
@@ -119,7 +115,7 @@ const setUpSecuritizationPoolImpl = async (registry) => {
     await initPool(securitizationPoolImpl);
 
     return securitizationPoolImpl;
-}
+};
 
 async function setup() {
     await deployments.fixture(['all']);
@@ -187,6 +183,7 @@ async function setup() {
     const DistributionTranche = await ethers.getContractFactory('DistributionTranche');
     distributionTranche = await upgrades.deployProxy(DistributionTranche, [registry.address]);
 
+    await registry.setSecuritizationManager(securitizationManager.address);
     await registry.setLoanInterestTermsContract(loanInterestTermsContract.address);
     await registry.setLoanRegistry(loanRegistry.address);
     await registry.setLoanKernel(loanKernel.address);
@@ -202,9 +199,6 @@ async function setup() {
     );
 
     const securitizationPoolImpl = await setUpSecuritizationPoolImpl(registry);
-
-    await registry.setSecuritizationManager(securitizationManager.address);
-
 
     return {
         stableCoin,

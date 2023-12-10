@@ -8,6 +8,7 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { setup } = require('../setup');
 const { presignedMintMessage } = require('../shared/uid-helper');
 const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE, BACKEND_ADMIN } = require('../constants.js');
+const { impersonateAccount, setBalance } = require('@nomicfoundation/hardhat-network-helpers');
 const { getPoolByAddress, unlimitedAllowance } = require('../utils');
 const { SaleType } = require('../shared/constants.js');
 
@@ -22,6 +23,7 @@ describe('SecuritizationTranche', () => {
   let securitizationPoolContract;
   let mintedNormalTGEContract;
   let mintedIncreasingInterestTGEContract;
+  let loanKernel;
 
   // Wallets
   let untangledAdminSigner,
@@ -52,7 +54,7 @@ describe('SecuritizationTranche', () => {
     ] = await ethers.getSigners();
 
     // Init contracts
-    ({ stableCoin, uniqueIdentity, securitizationManager } = await setup());
+    ({ stableCoin, uniqueIdentity, securitizationManager, loanKernel } = await setup());
 
     await securitizationManager.grantRole(POOL_ADMIN_ROLE, poolCreatorSigner.address);
     // Create new pool
@@ -309,6 +311,15 @@ describe('SecuritizationTranche', () => {
             .connect(lenderSignerA)
             .buyTokens(mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT))
             .to.be.revertedWith("SM: Buy token paused")
+
+      });
+      it('should revert if drawdown when redeem disabled', async () => {
+        await impersonateAccount(loanKernel.address);
+        await setBalance(loanKernel.address, ethers.utils.parseEther('1'));
+        const signer = await ethers.getSigner(loanKernel.address);
+        await expect(
+            securitizationPoolContract.connect(signer).withdraw(originatorSigner.address, parseEther('0.5'))
+        ).to.be.revertedWith("SecuritizationPool: withdraw paused");
 
       });
       it('enable redeem order', async () => {

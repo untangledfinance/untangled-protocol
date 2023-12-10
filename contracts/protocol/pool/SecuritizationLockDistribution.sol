@@ -274,6 +274,11 @@ contract SecuritizationLockDistribution is
         emit UpdateReserve($.reserve);
     }
 
+    function redeemDisabled() public view returns (bool){
+        Storage storage $ = _getStorage();
+        return $.redeemDisabled;
+    }
+
     function disburseAllForJOT(address[] memory toAddresses, uint256[] memory amounts, uint256[] memory redeemedAmount) onlyRole(BACKEND_ADMIN) public {
         Storage storage $ = _getStorage();
         uint256 userLength = toAddresses.length;
@@ -305,7 +310,7 @@ contract SecuritizationLockDistribution is
         override(ISecuritizationPoolExtension, SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](17);
+        bytes4[] memory _functionSignatures = new bytes4[](18);
 
         _functionSignatures[0] = this.totalRedeemedCurrency.selector;
         _functionSignatures[1] = this.lockedDistributeBalances.selector;
@@ -324,6 +329,7 @@ contract SecuritizationLockDistribution is
         _functionSignatures[14] = this.userRedeemJOTOrder.selector;
         _functionSignatures[15] = this.disburseAllForSOT.selector;
         _functionSignatures[16] = this.disburseAllForJOT.selector;
+        _functionSignatures[17] = this.redeemDisabled.selector;
 
         return _functionSignatures;
     }

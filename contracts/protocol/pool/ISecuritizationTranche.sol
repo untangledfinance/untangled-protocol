@@ -23,6 +23,10 @@ interface ISecuritizationTranche {
 
     /// @notice Total amount of SOT redeem order
     function totalSOTRedeem() external view returns (uint256);
+
+    /// @notice Get redeem disabled
+    function redeemDisabled() external view returns (bool);
+
     /// @notice Total amount of JOT redeem order
     function totalJOTRedeem() external view returns (uint256);
     /// @dev Retrieves the amount of JOT tokens that can be redeemed for the specified user.

@@ -284,7 +284,7 @@ describe('SecuritizationTranche', () => {
         await securitizationPoolContract.connect(backendAdminSigner).setRedeemDisabled(true);
 
       });
-      it('should revert when redeem disabled', async () => {
+      it('should revert if request redemption when redeem disabled', async () => {
         await expect(
             securitizationPoolContract.connect(lenderSignerB).redeemJOTOrder(parseEther('1'))
         ).to.be.revertedWith('redeem-not-allowed');
@@ -292,6 +292,23 @@ describe('SecuritizationTranche', () => {
         await expect(
             securitizationPoolContract.connect(lenderSignerB).redeemSOTOrder(parseEther('1'))
         ).to.be.revertedWith('redeem-not-allowed');
+
+      });
+
+      it('should revert if buy note token when redeem disabled', async () => {
+        await stableCoin.connect(lenderSignerA).approve(mintedNormalTGEContract.address, stableCoinAmountToBuyJOT);
+        await expect(securitizationManager
+            .connect(lenderSignerA)
+            .buyTokens(mintedNormalTGEContract.address, stableCoinAmountToBuyJOT))
+            .to.be.revertedWith("SM: Buy token paused")
+        // Lender try to buy SOT with amount violates min first loss
+        await stableCoin
+            .connect(lenderSignerA)
+            .approve(mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT);
+        expect(securitizationManager
+            .connect(lenderSignerA)
+            .buyTokens(mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT))
+            .to.be.revertedWith("SM: Buy token paused")
 
       });
       it('enable redeem order', async () => {

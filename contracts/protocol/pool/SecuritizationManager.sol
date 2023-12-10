@@ -7,6 +7,7 @@ import {UntangledBase} from '../../base/UntangledBase.sol';
 
 import {IRequiresUID} from '../../interfaces/IRequiresUID.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
+import {ISecuritizationTranche} from './ISecuritizationTranche.sol';
 
 import {Factory2} from '../../base/Factory2.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
@@ -338,6 +339,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         ICrowdSale tge = ICrowdSale(tgeAddress);
         uint256 tokenAmount = tge.buyTokens(_msgSender(), _msgSender(), currencyAmount);
         address pool = tge.pool();
+        require(!ISecuritizationTranche(pool).redeemDisabled(), "SM: Buy token paused");
 
         if (INoteToken(tge.token()).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
             if (MintedNormalTGE(tgeAddress).currencyRaised() >= MintedNormalTGE(tgeAddress).initialAmount()) {

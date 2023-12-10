@@ -351,6 +351,7 @@ contract SecuritizationTGE is
         registry().requireLoanKernel(_msgSender());
         require(hasRole(ORIGINATOR_ROLE, to), 'SecuritizationPool: Only Originator can drawdown');
         Storage storage $ = _getStorage();
+        require(!$.redeemDisabled, "SecuritizationPool: withdraw paused");
         require($.reserve >= amount, 'SecuritizationPool: not enough reserve');
 
         $.reserve = $.reserve - amount;

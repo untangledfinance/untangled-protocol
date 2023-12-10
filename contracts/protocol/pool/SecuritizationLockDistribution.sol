@@ -203,8 +203,7 @@ contract SecuritizationLockDistribution is
         _unpause();
     }
 
-    function setRedeemDisabled(bool _redeemDisabled) public {
-        registry().requirePoolAdminOrOwner(address(this), _msgSender());
+    function setRedeemDisabled(bool _redeemDisabled) onlyRole(BACKEND_ADMIN) public {
         Storage storage $ = _getStorage();
         $.redeemDisabled = _redeemDisabled;
     }

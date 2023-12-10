@@ -280,8 +280,8 @@ describe('SecuritizationTranche', () => {
         expect(sotRedeemOrderLenderB).to.equal(parseEther('1'));
       });
       it('only pool creator can disable redeem request', async () => {
-        await expect(securitizationPoolContract.connect(lenderSignerA).setRedeemDisabled(true)).to.be.revertedWith('Registry: Not an pool admin or pool owner');
-        await securitizationPoolContract.connect(poolCreatorSigner).setRedeemDisabled(true);
+        await expect(securitizationPoolContract.connect(lenderSignerA).setRedeemDisabled(true)).to.be.revertedWith('AccessControl: caller is not an originator');
+        await securitizationPoolContract.connect(backendAdminSigner).setRedeemDisabled(true);
 
       });
       it('should revert when redeem disabled', async () => {
@@ -295,7 +295,7 @@ describe('SecuritizationTranche', () => {
 
       });
       it('enable redeem order', async () => {
-        await securitizationPoolContract.connect(poolCreatorSigner).setRedeemDisabled(false);
+        await securitizationPoolContract.connect(backendAdminSigner).setRedeemDisabled(false);
       });
       it('Investor A should change redeem order for 1 JOT', async () => {
         await securitizationPoolContract.connect(lenderSignerA).redeemJOTOrder(parseEther('1'));
@@ -370,7 +370,7 @@ describe('SecuritizationTranche', () => {
         const sotRedeemOrderLenderB = await securitizationPoolContract.userRedeemJOTOrder(lenderSignerB.address);
         expect(sotRedeemOrderLenderB).to.equal(parseEther('0'));
         const reserve = await securitizationPoolContract.reserve();
-        expect(reserve).to.equal(parseEther('1')); 
+        expect(reserve).to.equal(parseEther('1'));
       });
     });
 

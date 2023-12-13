@@ -18,12 +18,12 @@ contract LoanAssetToken is ILoanAssetToken, LATValidator {
     using ConfigHelper for Registry;
 
     /** CONSTRUCTOR */
-    function initialize(
+    function init(
         Registry _registry,
         string memory name,
         string memory symbol,
         string memory baseTokenURI
-    ) public initializer {
+    ) public reinitializer(3) {
         __UntangledERC721__init(name, symbol, baseTokenURI);
         __LATValidator_init();
 

@@ -9,6 +9,7 @@ import {Registry} from '../../storage/Registry.sol';
 import {POOL_ADMIN, ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationAccessControl} from './ISecuritizationAccessControl.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {ISecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';

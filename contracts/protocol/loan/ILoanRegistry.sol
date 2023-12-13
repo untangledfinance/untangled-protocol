@@ -46,6 +46,20 @@ abstract contract ILoanRegistry {
         uint8[] calldata assetPurposeAndRiskScore
     ) external virtual returns (bool);
 
+    /**
+     * Record new External Loan to blockchain
+     */
+    function insert(
+        bytes32[] calldata tokenIds,
+        address termContract,
+        address debtor,
+        bytes32 termsContractParameter,
+        address pTokenAddress,
+        uint256 _salt,
+        uint256 expirationTimestampInSecs,
+        uint8[] calldata assetPurposeAndRiskScore
+    ) external virtual;
+
     /// @notice retrieves loan information
     function getEntry(bytes32 agreementId) public view virtual returns (LoanEntry memory);
 

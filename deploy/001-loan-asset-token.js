@@ -19,21 +19,35 @@ const { deployProxy } = require('./deployHelper');
 // };
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
-    const { deploy, execute, get } = deployments;
-    const { deployer } = await getNamedAccounts();
+  const { deploy, execute, get } = deployments;
+  const { deployer } = await getNamedAccounts();
 
-    const registry = await deployments.get('Registry');
+  const registry = await deployments.get('Registry');
 
-    const loanAssetTokenProxy = await deployProxy(
-        { getNamedAccounts, deployments },
-        'LoanAssetToken',
-        [registry.address, 'Loan Asset Token', 'LAT', ''],
-        'initialize(address,string,string,string)'
-    );
+  const loanAssetToken = await deploy('LoanAssetToken', {
+    from: deployer,
+    proxy: {
+      proxyContract: 'OpenZeppelinTransparentProxy',
+      execute: {
+        init: {
+          methodName: 'init',
+          args: [registry.address, 'Loan Asset Token', 'LAT', ''],
+        }
+      },
+    },
+    log: true,
+  });
 
-    console.log('loanAssetTokenProxy', loanAssetTokenProxy.address);
+  // const loanAssetTokenProxy = await deployProxy(
+  //     { getNamedAccounts, deployments },
+  //     'LoanAssetToken',
+  //     [registry.address, 'Loan Asset Token', 'LAT', ''],
+  //     'initialize(address,string,string,string)'
+  // );
 
-    await execute('Registry', { from: deployer, log: true }, 'setLoanAssetToken', loanAssetTokenProxy.address);
+  console.log('loanAssetTokenProxy', loanAssetToken.address);
+
+  await execute('Registry', { from: deployer, log: true }, 'setLoanAssetToken', loanAssetToken.address);
 };
 
 module.exports.dependencies = ['Registry'];

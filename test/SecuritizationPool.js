@@ -558,7 +558,7 @@ describe('SecuritizationPool', () => {
                 salts
             );
 
-            await loanKernel.fillDebtOrder(
+            const tx = await loanKernel.fillDebtOrder(
                 formatFillDebtOrderParams(
                     orderAddresses,
                     orderValues,
@@ -576,6 +576,8 @@ describe('SecuritizationPool', () => {
                     )
                 )
             );
+
+            console.log('TxXXX', (await tx.wait()).gasUsed);
 
             const ownerOfAgreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
             expect(ownerOfAgreement).equal(securitizationPoolContract.address);

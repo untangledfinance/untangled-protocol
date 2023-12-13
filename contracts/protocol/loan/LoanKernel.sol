@@ -11,6 +11,8 @@ import '../../tokens/ERC721/types.sol';
 import {ISecuritizationPool} from '../pool/ISecuritizationPool.sol';
 import {ISecuritizationTGE} from '../pool/ISecuritizationTGE.sol';
 
+import {ILoanAssetToken} from '../../tokens/ERC721/ILoanAssetToken.sol';
+
 /// @title LoanKernel
 /// @author Untangled Team
 /// @notice Upload loan and conclude loan
@@ -286,11 +288,13 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         );
 
         uint x = 0;
-        uint256 expectedAssetsValue = 0;
+        ILoanAssetToken lat = registry.getLoanAssetToken();
+        
 
+        uint expectedAssetsValue = 0;
         // Mint to pool
         for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
-            registry.getLoanAssetToken().safeMint(poolAddress, fillDebtOrderParam.latInfo[i]);
+            lat.safeMint(poolAddress, fillDebtOrderParam.latInfo[i]);
 
             for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
                 require(
@@ -330,6 +334,14 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                 fillDebtOrderParam.latInfo[i].tokenIds
             );
         }
+
+        // // calc expected assets value
+        // uint256 expectedAssetsValue = 0;
+        // for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
+        //     expectedAssetsValue += ISecuritizationPool(poolAddress).collectAssets(
+        //         fillDebtOrderParam.latInfo[i].tokenIds
+        //     );
+        // }
 
         // Start collect asset checkpoint and withdraw
         ISecuritizationTGE(poolAddress).withdraw(_msgSender(), expectedAssetsValue);

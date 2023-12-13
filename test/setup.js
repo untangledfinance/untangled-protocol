@@ -10,7 +10,7 @@ const setUpLoanAssetToken = async (registry, securitizationManager) => {
         LoanAssetToken,
         [registry.address, 'TEST', 'TST', 'test.com'],
         {
-            initializer: 'initialize(address,string,string,string)',
+            initializer: 'init(address,string,string,string)',
         }
     );
     await registry.setLoanAssetToken(loanAssetTokenContract.address);

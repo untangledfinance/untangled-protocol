@@ -65,6 +65,36 @@ contract LoanRegistry is UntangledBase, ILoanRegistry {
         return true;
     }
 
+    function insert(
+        bytes32[] calldata tokenIds,
+        address termContract,
+        address debtor,
+        bytes32 termsContractParameter,
+        address pTokenAddress,
+        uint256 _salt,
+        uint256 expirationTimestampInSecs,
+        uint8[] calldata assetPurposeAndRiskScore
+    ) external override whenNotPaused onlyLoanKernel {
+        require(termContract != address(0x0), 'LoanRegistry: Invalid term contract');
+        LoanEntry memory newEntry = LoanEntry({
+            loanTermContract: termContract,
+            debtor: debtor,
+            principalTokenAddress: pTokenAddress,
+            termsParam: termsContractParameter,
+            salt: _salt, //solium-disable-next-line security
+            issuanceBlockTimestamp: block.timestamp,
+            lastRepayTimestamp: 0,
+            expirationTimestamp: expirationTimestampInSecs,
+            assetPurpose: Configuration.ASSET_PURPOSE(assetPurposeAndRiskScore[0]),
+            riskScore: assetPurposeAndRiskScore[1]
+        });
+
+        for (uint i = 0; i < tokenIds.length; i++) {
+            entries[tokenIds[i]] = newEntry;
+            emit UpdateLoanEntry(tokenIds[i], newEntry);
+        }
+    }
+
     /// @inheritdoc ILoanRegistry
     function getLoanDebtor(bytes32 tokenId) public view override returns (address) {
         return entries[tokenId].debtor;

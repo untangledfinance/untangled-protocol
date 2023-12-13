@@ -83,6 +83,7 @@ contract LoanRepaymentRouter is ILoanRepaymentRouter {
         address tokenAddress
     ) external override whenNotPaused nonReentrant returns (bool) {
         uint256 agreementIdsLength = agreementIds.length;
+
         for (uint256 i = 0; i < agreementIdsLength; i++) {
             require(
                 _assertRepaymentRequest(agreementIds[i], tokenAddress),

@@ -287,12 +287,28 @@ contract LoanKernel is ILoanKernel, UntangledBase {
             salts
         );
 
-        uint x = 0;
         ILoanAssetToken lat = registry.getLoanAssetToken();
-        
 
         uint expectedAssetsValue = 0;
-        // Mint to pool
+        uint x = 0;
+
+        uint totalTokenId = 0;
+        for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
+            lat.safeMint(poolAddress, fillDebtOrderParam.latInfo[i]);
+            for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
+                totalTokenId = UntangledMath.uncheckedInc(totalTokenId);
+            }
+        }
+
+        // prepare list of 
+        uint256[] memory tokenIds = new uint256[](totalTokenId);
+        // flatten
+        for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
+            for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
+                tokenIds[i * fillDebtOrderParam.latInfo[i].tokenIds.length + j] = fillDebtOrderParam.latInfo[i].tokenIds[j];       
+            }
+        }
+
         for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
             lat.safeMint(poolAddress, fillDebtOrderParam.latInfo[i]);
 

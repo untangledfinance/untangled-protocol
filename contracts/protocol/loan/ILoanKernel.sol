@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 import {Registry} from '../../storage/Registry.sol';
 import '../../tokens/ERC721/types.sol';
 
+import { LoanOrder } from './types.sol';
+
 abstract contract ILoanKernel {
     Registry public registry;
 
@@ -65,6 +67,8 @@ abstract contract ILoanKernel {
     event IssuedNewInputLoans(address[] debtor, uint256[] loanTokenIds);
 
     event LogDebtOrderFilled(bytes32 _agreementId, uint256 _principal, address _principalToken, address _relayer);
+
+    event LogDebtOrderFilledBatch(LoanOrder _debtOrder);
 
     //********************************************************* */
 

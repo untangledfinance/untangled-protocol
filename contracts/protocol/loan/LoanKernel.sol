@@ -361,19 +361,19 @@ contract LoanKernel is ILoanKernel, UntangledBase {
             'Cannot register term start'
         );
 
-        for (uint i = 0; i < totalTokenId; i = UntangledMath.uncheckedInc(i)) {
-            // require(
-            //     ILoanInterestTermsContract(debtOrder.issuance.termsContract).registerTermStart(bytes32(tokenIds[i])),
-            //     'Cannot register term start'
-            // );
+        // for (uint i = 0; i < totalTokenId; i = UntangledMath.uncheckedInc(i)) {
+        //     // require(
+        //     //     ILoanInterestTermsContract(debtOrder.issuance.termsContract).registerTermStart(bytes32(tokenIds[i])),
+        //     //     'Cannot register term start'
+        //     // );
 
-            emit LogDebtOrderFilled(
-                debtOrder.issuance.agreementIds[i],
-                debtOrder.principalAmounts[i],
-                debtOrder.principalTokenAddress,
-                debtOrder.relayer
-            );
-        }
+        //     emit LogDebtOrderFilled(
+        //         debtOrder.issuance.agreementIds[i],
+        //         debtOrder.principalAmounts[i],
+        //         debtOrder.principalTokenAddress,
+        //         debtOrder.relayer
+        //     );
+        // }
 
         uint expectedAssetsValue = ISecuritizationPool(poolAddress).collectAssets(tokenIds);
         // Start collect asset checkpoint and withdraw

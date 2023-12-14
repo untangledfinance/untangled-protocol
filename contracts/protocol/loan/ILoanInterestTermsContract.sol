@@ -14,8 +14,11 @@ abstract contract ILoanInterestTermsContract {
 
     mapping(bytes32 => bool) public completedRepayment;
 
+    // /// @notice register the start of a loan term
+    // function registerTermStart(bytes32 agreementId) public virtual returns (bool);
+
     /// @notice register the start of a loan term
-    function registerTermStart(bytes32 agreementId) public virtual returns (bool);
+    function registerTermStart(uint256[] calldata agreementIds) public virtual returns (bool);
 
     /// @notice the total amount of principal and interest repaid for a given loan agreement
     function getValueRepaidToDate(bytes32 agreementId) public view virtual returns (uint256, uint256);

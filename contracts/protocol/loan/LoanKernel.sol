@@ -150,10 +150,8 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         uint256[] memory aggrementIds,
         address termContract,
         LoanOrder memory debtOrder,
-        bytes32[] memory termsParams // address[] memory debtors,
-    ) private // bytes32[] memory termsParams,
-    // address principalTokenAddress,
-    // uint256[] memory salts,
+        bytes32[] memory termsParams // address[] memory debtors, // bytes32[] memory termsParams, // address principalTokenAddress,
+    ) private // uint256[] memory salts,
     // uint256[] memory expirationTimestampInSecs,
     // uint8[][] memory assetPurposeAndRiskScore
     {
@@ -234,12 +232,12 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return riskScores;
     }
 
-    function _getAssetPurposeAndRiskScore(uint8 assetPurpose, uint8 riskScore) private pure returns (uint8[] memory) {
-        uint8[] memory assetPurposeAndRiskScore = new uint8[](2);
-        assetPurposeAndRiskScore[0] = assetPurpose;
-        assetPurposeAndRiskScore[1] = riskScore;
-        return assetPurposeAndRiskScore;
-    }
+    // function _getAssetPurposeAndRiskScore(uint8 assetPurpose, uint8 riskScore) private pure returns (uint8[] memory) {
+    //     uint8[] memory assetPurposeAndRiskScore = new uint8[](2);
+    //     assetPurposeAndRiskScore[0] = assetPurpose;
+    //     assetPurposeAndRiskScore[1] = riskScore;
+    //     return assetPurposeAndRiskScore;
+    // }
 
     function _burnLoanAssetToken(bytes32 agreementId) private {
         registry.getLoanAssetToken().burn(uint256(agreementId));
@@ -343,13 +341,13 @@ contract LoanKernel is ILoanKernel, UntangledBase {
             require(debtOrder.issuance.agreementIds[i] == bytes32(tokenIds[i]), 'LoanKernel: Invalid LAT Token Id');
         }
 
-        uint8[][] memory assetPurposeAndRiskScores = new uint8[][](totalTokenId);
-        for (uint i = 0; i < totalTokenId; i = UntangledMath.uncheckedInc(i)) {
-            assetPurposeAndRiskScores[i] = _getAssetPurposeAndRiskScore(
-                debtOrder.assetPurpose,
-                debtOrder.riskScores[i]
-            );
-        }
+        // uint8[][] memory assetPurposeAndRiskScores = new uint8[][](totalTokenId);
+        // for (uint i = 0; i < totalTokenId; i = UntangledMath.uncheckedInc(i)) {
+        //     assetPurposeAndRiskScores[i] = _getAssetPurposeAndRiskScore(
+        //         debtOrder.assetPurpose,
+        //         debtOrder.riskScores[i]
+        //     );
+        // }
 
         _issueDebtAgreements(
             tokenIds,
@@ -358,11 +356,16 @@ contract LoanKernel is ILoanKernel, UntangledBase {
             fillDebtOrderParam.termsContractParameters
         );
 
+        require(
+            ILoanInterestTermsContract(debtOrder.issuance.termsContract).registerTermStart(tokenIds),
+            'Cannot register term start'
+        );
+
         for (uint i = 0; i < totalTokenId; i = UntangledMath.uncheckedInc(i)) {
-            require(
-                ILoanInterestTermsContract(debtOrder.issuance.termsContract).registerTermStart(bytes32(tokenIds[i])),
-                'Cannot register term start'
-            );
+            // require(
+            //     ILoanInterestTermsContract(debtOrder.issuance.termsContract).registerTermStart(bytes32(tokenIds[i])),
+            //     'Cannot register term start'
+            // );
 
             emit LogDebtOrderFilled(
                 debtOrder.issuance.agreementIds[i],

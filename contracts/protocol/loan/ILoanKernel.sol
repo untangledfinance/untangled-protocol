@@ -72,26 +72,26 @@ abstract contract ILoanKernel {
     // STRUCTURES
     /*********** */
 
-    struct LoanIssuance {
-        address version;
-        address termsContract;
-        address[] debtors;
-        bytes32[] termsContractParameters; // for different loans
-        bytes32[] agreementIds;
-        uint256[] salts;
-    }
+    // struct LoanIssuance {
+    //     address version;
+    //     address termsContract;
+    //     address[] debtors;
+    //     bytes32[] termsContractParameters; // for different loans
+    //     bytes32[] agreementIds;
+    //     uint256[] salts;
+    // }
 
-    struct LoanOrder {
-        LoanIssuance issuance;
-        address principalTokenAddress;
-        uint256[] principalAmounts;
-        uint256 creditorFee;
-        address relayer;
-        uint256[] expirationTimestampInSecs;
-        bytes32[] debtOrderHashes;
-        uint8[] riskScores;
-        uint8 assetPurpose;
-    }
+    // struct LoanOrder {
+    //     LoanIssuance issuance;
+    //     address principalTokenAddress;
+    //     uint256[] principalAmounts;
+    //     uint256 creditorFee;
+    //     address relayer;
+    //     uint256[] expirationTimestampInSecs;
+    //     bytes32[] debtOrderHashes;
+    //     uint8[] riskScores;
+    //     uint8 assetPurpose;
+    // }
 
     struct FillDebtOrderParam {
         address[] orderAddresses; // 0-pool, 1-principal token address, 2-repayment router, 3-term contract, 4-relayer,...

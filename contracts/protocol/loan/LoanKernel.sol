@@ -306,7 +306,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         );
 
         uint256 expectedAssetsValue = ISecuritizationPool(poolAddress).collectAssets(tokenIds);
-        // Start collect asset checkpoint and withdraw
         ISecuritizationTGE(poolAddress).withdraw(_msgSender(), expectedAssetsValue);
     }
 

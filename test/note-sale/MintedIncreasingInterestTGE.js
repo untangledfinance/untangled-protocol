@@ -161,7 +161,7 @@ describe('MintedIncreasingInterestTGE', function () {
     // Only the owner (or pool) should be able to start a new round sale
     await expect(
       mintedIncreasingInterestTGE.connect(accounts[0]).startNewRoundSale(openingTime, closingTime, rate, cap)
-    ).to.be.revertedWith('MintedIncreasingInterestTGE: Caller must be owner or pool');
+    ).to.be.revertedWith('MintedIncreasingInterestTGE: Caller must be owner or manager');
 
     // The owner (or pool) should be able to start a new round sale
     await mintedIncreasingInterestTGE.connect(untangledAdminSigner).startNewRoundSale(openingTime, closingTime, rate, cap);

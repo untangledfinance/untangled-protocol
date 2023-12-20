@@ -6,6 +6,7 @@ import './crowdsale/IncreasingInterestCrowdsale.sol';
 import './IMintedTGE.sol';
 import './base/LongSaleInterest.sol';
 import './IInterestRate.sol';
+import '../../interfaces/INoteToken.sol';
 
 /// @title MintedIncreasingInterestTGE
 /// @author Untangled Team
@@ -66,7 +67,7 @@ contract MintedIncreasingInterestTGE is IMintedTGE, UntangledBase, IncreasingInt
 
     /// @notice Get amount of token can receive from an amount of currency
     function getTokenAmount(uint256 currencyAmount) public view override returns (uint256) {
-        return currencyAmount / getTokenPrice();
+        return (currencyAmount * 10 ** INoteToken(token).decimals()) / getTokenPrice();
     }
 
     /// @notice Setup a new round sale for note token
@@ -78,16 +79,24 @@ contract MintedIncreasingInterestTGE is IMintedTGE, UntangledBase, IncreasingInt
         uint256 closingTime_,
         uint256 rate_,
         uint256 cap_
-    ) external whenNotPaused override {
+    ) external override whenNotPaused {
         require(
             hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
-            'MintedIncreasingInterestTGE: Caller must be owner or pool'
+            'MintedIncreasingInterestTGE: Caller must be owner or manager'
         );
         _preValidateNewSaleRound();
 
         // call inner function for each extension
         _newSaleRound(rate_);
         newSaleRoundTime(openingTime_, closingTime_);
+        _setTotalCap(cap_);
+    }
+
+    function setTotalCap(uint256 cap_) external whenNotPaused {
+        require(
+            hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
+            'MintedIncreasingInterestTGE: Caller must be owner or manager'
+        );
         _setTotalCap(cap_);
     }
 

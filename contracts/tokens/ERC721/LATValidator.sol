@@ -7,7 +7,6 @@ import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/crypto
 import {SignatureCheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol';
 import {ERC165CheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol';
 import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
-import {ISecuritizationAccessControl} from '../../interfaces/ISecuritizationAccessControl.sol';
 import {IERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {IERC5008} from './IERC5008.sol';
@@ -24,17 +23,11 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
     mapping(uint256 => uint256) internal _nonces;
 
     modifier validateCreditor(address creditor, LoanAssetInfo calldata info) {
-        //  requireNonceValid(latInfo) requireValidator(latInfo)
-        if (
-            IERC165Upgradeable(creditor).supportsInterface(type(ISecuritizationPoolStorage).interfaceId) &&
-            IERC165Upgradeable(creditor).supportsInterface(type(ISecuritizationAccessControl).interfaceId)
-        ) {
-            if (ISecuritizationPoolStorage(creditor).validatorRequired()) {
-                _checkNonceValid(info);
+        if (ISecuritizationPoolStorage(creditor).validatorRequired()) {
+            _checkNonceValid(info);
 
-                require(_checkValidator(info), 'LATValidator: invalid validator signature');
-                require(isValidator(info.validator), 'LATValidator: invalid validator');
-            }
+            require(_checkValidator(info), 'LATValidator: invalid validator signature');
+            require(isValidator(info.validator), 'LATValidator: invalid validator');
         }
         _;
     }

@@ -19,4 +19,6 @@ interface ICrowdSale {
     function onRedeem(uint256 currencyAmount) external;
 
     function setHasStarted(bool _hasStarted) external;
+
+    function setMinBidAmount(uint256 _minBidAmount) external;
 }

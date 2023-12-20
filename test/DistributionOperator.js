@@ -22,7 +22,7 @@ const {
     genSalt,
     generateLATMintPayload,
     getPoolByAddress,
-    formatFillDebtOrderParams
+    formatFillDebtOrderParams,
 } = require('./utils.js');
 const { setup } = require('./setup.js');
 const { SaleType } = require('./shared/constants.js');
@@ -285,7 +285,6 @@ describe('Distribution', () => {
 
     describe('#Securitization Manager', async () => {
         it('Should set up TGE for SOT successfully', async () => {
-
             const openingTime = dayjs(new Date()).unix();
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
@@ -296,9 +295,7 @@ describe('Distribution', () => {
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'SOT_';
 
-            const transaction = await securitizationManager
-              .connect(poolCreatorSigner)
-              .setUpTGEForSOT(
+            const transaction = await securitizationManager.connect(poolCreatorSigner).setUpTGEForSOT(
                 {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
@@ -313,8 +310,8 @@ describe('Distribution', () => {
                     finalInterest,
                     timeInterval,
                     amountChangeEachInterval,
-                },
-              );
+                }
+            );
 
             const receipt = await transaction.wait();
 
@@ -330,7 +327,6 @@ describe('Distribution', () => {
         });
 
         it('Should set up TGE for JOT successfully', async () => {
-
             const openingTime = dayjs(new Date()).unix();
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
@@ -339,9 +335,7 @@ describe('Distribution', () => {
             const initialJotAmount = parseEther('100');
 
             // JOT only has SaleType.NORMAL_SALE
-            const transaction = await securitizationManager
-              .connect(poolCreatorSigner)
-              .setUpTGEForJOT(
+            const transaction = await securitizationManager.connect(poolCreatorSigner).setUpTGEForJOT(
                 {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
@@ -351,8 +345,8 @@ describe('Distribution', () => {
                     ticker: prefixOfNoteTokenSaleName,
                 },
                 { openingTime: openingTime, closingTime: closingTime, rate: rate, cap: totalCapOfToken },
-                initialJotAmount,
-              );
+                initialJotAmount
+            );
             const receipt = await transaction.wait();
 
             const [tgeAddress] = receipt.events.find((e) => e.event == 'NewTGECreated').args;
@@ -544,7 +538,8 @@ describe('Distribution', () => {
                 jotToken.address,
                 lenderSigner.address
             );
-            expect(formatEther(result)).equal('90.0');
+
+            expect(result).to.closeTo(parseEther('90.18'), parseEther('0.01'));
         });
 
         it('#calcCorrespondingAssetValue(address,address[])', async () => {
@@ -560,10 +555,10 @@ describe('Distribution', () => {
                 securitizationPoolContract.address,
                 sotToken.address
             );
-            expect(formatEther(result)).equal('0.000000000000000001');
+            expect(formatEther(result)).equal('1.0');
 
             result = await distributionAssessor.calcTokenPrice(securitizationPoolContract.address, jotToken.address);
-            expect(formatEther(result)).equal('0.000000000000000001');
+            expect(result).to.closeTo(parseEther('1.002'), parseEther('0.001'));
 
             result = await distributionAssessor.calcTokenPrice(securitizationPoolContract.address, ZERO_ADDRESS);
             expect(formatEther(result)).equal('0.0');

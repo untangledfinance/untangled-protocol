@@ -31,11 +31,9 @@ contract DistributionAssessor is SecuritizationPoolServiceBase, IDistributionAss
 
         require(address(noteToken) != address(0), 'DistributionAssessor: Invalid note token address');
         // In initial state, SOT price = 1$
-        if (noteToken.totalSupply() == 0)
-            return
-                10 ** (INoteToken(ISecuritizationTGE(securitizationPool).underlyingCurrency()).decimals() - decimals);
+        if (noteToken.totalSupply() == 0) return 10 ** decimals;
 
-        return asset / totalSupply;
+        return (asset * 10 ** decimals) / totalSupply;
     }
 
     // get current individual asset for SOT tranche
@@ -43,7 +41,12 @@ contract DistributionAssessor is SecuritizationPoolServiceBase, IDistributionAss
     function getSOTTokenPrice(address securitizationPool) public view override returns (uint256) {
         ISecuritizationPoolValueService poolService = registry.getSecuritizationPoolValueService();
         uint256 seniorAsset = poolService.getSeniorAsset(address(securitizationPool));
-        return _getTokenPrice(securitizationPool, INoteToken(ISecuritizationTGE(securitizationPool).sotToken()), seniorAsset);
+        return
+            _getTokenPrice(
+                securitizationPool,
+                INoteToken(ISecuritizationTGE(securitizationPool).sotToken()),
+                seniorAsset
+            );
     }
 
     /// @inheritdoc IDistributionAssessor
@@ -62,17 +65,11 @@ contract DistributionAssessor is SecuritizationPoolServiceBase, IDistributionAss
         INoteToken notesToken = INoteToken(tokenAddress);
         ISecuritizationLockDistribution securitizationPool = ISecuritizationLockDistribution(notesToken.poolAddress());
 
-        // if (Configuration.NOTE_TOKEN_TYPE(notesToken.noteTokenType()) == Configuration.NOTE_TOKEN_TYPE.SENIOR) {
-        //     tokenPrice = getSOTTokenPrice(securitizationPool);
-        // } else {
-        //     tokenPrice = getJOTTokenPrice(securitizationPool);
-        // }
-
         uint256 tokenPrice = calcTokenPrice(address(securitizationPool), tokenAddress);
 
         uint256 tokenRedeem = securitizationPool.lockedRedeemBalances(tokenAddress, investor);
         uint256 tokenBalance = notesToken.balanceOf(investor) - tokenRedeem;
-        return tokenBalance * tokenPrice;
+        return (tokenBalance * tokenPrice) / 10 ** notesToken.decimals();
     }
 
     /// @notice Calculate SOT/JOT asset value for multiple investors
@@ -100,7 +97,12 @@ contract DistributionAssessor is SecuritizationPoolServiceBase, IDistributionAss
     function getJOTTokenPrice(address securitizationPool) public view override returns (uint256) {
         ISecuritizationPoolValueService poolService = registry.getSecuritizationPoolValueService();
         uint256 seniorAsset = poolService.getJuniorAsset(address(securitizationPool));
-        return _getTokenPrice(securitizationPool, INoteToken(ISecuritizationTGE(securitizationPool).jotToken()), seniorAsset);
+        return
+            _getTokenPrice(
+                securitizationPool,
+                INoteToken(ISecuritizationTGE(securitizationPool).jotToken()),
+                seniorAsset
+            );
     }
 
     /// @inheritdoc IDistributionAssessor

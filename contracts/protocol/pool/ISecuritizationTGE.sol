@@ -10,6 +10,7 @@ interface ISecuritizationTGE {
     event UpdateReserve(uint256 currencyAmount);
     event UpdateInterestRateSOT(uint32 _interestRateSOT);
     event UpdateDebtCeiling(uint256 _debtCeiling);
+    event UpdateMintFirstLoss(uint32 _mintFirstLoss);
     event Withdraw(address originatorAddress, uint256 amount);
     event UpdatePoolNAV(address poolNav);
 
@@ -20,6 +21,9 @@ interface ISecuritizationTGE {
 
     /// @notice sets debt ceiling value
     function setDebtCeiling(uint256 _debtCeiling) external;
+
+    /// @notice sets mint first loss value
+    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external;
 
     // function pot() external view returns (address);
 
@@ -69,6 +73,11 @@ interface ISecuritizationTGE {
     function increaseTotalAssetRepaidCurrency(uint256 amount) external;
 
     function redeem(address usr, address notesToken, uint256 currencyAmount, uint256 tokenAmount) external;
+
+    /// @dev Disburses a specified amount of currency to the given user.
+    /// @param usr The address of the user to receive the currency.
+    /// @param currencyAmount The amount of currency to disburse.
+    function disburse(address usr, uint256 currencyAmount) external;
 
     /// @notice checks if the redemption process has finished
     function hasFinishedRedemption() external view returns (bool);

@@ -28,7 +28,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         );
     }
 
-    // await execute('Registry', { from: deployer, log: true }, 'setSecuritizationManager', SecuritizationManager.address);
+    await execute('Registry', { from: deployer, log: true }, 'setSecuritizationManager', SecuritizationManager.address);
 };
 
 module.exports.dependencies = ['Registry'];

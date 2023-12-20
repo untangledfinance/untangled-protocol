@@ -65,14 +65,15 @@ contract DistributionOperator is SecuritizationPoolServiceBase, IDistributionOpe
         );
 
         uint256 tokenPrice = registry.getDistributionAssessor().calcTokenPrice(poolAddress, address(noteToken));
+        uint256 decimals = noteToken.decimals();
 
         address pot = ISecuritizationPoolStorage(poolAddress).pot();
         uint256 tokenToBeRedeemed = Math.min(
-            INoteToken(securitizationPool.underlyingCurrency()).balanceOf(pot) / tokenPrice,
+            (INoteToken(securitizationPool.underlyingCurrency()).balanceOf(pot) * 10 ** decimals) / tokenPrice,
             tokenAmount
         );
 
-        uint256 currencyAmtToBeDistributed = tokenToBeRedeemed * tokenPrice;
+        uint256 currencyAmtToBeDistributed = (tokenToBeRedeemed * tokenPrice) / 10 ** decimals;
 
         ISecuritizationLockDistribution securitizationLockDistribute = ISecuritizationLockDistribution(poolAddress);
         securitizationLockDistribute.increaseLockedDistributeBalance(

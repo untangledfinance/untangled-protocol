@@ -20,6 +20,7 @@ import {POOL_ADMIN} from './types.sol';
 import {VALIDATOR_ROLE} from '../../tokens/ERC721/types.sol';
 import {MintedNormalTGE} from '../note-sale/MintedNormalTGE.sol';
 import {MintedIncreasingInterestTGE} from '../note-sale/MintedIncreasingInterestTGE.sol';
+import {IMintedTGE} from '../note-sale/IMintedTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
 import {ITokenGenerationEventFactory} from '../note-sale/fab/ITokenGenerationEventFactory.sol';
 import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
@@ -81,6 +82,12 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         uint32 finalInterest;
         uint32 timeInterval;
         uint32 amountChangeEachInterval;
+    }
+
+    struct TGEInfoParam {
+        address tgeAddress;
+        uint256 totalCap;
+        uint256 minBidAmount;
     }
 
     function initialize(Registry _registry, address _factoryAdmin) public reinitializer(2) {
@@ -338,6 +345,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         ICrowdSale tge = ICrowdSale(tgeAddress);
         uint256 tokenAmount = tge.buyTokens(_msgSender(), _msgSender(), currencyAmount);
         address pool = tge.pool();
+        require(registry.getNoteTokenVault().redeemDisabled(pool) == false, 'SM: Buy token paused');
 
         if (INoteToken(tge.token()).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
             if (MintedNormalTGE(tgeAddress).currencyRaised() >= MintedNormalTGE(tgeAddress).initialAmount()) {
@@ -369,31 +377,16 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         return registry.getGo().goOnlyIdTypes(sender, allowedUIDTypes);
     }
 
-    // function pausePool(address poolAddress) external whenNotPaused nonReentrant onlyRole(POOL_ADMIN) {
-    //     require(isExistingPools[poolAddress], 'SecuritizationManager: pool does not exist');
-    //     ISecuritizationPool pool = ISecuritizationPool(poolAddress);
-    //     pool.pause();
-    // }
-
-    // function unpausePool(address poolAddress) external whenNotPaused nonReentrant onlyRole(POOL_ADMIN) {
-    //     require(isExistingPools[poolAddress], 'SecuritizationManager: pool does not exist');
-    //     ISecuritizationPool pool = ISecuritizationPool(poolAddress);
-    //     pool.unpause();
-    // }
-
-    // function pauseAllPools() external whenNotPaused nonReentrant onlyRole(POOL_ADMIN) {
-    //     uint256 poolsLength = pools.length;
-    //     for (uint256 i = 0; i < poolsLength; i = UntangledMath.uncheckedInc(i)) {
-    //         pools[i].pause();
-    //     }
-    // }
-
-    // function unpauseAllPools() external whenNotPaused nonReentrant onlyRole(POOL_ADMIN) {
-    //     uint256 poolsLength = pools.length;
-    //     for (uint256 i = 0; i < poolsLength; i = UntangledMath.uncheckedInc(i)) {
-    //         pools[i].unpause();
-    //     }
-    // }
+    function updateTgeInfo(TGEInfoParam[] calldata tgeInfos) public {
+        for (uint i = 0; i < tgeInfos.length; i++) {
+            require(
+                IAccessControlUpgradeable(ICrowdSale(tgeInfos[i].tgeAddress).pool()).hasRole(OWNER_ROLE, _msgSender()),
+                'SecuritizationManager: Not the controller of the project'
+            );
+            IMintedTGE(tgeInfos[i].tgeAddress).setTotalCap(tgeInfos[i].totalCap);
+            ICrowdSale(tgeInfos[i].tgeAddress).setMinBidAmount(tgeInfos[i].minBidAmount);
+        }
+    }
 
     function registerValidator(address validator) public onlyRole(POOL_ADMIN) {
         require(validator != address(0), 'SecuritizationManager: Invalid validator address');

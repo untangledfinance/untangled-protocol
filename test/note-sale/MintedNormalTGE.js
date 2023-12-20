@@ -61,7 +61,7 @@ describe('MintedNormalTGE', () => {
       mintedNormalTGE
         .connect(accounts[0])
         .startNewRoundSale(openingTime, closingTime, rate, cap)
-    ).to.be.revertedWith('MintedNormalTGE: Caller must be owner or pool');
+    ).to.be.revertedWith('MintedNormalTGE: Caller must be owner or manager');
 
     // The owner (or pool) should be able to start a new round sale
     await mintedNormalTGE

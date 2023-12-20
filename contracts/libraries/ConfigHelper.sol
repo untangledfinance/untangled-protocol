@@ -27,6 +27,7 @@ import {IGo} from '../interfaces/IGo.sol';
 import "../protocol/pool/IPoolNAVFactory.sol";
 
 import {POOL_ADMIN, OWNER_ROLE} from './types.sol';
+import {INoteTokenVault} from "../protocol/pool/INoteTokenVault.sol";
 
 /**
  * @title ConfigHelper
@@ -121,6 +122,10 @@ library ConfigHelper {
 
     function getPoolNAVFactory(Registry registry) internal view returns (IPoolNAVFactory) {
         return IPoolNAVFactory(getAddress(registry, Configuration.CONTRACT_TYPE.POOL_NAV_FACTORY));
+    }
+
+    function getNoteTokenVault(Registry registry) internal view returns (INoteTokenVault) {
+        return INoteTokenVault(getAddress(registry, Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT));
     }
 
     function requireDistributionOperator(Registry registry, address account) internal view {

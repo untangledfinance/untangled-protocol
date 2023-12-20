@@ -8,6 +8,7 @@ import {FinalizableCrowdsale} from './crowdsale/FinalizableCrowdsale.sol';
 import {ISecuritizationPool} from '../pool/ISecuritizationPool.sol';
 import {IMintedTGE} from './IMintedTGE.sol';
 import {LongSaleInterest} from './base/LongSaleInterest.sol';
+import '../../interfaces/INoteToken.sol';
 
 /// @title MintedNormalTGE
 /// @author Untangled Team
@@ -67,7 +68,7 @@ contract MintedNormalTGE is IMintedTGE, FinalizableCrowdsale, LongSaleInterest {
     }
 
     function getTokenAmount(uint256 currencyAmount) public view override returns (uint256) {
-        return currencyAmount / getTokenPrice();
+        return (currencyAmount * 10 ** INoteToken(token).decimals()) / getTokenPrice();
     }
 
     /// @notice Setup a new round sale for note token
@@ -82,7 +83,7 @@ contract MintedNormalTGE is IMintedTGE, FinalizableCrowdsale, LongSaleInterest {
     ) external override whenNotPaused {
         require(
             hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
-            'MintedNormalTGE: Caller must be owner or pool'
+            'MintedNormalTGE: Caller must be owner or manager'
         );
         _preValidateNewSaleRound();
 
@@ -92,12 +93,20 @@ contract MintedNormalTGE is IMintedTGE, FinalizableCrowdsale, LongSaleInterest {
         _setTotalCap(cap_);
     }
 
+    function setTotalCap(uint256 cap_) external whenNotPaused {
+        require(
+            hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
+            'MintedNormalTGE: Caller must be owner or manager'
+        );
+        _setTotalCap(cap_);
+    }
+
     /// @notice Setup initial amount currency raised for JOT condition
     /// @param _initialAmount Expected minimum amount of JOT before SOT start
     function setInitialAmount(uint256 _initialAmount) external whenNotPaused {
         require(
             hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
-            'MintedNormalTGE: Caller must be owner or pool'
+            'MintedNormalTGE: Caller must be owner or manager'
         );
         require(initialAmount < totalCap, 'MintedNormalTGE: Initial JOT amount must be less than total cap');
         initialAmount = _initialAmount;

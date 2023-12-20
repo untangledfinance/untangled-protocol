@@ -3,9 +3,9 @@ pragma solidity 0.8.19;
 
 import './auth.sol';
 import {Discounting} from './discounting.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
 interface IPoolNAV {
+    event Rely(address indexed usr);
     function addLoan(uint256 loan) external returns (uint256);
 
     function repayLoan(uint256 loan, uint256 amount) external returns (uint256);

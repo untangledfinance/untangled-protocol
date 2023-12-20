@@ -177,6 +177,19 @@ contract SecuritizationPoolValueService is
         return expectedAssetsValues;
     }
 
+    function getDebtAssetValues(
+        address poolAddress,
+        bytes32[] calldata tokenIds
+    ) public view returns (uint256[] memory debtAssetsValues) {
+        debtAssetsValues = new uint256[](tokenIds.length);
+        IPoolNAV poolNav = IPoolNAV(ISecuritizationPoolStorage(poolAddress).poolNAV());
+        for (uint i = 0; i < tokenIds.length; i++) {
+            debtAssetsValues[i] = poolNav.debt(uint256(tokenIds[i]));
+        }
+
+        return debtAssetsValues;
+    }
+
     /// @inheritdoc ISecuritizationPoolValueService
     function getExpectedAssetsValue(
         address poolAddress,

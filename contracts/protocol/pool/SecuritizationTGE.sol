@@ -179,6 +179,19 @@ contract SecuritizationTGE is
         emit UpdateReserve($.reserve);
     }
 
+    /// @inheritdoc ISecuritizationTGE
+    function disburse(address usr, uint256 currencyAmount) external virtual override {
+        Storage storage $ = _getStorage();
+        require(
+            _msgSender() == address(registry().getNoteTokenVault()),
+            'SecuritizationPool: Caller must be NoteTokenVault'
+        );
+        require(
+            IERC20Upgradeable($.underlyingCurrency).transferFrom($.pot, usr, currencyAmount),
+            'SecuritizationPool: currency-transfer-failed'
+        );
+    }
+
     function checkMinFirstLost() public view virtual returns (bool) {
         ISecuritizationPoolValueService poolService = registry().getSecuritizationPoolValueService();
         return _getStorage().minFirstLossCushion <= poolService.getJuniorRatio(address(this));
@@ -239,6 +252,14 @@ contract SecuritizationTGE is
         registry().getSecuritizationManager().registerPot(_pot);
     }
 
+    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external override whenNotPaused notClosingStage {
+        registry().requirePoolAdminOrOwner(address(this), _msgSender());
+
+        Storage storage $ = _getStorage();
+        $.minFirstLossCushion = _minFirstLossCushion;
+        emit UpdateDebtCeiling(_minFirstLossCushion);
+    }
+
     function setDebtCeiling(uint256 _debtCeiling) external override whenNotPaused notClosingStage {
         registry().requirePoolAdminOrOwner(address(this), _msgSender());
 
@@ -277,7 +298,8 @@ contract SecuritizationTGE is
     function decreaseReserve(uint256 currencyAmount) external override whenNotPaused {
         require(
             _msgSender() == address(registry().getSecuritizationManager()) ||
-                _msgSender() == address(registry().getDistributionOperator()),
+                _msgSender() == address(registry().getDistributionOperator()) ||
+                _msgSender() == address(registry().getNoteTokenVault()),
             'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
         );
 
@@ -349,6 +371,7 @@ contract SecuritizationTGE is
     function withdraw(address to, uint256 amount) public override whenNotPaused {
         registry().requireLoanKernel(_msgSender());
         require(hasRole(ORIGINATOR_ROLE, to), 'SecuritizationPool: Only Originator can drawdown');
+        require(!registry().getNoteTokenVault().redeemDisabled(address(this)), 'SecuritizationPool: withdraw paused');
         Storage storage $ = _getStorage();
         require($.reserve >= amount, 'SecuritizationPool: not enough reserve');
 
@@ -391,7 +414,7 @@ contract SecuritizationTGE is
         override(SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](30);
+        bytes4[] memory _functionSignatures = new bytes4[](32);
 
         _functionSignatures[0] = this.termLengthInSeconds.selector;
         _functionSignatures[1] = this.setPot.selector;
@@ -423,6 +446,8 @@ contract SecuritizationTGE is
         _functionSignatures[27] = this.isDebtCeilingValid.selector;
         _functionSignatures[28] = this.setDebtCeiling.selector;
         _functionSignatures[29] = this.debtCeiling.selector;
+        _functionSignatures[30] = this.disburse.selector;
+        _functionSignatures[31] = this.setMinFirstLossCushion.selector;
 
         return _functionSignatures;
     }

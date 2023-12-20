@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 import '../../storage/Registry.sol';
 
-import { LoanOrder } from './types.sol';
+import {LoanOrder} from './types.sol';
 
 abstract contract ILoanRegistry {
     Registry public registry;
@@ -34,51 +34,12 @@ abstract contract ILoanRegistry {
 
     function initialize(Registry _registry) public virtual;
 
-    // /**
-    //  * Record new External Loan to blockchain
-    //  */
-    // function insert(
-    //     bytes32 tokenId,
-    //     address termContract,
-    //     address debtor,
-    //     bytes32 termsContractParameter,
-    //     address pTokenAddress,
-    //     uint256 _salt,
-    //     uint256 expirationTimestampInSecs,
-    //     uint8[] calldata assetPurposeAndRiskScore
-    // ) external virtual returns (bool);
-
     function insert(
         uint256[] calldata tokenIds,
         address termContract,
         LoanOrder calldata debtOrder,
         bytes32[] calldata termsParam
-    )
-        external
-        virtual
-        returns (
-            // address[] calldata debtors,
-            // bytes32[] calldata termsParam,
-            // address principalTokenAddress,
-            // uint256[] calldata salts,
-            // uint256[] calldata expirationTimestampInSecs,
-            // uint8[][] calldata assetPurposeAndRiskScore
-            bool
-        );
-
-    // /**
-    //  * Record new External Loan to blockchain
-    //  */
-    // function insert(
-    //     bytes32 tokenId,
-    //     address termContract,
-    //     address debtor,
-    //     bytes32 termsContractParameter,
-    //     address pTokenAddress,
-    //     uint256 _salt,
-    //     uint256 expirationTimestampInSecs,
-    //     uint8[] calldata assetPurposeAndRiskScore
-    // ) external virtual;
+    ) external virtual returns (bool);
 
     /// @notice retrieves loan information
     function getEntry(bytes32 agreementId) public view virtual returns (LoanEntry memory);

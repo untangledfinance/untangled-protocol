@@ -120,55 +120,14 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return debtOrder;
     }
 
-    //** Issue Loan to Farmers */
-    // function _issueDebtAgreements(
-    //     uint256 tokenId,
-    //     address termContract,
-    //     address debtor,
-    //     bytes32 termsParam,
-    //     address principalTokenAddress,
-    //     uint256 salt,
-    //     uint256 expirationTimestampInSecs,
-    //     uint8[] memory assetPurposeAndRiskScore
-    // ) private {
-    //     require(
-    //         registry.getLoanRegistry().insert(
-    //             bytes32(tokenId),
-    //             termContract,
-    //             debtor,
-    //             termsParam,
-    //             principalTokenAddress,
-    //             salt,
-    //             expirationTimestampInSecs,
-    //             assetPurposeAndRiskScore
-    //         ),
-    //         'LoanKernel: insert failure'
-    //     );
-    // }
-
     function _issueDebtAgreements(
         uint256[] memory aggrementIds,
         address termContract,
         LoanOrder memory debtOrder,
-        bytes32[] memory termsParams // address[] memory debtors, // bytes32[] memory termsParams, // address principalTokenAddress,
-    ) private // uint256[] memory salts,
-    // uint256[] memory expirationTimestampInSecs,
-    // uint8[][] memory assetPurposeAndRiskScore
-    {
+        bytes32[] memory termsParams
+    ) private {
         require(
-            registry.getLoanRegistry().insert(
-                aggrementIds,
-                termContract,
-                debtOrder,
-                termsParams
-
-                // debtors,
-                // termsParams,
-                // principalTokenAddress,
-                // salts,
-                // expirationTimestampInSecs,
-                // assetPurposeAndRiskScore
-            ),
+            registry.getLoanRegistry().insert(aggrementIds, termContract, debtOrder, termsParams),
             'LoanKernel: insert failure'
         );
     }
@@ -231,13 +190,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         }
         return riskScores;
     }
-
-    // function _getAssetPurposeAndRiskScore(uint8 assetPurpose, uint8 riskScore) private pure returns (uint8[] memory) {
-    //     uint8[] memory assetPurposeAndRiskScore = new uint8[](2);
-    //     assetPurposeAndRiskScore[0] = assetPurpose;
-    //     assetPurposeAndRiskScore[1] = riskScore;
-    //     return assetPurposeAndRiskScore;
-    // }
 
     function _burnLoanAssetToken(bytes32 agreementId) private {
         registry.getLoanAssetToken().burn(uint256(agreementId));
@@ -341,14 +293,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
             require(debtOrder.issuance.agreementIds[i] == bytes32(tokenIds[i]), 'LoanKernel: Invalid LAT Token Id');
         }
 
-        // uint8[][] memory assetPurposeAndRiskScores = new uint8[][](totalTokenId);
-        // for (uint i = 0; i < totalTokenId; i = UntangledMath.uncheckedInc(i)) {
-        //     assetPurposeAndRiskScores[i] = _getAssetPurposeAndRiskScore(
-        //         debtOrder.assetPurpose,
-        //         debtOrder.riskScores[i]
-        //     );
-        // }
-
         _issueDebtAgreements(
             tokenIds,
             fillDebtOrderParam.orderAddresses[uint8(FillingAddressesIndex.TERM_CONTRACT)],
@@ -361,21 +305,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
             'Cannot register term start'
         );
 
-        // for (uint i = 0; i < totalTokenId; i = UntangledMath.uncheckedInc(i)) {
-        //     // require(
-        //     //     ILoanInterestTermsContract(debtOrder.issuance.termsContract).registerTermStart(bytes32(tokenIds[i])),
-        //     //     'Cannot register term start'
-        //     // );
-
-        //     emit LogDebtOrderFilled(
-        //         debtOrder.issuance.agreementIds[i],
-        //         debtOrder.principalAmounts[i],
-        //         debtOrder.principalTokenAddress,
-        //         debtOrder.relayer
-        //     );
-        // }
-
-        uint expectedAssetsValue = ISecuritizationPool(poolAddress).collectAssets(tokenIds);
+        uint256 expectedAssetsValue = ISecuritizationPool(poolAddress).collectAssets(tokenIds);
         // Start collect asset checkpoint and withdraw
         ISecuritizationTGE(poolAddress).withdraw(_msgSender(), expectedAssetsValue);
     }

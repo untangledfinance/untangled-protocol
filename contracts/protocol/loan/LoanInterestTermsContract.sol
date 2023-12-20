@@ -80,11 +80,6 @@ contract LoanInterestTermsContract is UntangledBase, ILoanInterestTermsContract 
         _;
     }
 
-    // modifier onlyHaventStartedLoan(bytes32 agreementId) {
-    //     require(!startedLoan[agreementId], 'LoanInterestTermsContract: Loan has started!');
-    //     _;
-    // }
-
     function _addRepaidPrincipalAmount(bytes32 agreementId, uint256 repaidAmount) private {
         repaidPrincipalAmounts[agreementId] += repaidAmount;
     }
@@ -179,7 +174,6 @@ contract LoanInterestTermsContract is UntangledBase, ILoanInterestTermsContract 
 
         // Update Debt registry record
         loanRegistry.updateLastRepaymentTimestamp(agreementId, currentTimestamp);
-        // loanRegistry.selfEvaluateCollateralRatio(agreementId);
 
         // Emit new event
         emit LogRegisterRepayment(agreementId, payer, beneficiary, unitsOfRepayment, tokenAddress);

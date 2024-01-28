@@ -7,7 +7,7 @@ import {RegistryInjection} from './RegistryInjection.sol';
 
 import {OWNER_ROLE, ORIGINATOR_ROLE} from './types.sol';
 
-import {ISecuritizationAccessControl} from './ISecuritizationAccessControl.sol';
+import {ISecuritizationAccessControl} from "../../interfaces/ISecuritizationAccessControl.sol";
 import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 

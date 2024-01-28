@@ -39,7 +39,7 @@ import {POOL, ONE_HUNDRED_PERCENT, RATE_SCALING_FACTOR, WRITEOFF_RATE_GROUP_STAR
 import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {RegistryInjection} from './RegistryInjection.sol';
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
-import {ISecuritizationAccessControl} from './ISecuritizationAccessControl.sol';
+import {ISecuritizationAccessControl} from "../../interfaces/ISecuritizationAccessControl.sol";
 import {ISecuritizationPoolNAV} from './ISecuritizationPoolNAV.sol';
 import {RiskScore, LoanEntry} from './base/types.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';

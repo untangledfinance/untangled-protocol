@@ -19,7 +19,7 @@ import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolSt
 import {ISecuritizationPoolNAV} from './ISecuritizationPoolNAV.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
-import {ISecuritizationAccessControl} from './ISecuritizationAccessControl.sol';
+import {ISecuritizationAccessControl} from "../../interfaces/ISecuritizationAccessControl.sol";
 import {RiskScore, LoanEntry} from './base/types.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';

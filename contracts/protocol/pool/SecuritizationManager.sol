@@ -10,7 +10,7 @@ import {Factory2} from '../../base/Factory2.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {INoteTokenFactory} from '../note-sale/fab/INoteTokenFactory.sol';
 import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.sol';
-import {ISecuritizationPool} from './ISecuritizationPool.sol';
+import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';

@@ -10,7 +10,7 @@ import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/se
 import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
 import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
-import {ISecuritizationPool} from './ISecuritizationPool.sol';
+import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {Registry} from '../../storage/Registry.sol';

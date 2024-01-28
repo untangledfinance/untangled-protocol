@@ -9,7 +9,7 @@ import '../../libraries/ConfigHelper.sol';
 import '../../libraries/UntangledMath.sol';
 import '../../tokens/ERC721/types.sol';
 import {LoanEntry} from '../../protocol/pool/base/types.sol';
-import {ISecuritizationPool} from '../pool/ISecuritizationPool.sol';
+import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 import {ISecuritizationTGE} from '../pool/ISecuritizationTGE.sol';
 
 /// @title LoanKernel

@@ -2,12 +2,12 @@
 pragma solidity 0.8.19;
 
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
-import {ISecuritizationPool} from '../pool/ISecuritizationPool.sol';
 
 import {ILoanRepaymentRouter} from './ILoanRepaymentRouter.sol';
 import {ILoanAssetToken} from '../../interfaces/ILoanAssetToken.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
+import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 import {ISecuritizationTGE} from '../pool/ISecuritizationTGE.sol';
 import {ISecuritizationPoolStorage} from '../pool/ISecuritizationPoolStorage.sol';
 import {ISecuritizationPoolNAV} from '../pool/ISecuritizationPoolNAV.sol';

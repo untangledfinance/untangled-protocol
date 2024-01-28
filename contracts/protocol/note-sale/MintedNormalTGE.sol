@@ -5,7 +5,7 @@ import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Crowdsale} from './crowdsale/Crowdsale.sol';
 import {FinalizableCrowdsale} from './crowdsale/FinalizableCrowdsale.sol';
-import {ISecuritizationPool} from '../pool/ISecuritizationPool.sol';
+import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 import {IMintedTGE} from './IMintedTGE.sol';
 import {LongSaleInterest} from './base/LongSaleInterest.sol';
 import '../../interfaces/INoteToken.sol';

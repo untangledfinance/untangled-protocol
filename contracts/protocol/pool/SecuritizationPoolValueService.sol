@@ -17,7 +17,7 @@ import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {ISecuritizationPoolNAV} from './ISecuritizationPoolNAV.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
 import {RiskScore} from './base/types.sol';
 import {ONE_HUNDRED_PERCENT} from './types.sol';

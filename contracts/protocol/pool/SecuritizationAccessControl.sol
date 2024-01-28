@@ -8,7 +8,7 @@ import {RegistryInjection} from './RegistryInjection.sol';
 import {OWNER_ROLE, ORIGINATOR_ROLE} from './types.sol';
 
 import {ISecuritizationAccessControl} from './ISecuritizationAccessControl.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 
 contract SecuritizationAccessControl is

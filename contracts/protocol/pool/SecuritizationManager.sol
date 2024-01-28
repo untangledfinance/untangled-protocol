@@ -23,7 +23,7 @@ import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEvent
 import {ITokenGenerationEventFactory} from '../note-sale/fab/ITokenGenerationEventFactory.sol';
 import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 
 abstract contract SecuritizationManagerBase is ISecuritizationManager {
     Registry public override registry;

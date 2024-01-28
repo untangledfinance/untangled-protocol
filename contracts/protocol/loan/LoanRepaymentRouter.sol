@@ -9,7 +9,7 @@ import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 import {ISecuritizationTGE} from '../pool/ISecuritizationTGE.sol';
-import {ISecuritizationPoolStorage} from '../pool/ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {ISecuritizationPoolNAV} from '../pool/ISecuritizationPoolNAV.sol';
 
 /// @title LoanRepaymentRouter

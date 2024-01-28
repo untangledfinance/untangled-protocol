@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {Configuration} from '../../libraries/Configuration.sol';
 import {LoanEntry} from './base/types.sol';
 import '../../libraries/UnpackLoanParamtersLib.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 
 interface ISecuritizationPoolNAV {
     /// Events

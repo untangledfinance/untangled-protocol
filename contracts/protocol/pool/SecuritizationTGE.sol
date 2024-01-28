@@ -11,7 +11,7 @@ import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-import {ISecuritizationPoolValueService} from './ISecuritizationPoolValueService.sol';
+import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 import {IMintedTGE} from '../note-sale/IMintedTGE.sol';

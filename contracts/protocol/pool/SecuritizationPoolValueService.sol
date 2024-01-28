@@ -9,7 +9,7 @@ import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
 import {ICrowdSale} from '../../interfaces/ICrowdSale.sol';
 import {ISecuritizationPool} from './ISecuritizationPool.sol';
-import {ISecuritizationPoolValueService} from './ISecuritizationPoolValueService.sol';
+import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
 import {IDistributionAssessor} from './IDistributionAssessor.sol';
 import {SecuritizationPoolServiceBase} from './base/SecuritizationPoolServiceBase.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';

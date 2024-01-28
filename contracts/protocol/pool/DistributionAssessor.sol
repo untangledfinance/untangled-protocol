@@ -8,7 +8,7 @@ import '../../interfaces/INoteToken.sol';
 
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {IDistributionAssessor} from './IDistributionAssessor.sol';
-import {ISecuritizationPoolValueService} from './ISecuritizationPoolValueService.sol';
+import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
 import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
 import {IMintedTGE} from '../note-sale/IMintedTGE.sol';

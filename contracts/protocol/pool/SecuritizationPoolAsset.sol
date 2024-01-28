@@ -229,7 +229,7 @@ contract SecuritizationPoolAsset is
         address[] calldata tokenAddresses,
         uint256[] calldata tokenIds,
         address[] calldata recipients
-    ) external override whenNotPaused nonReentrant onlyOwner {
+    ) external override whenNotPaused onlyOwner {
         uint256 tokenIdsLength = tokenIds.length;
         require(tokenAddresses.length == tokenIdsLength, 'tokenAddresses length and tokenIds length are not equal');
         require(

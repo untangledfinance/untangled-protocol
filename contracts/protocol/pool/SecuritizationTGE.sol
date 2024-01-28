@@ -135,7 +135,7 @@ contract SecuritizationTGE is
     }
 
     /// @inheritdoc ISecuritizationTGE
-    function disburse(address usr, uint256 currencyAmount) external virtual override {
+    function disburse(address usr, uint256 currencyAmount) external virtual override whenNotPaused {
         Storage storage $ = _getStorage();
         require(
             _msgSender() == address(registry().getNoteTokenVault()),

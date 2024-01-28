@@ -6,9 +6,8 @@ interface ISecuritizationPoolLike {
 }
 
 /**
- * @title Untangled's SecuritizationPool contract
- * @notice Main entry point for senior LPs (a.k.a. capital providers)
- *  Automatically invests across borrower pools using an adjustable strategy.
+ * @title Untangled's ISecuritizationPoolExtension interface
+ * @notice Interface for the securitization pool extension contract
  * @author Untangled Team
  */
 interface ISecuritizationPoolExtension {

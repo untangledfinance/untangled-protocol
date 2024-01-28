@@ -25,9 +25,8 @@ import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 
 /**
- * @title Untangled's SecuritizationPool contract
- * @notice Main entry point for senior LPs (a.k.a. capital providers)
- *  Automatically invests across borrower pools using an adjustable strategy.
+ * @title Untangled's SecuritizationPoolAsset contract
+ * @notice Provides pool's asset related functions
  * @author Untangled Team
  */
 contract SecuritizationPoolAsset is

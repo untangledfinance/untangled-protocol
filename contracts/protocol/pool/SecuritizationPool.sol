@@ -68,6 +68,7 @@ contract SecuritizationPool is Initializable, RegistryInjection, ERC165Upgradeab
     }
 
     function _registerExtension(address ext) internal {
+        require(ext != address(0), 'SecuritizationPool: Invalid extension address');
         extensions.push(ext);
 
         bytes4[] memory signatures = ISecuritizationPoolExtension(ext).getFunctionSignatures();

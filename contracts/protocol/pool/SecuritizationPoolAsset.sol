@@ -64,6 +64,8 @@ contract SecuritizationPoolAsset is
     function installExtension(
         bytes memory params
     ) public virtual override(SecuritizationAccessControl, SecuritizationPoolStorage) onlyCallInTargetPool {
+        __ReentrancyGuard_init_unchained();
+        __SecuritizationAccessControl_init_unchained(_msgSender());
         __SecuritizationPoolAsset_init_unchained(abi.decode(params, (NewPoolParams)));
     }
 

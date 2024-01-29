@@ -87,7 +87,7 @@ contract NoteTokenVault is
     function redeemOrder(
         RedeemOrderParam calldata redeemParam,
         bytes calldata signature
-    ) public orderAllowed(redeemParam.pool) {
+    ) public orderAllowed(redeemParam.pool) nonReentrant {
         _validateRedeemParam(redeemParam, signature);
 
         address pool = redeemParam.pool;
@@ -207,7 +207,7 @@ contract NoteTokenVault is
         require(hasRole(SIGNER_ROLE, ECDSAUpgradeable.recover(ethSignedMessage, signature)), 'Invalid signer');
     }
 
-    function cancelOrder(CancelOrderParam calldata cancelParam, bytes calldata signature) public {
+    function cancelOrder(CancelOrderParam calldata cancelParam, bytes calldata signature) public nonReentrant {
         address usr = _msgSender();
 
         _validateCancelParam(cancelParam, signature);

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 interface IERCProxy {
@@ -24,12 +24,12 @@ abstract contract Proxy is IERCProxy {
 
             switch result
             // delegatecall returns 0 on error.
-                case 0 {
-                    revert(0, returndatasize())
-                }
-                default {
-                    return(0, returndatasize())
-                }
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
     }
 
@@ -45,8 +45,8 @@ contract UpgradableProxy is Proxy {
     event ProxyUpdated(address indexed _new, address indexed _old);
     event ProxyOwnerUpdate(address _new, address _old);
 
-    bytes32 constant IMPLEMENTATION_SLOT = keccak256("matic.network.proxy.implementation");
-    bytes32 constant OWNER_SLOT = keccak256("matic.network.proxy.owner");
+    bytes32 constant IMPLEMENTATION_SLOT = keccak256('matic.network.proxy.implementation');
+    bytes32 constant OWNER_SLOT = keccak256('matic.network.proxy.owner');
 
     constructor(address _proxyTo) {
         setProxyOwner(msg.sender);
@@ -62,7 +62,7 @@ contract UpgradableProxy is Proxy {
     }
 
     modifier onlyProxyOwner() {
-        require(loadProxyOwner() == msg.sender, "NOT_OWNER");
+        require(loadProxyOwner() == msg.sender, 'NOT_OWNER');
         _;
     }
 
@@ -93,7 +93,7 @@ contract UpgradableProxy is Proxy {
     }
 
     function transferProxyOwnership(address newOwner) public onlyProxyOwner {
-        require(newOwner != address(0), "ZERO_ADDRESS");
+        require(newOwner != address(0), 'ZERO_ADDRESS');
         emit ProxyOwnerUpdate(newOwner, loadProxyOwner());
         setProxyOwner(newOwner);
     }
@@ -106,8 +106,8 @@ contract UpgradableProxy is Proxy {
     }
 
     function updateImplementation(address _newProxyTo) public onlyProxyOwner {
-        require(_newProxyTo != address(0x0), "INVALID_PROXY_ADDRESS");
-        require(isContract(_newProxyTo), "DESTINATION_ADDRESS_IS_NOT_A_CONTRACT");
+        require(_newProxyTo != address(0x0), 'INVALID_PROXY_ADDRESS');
+        require(isContract(_newProxyTo), 'DESTINATION_ADDRESS_IS_NOT_A_CONTRACT');
 
         emit ProxyUpdated(_newProxyTo, loadImplementation());
 

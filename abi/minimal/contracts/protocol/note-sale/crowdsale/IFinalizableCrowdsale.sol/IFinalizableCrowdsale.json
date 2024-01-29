@@ -1,0 +1,5 @@
+[
+  "event CrowdsaleFinalized()",
+  "function finalize(bool,address)",
+  "function finalized() view returns (bool)"
+]

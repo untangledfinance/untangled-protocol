@@ -1,0 +1,39 @@
+[
+  {
+    "anonymous": false,
+    "inputs": [],
+    "name": "CrowdsaleFinalized",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bool",
+        "name": "claimRemainToken",
+        "type": "bool"
+      },
+      {
+        "internalType": "address",
+        "name": "remainTokenRecipient",
+        "type": "address"
+      }
+    ],
+    "name": "finalize",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "finalized",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
+]

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import {UntangledBase} from '../../base/UntangledBase.sol';
@@ -7,17 +7,11 @@ import {Registry} from '../../storage/Registry.sol';
 abstract contract ILoanRepaymentRouter is UntangledBase {
     Registry public registry;
 
-    enum Errors {
-        DEBT_AGREEMENT_NONEXISTENT,
-        PAYER_BALANCE_OR_ALLOWANCE_INSUFFICIENT,
-        REPAYMENT_REJECTED_BY_TERMS_CONTRACT
-    }
-
     event LogOutputSubmit(bytes32 indexed _agreementId, uint256 indexed _tokenIndex, uint256 _totalAmount);
 
     function initialize(Registry _registry) public virtual;
 
-    event LogRepayment(
+    event AssetRepay(
         bytes32 indexed _agreementId,
         address indexed _payer,
         address indexed _beneficiary,
@@ -25,7 +19,7 @@ abstract contract ILoanRepaymentRouter is UntangledBase {
         address _token
     );
 
-    event LogRepayments(bytes32[] _agreementIds, address _payer, uint256[] _amounts);
+    event BatchAssetRepay(bytes32[] _agreementIds, address _payer, uint256[] _amounts, address _token);
 
     event LogError(uint8 indexed _errorId, bytes32 indexed _agreementId);
 

@@ -1,11 +1,15 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC721/presets/ERC721PresetMinterPauserAutoIdUpgradeable.sol';
+import '@openzeppelin/contracts/utils/Strings.sol';
+
 import '../../storage/Registry.sol';
 
 abstract contract IUntangledERC721 is ERC721PresetMinterPauserAutoIdUpgradeable {
     Registry public registry;
+
+    string private _baseTokenURI;
 
     function __UntangledERC721__init(
         string memory name,
@@ -20,7 +24,8 @@ abstract contract IUntangledERC721 is ERC721PresetMinterPauserAutoIdUpgradeable 
         string memory symbol,
         string memory baseTokenURI
     ) internal onlyInitializing {
-        __ERC721PresetMinterPauserAutoId_init_unchained(name, symbol, baseTokenURI);
+        _baseTokenURI = baseTokenURI;
+        __ERC721PresetMinterPauserAutoId_init(name, symbol, baseTokenURI);
     }
 
     function mint(address to, uint256 tokenId) public virtual onlyRole(MINTER_ROLE) {
@@ -31,29 +36,30 @@ abstract contract IUntangledERC721 is ERC721PresetMinterPauserAutoIdUpgradeable 
         _safeMint(to, tokenId);
     }
 
-    /// @notice calculates the total expected repayment value (principal + interest) for a loan asset token at a given timestamp
-    function getTotalExpectedRepaymentValue(
-        uint256 agreementId,
-        uint256 timestamp
-    ) external view virtual returns (uint256);
+    function setBaseURI(string memory baseTokenURI) public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+        _baseTokenURI = baseTokenURI;
+    }
 
-    /// @notice the expected principal and interest for an asset
-    function getExpectedRepaymentValues(
-        uint256 tokenId,
-        uint256 timestamp
-    ) public view virtual returns (uint256 expectedPrincipal, uint256 expectedInterest);
+    function _baseURI() internal view virtual override returns (string memory) {
+        return _baseTokenURI;
+    }
 
-    /// @notice the expiration timestamp of an invoice/loan token
-    function getExpirationTimestamp(uint256 agreementId) external view virtual returns (uint256);
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+        _requireMinted(tokenId);
 
-    /// @notice  the interest rate associated with an token
-    function getInterestRate(uint256 agreementId) external view virtual returns (uint256);
+        string memory baseURI = _baseURI();
+        return
+            bytes(baseURI).length > 0
+                ? string(
+                    abi.encodePacked(
+                        baseURI,
+                        Strings.toHexString(tokenId),
+                        '?chain_id=',
+                        Strings.toString(block.chainid)
+                    )
+                )
+                : '';
+    }
 
-    /// @notice the risk score associated with a token
-    function getRiskScore(uint256 agreementId) external view virtual returns (uint8);
-
-    /// @notice retrieves the asset purpose for a given loan agreement ID
-    function getAssetPurpose(uint256 agreementId) public view virtual returns (Configuration.ASSET_PURPOSE);
-
-    uint256[49] private __gap;
+    uint256[48] private __gap;
 }

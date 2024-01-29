@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import '../../base/UntangledBase.sol';
@@ -6,6 +6,7 @@ import './crowdsale/IncreasingInterestCrowdsale.sol';
 import './IMintedTGE.sol';
 import './base/LongSaleInterest.sol';
 import './IInterestRate.sol';
+import '../../interfaces/INoteToken.sol';
 
 /// @title MintedIncreasingInterestTGE
 /// @author Untangled Team
@@ -14,10 +15,9 @@ contract MintedIncreasingInterestTGE is IMintedTGE, UntangledBase, IncreasingInt
     using ConfigHelper for Registry;
 
     bool public longSale;
-    uint256 public timeStartEarningInterest;
-    uint256 public termLengthInSeconds;
     uint256 public interestRate;
-    uint256 public yield;
+
+    uint8 saleType;
 
     function initialize(
         Registry _registry,
@@ -29,6 +29,7 @@ contract MintedIncreasingInterestTGE is IMintedTGE, UntangledBase, IncreasingInt
         __Crowdsale__init(_registry, _pool, _token, _currency);
 
         longSale = _longSale;
+        saleType = uint8(SaleType.MINTED_INCREASING_INTEREST);
     }
 
     /// @inheritdoc Crowdsale
@@ -36,37 +37,24 @@ contract MintedIncreasingInterestTGE is IMintedTGE, UntangledBase, IncreasingInt
         return longSale;
     }
 
-    /// @dev Sets the yield variable to the specified value
-    function setYield(uint256 _yield) public whenNotPaused onlyRole(OWNER_ROLE) {
-        yield = _yield;
-        emit YieldUpdated(_yield);
-    }
-
-    function setupLongSale(
-        uint256 _interestRate,
-        uint256 _termLengthInSeconds,
-        uint256 _timeStartEarningInterest
-    ) public whenNotPaused securitizationPoolRestricted {
-        if (isLongSale()) {
-            interestRate = _interestRate;
-            timeStartEarningInterest = _timeStartEarningInterest;
-            termLengthInSeconds = _termLengthInSeconds;
-            yield = _interestRate;
-
-            emit SetupLongSale(interestRate, termLengthInSeconds, timeStartEarningInterest);
-            emit YieldUpdated(yield);
-        }
-    }
-
     /// @notice Calculate token price
     /// @dev This sale is for SOT. So the function return SOT token price
     function getTokenPrice() public view returns (uint256) {
-        return registry.getDistributionAssessor().getSOTTokenPrice(pool);
+        return registry.getDistributionAssessor().calcTokenPrice(pool, token);
     }
 
     /// @notice Get amount of token can receive from an amount of currency
     function getTokenAmount(uint256 currencyAmount) public view override returns (uint256) {
-        return currencyAmount / getTokenPrice();
+        uint256 tokenPrice = getTokenPrice();
+
+        if (tokenPrice == 0) {
+            return 0;
+        }
+        return (currencyAmount * 10 ** INoteToken(token).decimals()) / tokenPrice;
+    }
+
+    function getInterest() public view override returns (uint256) {
+        return getCurrentInterest();
     }
 
     /// @notice Setup a new round sale for note token
@@ -78,16 +66,24 @@ contract MintedIncreasingInterestTGE is IMintedTGE, UntangledBase, IncreasingInt
         uint256 closingTime_,
         uint256 rate_,
         uint256 cap_
-    ) external whenNotPaused override {
+    ) external override whenNotPaused {
         require(
             hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
-            'MintedIncreasingInterestTGE: Caller must be owner or pool'
+            'MintedIncreasingInterestTGE: Caller must be owner or manager'
         );
         _preValidateNewSaleRound();
 
         // call inner function for each extension
         _newSaleRound(rate_);
         newSaleRoundTime(openingTime_, closingTime_);
+        _setTotalCap(cap_);
+    }
+
+    function setTotalCap(uint256 cap_) external whenNotPaused {
+        require(
+            hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
+            'MintedIncreasingInterestTGE: Caller must be owner or manager'
+        );
         _setTotalCap(cap_);
     }
 

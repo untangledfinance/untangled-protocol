@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 
 pragma solidity 0.8.19;
 
@@ -7,11 +7,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinte
 contract MockERC20Upgradeable is ERC20PresetMinterPauserUpgradeable {
     uint8 public currentDecimal;
 
-    function initialize(
-        string memory name,
-        string memory symbol,
-        uint8 _currentDecimal
-    ) public initializer {
+    function initialize(string memory name, string memory symbol, uint8 _currentDecimal) public initializer {
         __ERC20PresetMinterPauser_init(name, symbol);
         currentDecimal = _currentDecimal;
     }

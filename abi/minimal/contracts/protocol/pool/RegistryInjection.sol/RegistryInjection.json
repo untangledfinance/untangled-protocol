@@ -1,0 +1,4 @@
+[
+  "event UpdateRegistry(address)",
+  "function registry() view returns (address)"
+]

@@ -1,16 +1,12 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 /// @title UntangledMath
 /// @author Untangled Team
 library UntangledMath {
-    uint256 public constant ONE = 10**27;
+    uint256 public constant ONE = 10 ** 27;
 
-    function rpow(
-        uint256 x,
-        uint256 n,
-        uint256 base
-    ) internal pure returns (uint256 z) {
+    function rpow(uint256 x, uint256 n, uint256 base) internal pure returns (uint256 z) {
         assembly {
             switch x
             case 0 {

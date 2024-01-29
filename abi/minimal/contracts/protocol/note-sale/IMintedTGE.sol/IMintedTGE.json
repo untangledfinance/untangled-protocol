@@ -1,0 +1,10 @@
+[
+  "event SetupLongSale(uint256,uint256,uint256)",
+  "event UpdateInitialAmount(uint256)",
+  "event YieldUpdated(uint256)",
+  "function buyTokens(address,address,uint256) returns (uint256)",
+  "function initialize(address,address,address,address,bool)",
+  "function pickedInterest() view returns (uint32)",
+  "function setupLongSale(uint256,uint256,uint256)",
+  "function startNewRoundSale(uint256,uint256,uint256,uint256)"
+]

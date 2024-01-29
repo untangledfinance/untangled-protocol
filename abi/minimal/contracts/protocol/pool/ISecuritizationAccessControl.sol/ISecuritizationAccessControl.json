@@ -1,0 +1,9 @@
+[
+  "event RoleGranted(bytes32 indexed,address indexed,address indexed)",
+  "event RoleRevoked(bytes32 indexed,address indexed,address indexed)",
+  "function grantRole(bytes32,address)",
+  "function hasRole(bytes32,address) view returns (bool)",
+  "function isOwner(address) view returns (bool)",
+  "function renounceRole(bytes32,address)",
+  "function revokeRole(bytes32,address)"
+]

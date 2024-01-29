@@ -3,76 +3,75 @@ const { setup } = require('../setup');
 const { expect } = require('chai');
 const { BigNumber, utils } = require('ethers');
 const { keccak256 } = require('@ethersproject/keccak256');
+const { parseEther } = ethers.utils;
+const dayjs = require('dayjs');
+
 const { POOL_ADMIN_ROLE } = require('../constants.js');
+const UntangledProtocol = require('../shared/untangled-protocol');
+const { SaleType } = require('../shared/constants.js');
 
 describe('TokenGenerationEventFactory', () => {
-  let registry;
-  let tokenGenerationEventFactory;
-  let securitizationManager;
-  let stableCoin;
-  let poolCreatorSigner;
+    let registry;
+    let tokenGenerationEventFactory;
+    let securitizationManager;
+    let stableCoin;
+    let poolCreatorSigner;
+    let untangledProtocol;
 
-  before('create fixture', async () => {
-    ({ registry, tokenGenerationEventFactory, stableCoin, securitizationManager, uniqueIdentity } = await setup());
+    before('create fixture', async () => {
+        const contracts = await setup();
+        untangledProtocol = UntangledProtocol.bind(contracts);
+        ({ registry, tokenGenerationEventFactory, stableCoin, securitizationManager } = await setup());
 
-    [, , poolCreatorSigner] = await ethers.getSigners();
+        [untangledAdminSigner, , poolCreatorSigner] = await ethers.getSigners();
 
-    await securitizationManager.grantRole(POOL_ADMIN_ROLE, poolCreatorSigner.address);
-  });
+        await securitizationManager.grantRole(POOL_ADMIN_ROLE, poolCreatorSigner.address);
+    });
 
-  it('#pauseUnpauseTge', async () => {
-    const poolTx = await securitizationManager.connect(poolCreatorSigner)
+    it('#pauseUnpauseTge', async () => {
+        const poolAddress = await untangledProtocol.createSecuritizationPool(poolCreatorSigner);
 
-    .newPoolInstance(
-      utils.keccak256(Date.now()),
+        const [issuer] = await ethers.getSigners();
 
-      poolCreatorSigner.address,
-      utils.defaultAbiCoder.encode([
-        {
-          type: 'tuple',
-          components: [
+        const openingTime = dayjs(new Date()).unix();
+        const closingTime = dayjs(new Date()).add(7, 'days').unix();
+        const rate = 2;
+        const totalCapOfToken = parseEther('100000');
+        const initialInterest = 10000;
+        const finalInterest = 10000;
+        const timeInterval = 1 * 24 * 3600; // seconds
+        const amountChangeEachInterval = 0;
+        const prefixOfNoteTokenSaleName = 'SOT_';
+
+        const transactionSOTSale = await securitizationManager.connect(poolCreatorSigner).setUpTGEForSOT(
             {
-              name: 'currency',
-              type: 'address'
+                issuerTokenController: untangledAdminSigner.address,
+                pool: poolAddress,
+                minBidAmount: parseEther('50'),
+                saleType: SaleType.MINTED_INCREASING_INTEREST,
+                longSale: true,
+                ticker: prefixOfNoteTokenSaleName,
             },
             {
-              name: 'minFirstLossCushion',
-              type: 'uint32'
+                openingTime: openingTime,
+                closingTime: closingTime,
+                rate: rate,
+                cap: totalCapOfToken,
             },
             {
-              name: 'validatorRequired',
-              type: 'bool'
+                initialInterest: initialInterest,
+                finalInterest: finalInterest,
+                timeInterval: timeInterval,
+                amountChangeEachInterval: amountChangeEachInterval,
             }
-          ]
-        }
-      ], [
-        {
-          currency: stableCoin.address,
-          minFirstLossCushion: 0,
-          validatorRequired: true
-        }
-      ]));
+        );
+        const receiptSOTSale = await transactionSOTSale.wait();
+        const [sotTokenAddress, sotTGEAddress] = receiptSOTSale.events.find((e) => e.event == 'SetupSot').args;
 
+        await expect(tokenGenerationEventFactory.pauseUnpauseTge(sotTGEAddress)).to.not.be.reverted;
+    });
 
-    const poolTxWait = await poolTx.wait();
-    const poolAddress = poolTxWait.events.find((x) => x.event == 'NewPoolCreated').args.instanceAddress;
-
-    const [issuer] = await ethers.getSigners();
-    // const securitizationPool = await SecuritizationPool.deploy();
-    // const noteToken = await NoteToken.deploy('Test', 'TST', 18, securitizationPool.address, 1);
-    // const currencyAddress = await securitizationPool.underlyingCurrency();
-
-    const tx = await securitizationManager
-      .connect(poolCreatorSigner)
-      .initialTGEForSOT(issuer.address, poolAddress, [0, 2], true, 'SENIOR');
-    const txWait = await tx.wait();
-
-    const tgeAddress = txWait.events.find((x) => x.event == 'NewTGECreated').args.instanceAddress;
-
-    await expect(tokenGenerationEventFactory.pauseUnpauseTge(tgeAddress)).to.not.be.reverted;
-  });
-
-  it('#unPauseAllTges', async () => {
-    await expect(tokenGenerationEventFactory.pauseUnpauseAllTges()).to.not.be.reverted;
-  });
+    it('#unPauseAllTges', async () => {
+        await expect(tokenGenerationEventFactory.pauseUnpauseAllTges()).to.not.be.reverted;
+    });
 });

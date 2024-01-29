@@ -1,0 +1,14 @@
+[
+  "event NewNotesTokenCreated(address indexed)",
+  "event NewPoolCreated(address indexed)",
+  "event NewTGECreated(address indexed)",
+  "event UpdatePotToPool(address indexed,address indexed)",
+  "function isExistingPools(address) view returns (bool)",
+  "function isExistingTGEs(address) view returns (bool)",
+  "function poolToJOT(address) view returns (address)",
+  "function poolToSOT(address) view returns (address)",
+  "function pools(uint256) view returns (address)",
+  "function potToPool(address) view returns (address)",
+  "function registerPot(address)",
+  "function registry() view returns (address)"
+]

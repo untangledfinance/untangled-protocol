@@ -1,6 +1,7 @@
 const { ethers, upgrades } = require('hardhat');
 const { deployments } = require('hardhat');
 const { OWNER_ROLE, POOL_ADMIN_ROLE, VALIDATOR_ADMIN_ROLE } = require('./constants');
+const { LAT_BASE_URI } = require('./shared/constants');
 
 const { parseEther } = ethers.utils;
 
@@ -8,7 +9,7 @@ const setUpLoanAssetToken = async (registry, securitizationManager) => {
     const LoanAssetToken = await ethers.getContractFactory('LoanAssetToken');
     const loanAssetTokenContract = await upgrades.deployProxy(
         LoanAssetToken,
-        [registry.address, 'TEST', 'TST', 'test.com'],
+        [registry.address, 'TEST', 'TST', LAT_BASE_URI],
         {
             initializer: 'initialize(address,string,string,string)',
         }
@@ -46,6 +47,8 @@ const setUpTokenGenerationEventFactory = async (registry, factoryAdmin) => {
 
     await tokenGenerationEventFactory.setTGEImplAddress(2, mintedNormalTGEImpl.address);
 
+    await registry.setTokenGenerationEventFactory(tokenGenerationEventFactory.address);
+
     return { tokenGenerationEventFactory };
 };
 
@@ -55,32 +58,19 @@ const setUpNoteTokenFactory = async (registry, factoryAdmin) => {
 
     const NoteToken = await ethers.getContractFactory('NoteToken');
     const noteTokenImpl = await NoteToken.deploy();
-    // await registry.setNoteToken(noteTokenImpl.address);
     await noteTokenFactory.setNoteTokenImplementation(noteTokenImpl.address);
+
+    await registry.setNoteTokenFactory(noteTokenFactory.address);
 
     return { noteTokenFactory };
 };
 
-const setUpPoolNAVFactory = async (registry, factoryAdmin) => {
-    const PoolNAVFactory = await ethers.getContractFactory('PoolNAVFactory');
-    const poolNAVFactory = await upgrades.deployProxy(PoolNAVFactory, [registry.address, factoryAdmin.address]);
-
-    const PoolNAV = await ethers.getContractFactory('PoolNAV');
-    const poolNAVImpl = await PoolNAV.deploy();
-    // await registry.setNoteToken(noteTokenImpl.address);
-    await poolNAVFactory.setPoolNAVImplementation(poolNAVImpl.address);
-
-    return { poolNAVFactory };
-}
-
-
 const initPool = async (securitizationPoolImpl) => {
-
     // SecuritizationAccessControl,
     // SecuritizationPoolStorage,
     // SecuritizationTGE,
     // SecuritizationPoolAsset,
-    // SecuritizationLockDistribution
+    // SecuritizationPoolNAV
     const SecuritizationAccessControl = await ethers.getContractFactory('SecuritizationAccessControl');
     const securitizationAccessControlImpl = await SecuritizationAccessControl.deploy();
     await securitizationPoolImpl.registerExtension(securitizationAccessControlImpl.address);
@@ -97,14 +87,12 @@ const initPool = async (securitizationPoolImpl) => {
     const securitizationPoolAssetImpl = await SecuritizationPoolAsset.deploy();
     await securitizationPoolImpl.registerExtension(securitizationPoolAssetImpl.address);
 
-    const SecuritizationLockDistribution = await ethers.getContractFactory('SecuritizationLockDistribution');
-    const securitizationLockDistributionImpl = await SecuritizationLockDistribution.deploy();
-    await securitizationPoolImpl.registerExtension(securitizationLockDistributionImpl.address);
+    const SecuritizationPoolNAV = await ethers.getContractFactory('SecuritizationPoolNAV');
+    const securitizationPoolNAVImpl = await SecuritizationPoolNAV.deploy();
+    await securitizationPoolImpl.registerExtension(securitizationPoolNAVImpl.address);
 
     return securitizationPoolImpl;
-}
-
-
+};
 
 const setUpSecuritizationPoolImpl = async (registry) => {
     const SecuritizationPool = await ethers.getContractFactory('SecuritizationPool');
@@ -114,7 +102,7 @@ const setUpSecuritizationPoolImpl = async (registry) => {
     await initPool(securitizationPoolImpl);
 
     return securitizationPoolImpl;
-}
+};
 
 async function setup() {
     await deployments.fixture(['all']);
@@ -122,8 +110,6 @@ async function setup() {
     let stableCoin;
     let registry;
 
-    let loanInterestTermsContract;
-    let loanRegistry;
     let loanKernel;
     let loanRepaymentRouter;
     let securitizationManager;
@@ -133,6 +119,7 @@ async function setup() {
     let distributionAssessor;
     let distributionOperator;
     let distributionTranche;
+    let noteTokenVault;
     let factoryAdmin;
 
     const [untangledAdminSigner] = await ethers.getSigners();
@@ -155,7 +142,6 @@ async function setup() {
     securitizationPoolValueService = await upgrades.deployProxy(SecuritizationPoolValueService, [registry.address]);
 
     const { noteTokenFactory } = await setUpNoteTokenFactory(registry, factoryAdmin);
-    const { poolNAVFactory } = await setUpPoolNAVFactory(registry, factoryAdmin);
     const { tokenGenerationEventFactory } = await setUpTokenGenerationEventFactory(registry, factoryAdmin);
 
     const UniqueIdentity = await ethers.getContractFactory('UniqueIdentity');
@@ -167,29 +153,22 @@ async function setup() {
     go = await upgrades.deployProxy(Go, [untangledAdminSigner.address, uniqueIdentity.address]);
     await registry.setGo(go.address);
 
-    const LoanInterestTermsContract = await ethers.getContractFactory('LoanInterestTermsContract');
-    loanInterestTermsContract = await upgrades.deployProxy(LoanInterestTermsContract, [registry.address]);
-    const LoanRegistry = await ethers.getContractFactory('LoanRegistry');
-    loanRegistry = await upgrades.deployProxy(LoanRegistry, [registry.address]);
     const LoanKernel = await ethers.getContractFactory('LoanKernel');
     loanKernel = await upgrades.deployProxy(LoanKernel, [registry.address]);
     const LoanRepaymentRouter = await ethers.getContractFactory('LoanRepaymentRouter');
     loanRepaymentRouter = await upgrades.deployProxy(LoanRepaymentRouter, [registry.address]);
     const DistributionAssessor = await ethers.getContractFactory('DistributionAssessor');
     distributionAssessor = await upgrades.deployProxy(DistributionAssessor, [registry.address]);
-    const DistributionOperator = await ethers.getContractFactory('DistributionOperator');
-    distributionOperator = await upgrades.deployProxy(DistributionOperator, [registry.address]);
-    const DistributionTranche = await ethers.getContractFactory('DistributionTranche');
-    distributionTranche = await upgrades.deployProxy(DistributionTranche, [registry.address]);
 
-    await registry.setLoanInterestTermsContract(loanInterestTermsContract.address);
-    await registry.setLoanRegistry(loanRegistry.address);
+    const NoteTokenVault = await ethers.getContractFactory('NoteTokenVault');
+    noteTokenVault = await upgrades.deployProxy(NoteTokenVault, [registry.address]);
+
+    await registry.setSecuritizationManager(securitizationManager.address);
     await registry.setLoanKernel(loanKernel.address);
     await registry.setLoanRepaymentRouter(loanRepaymentRouter.address);
     await registry.setSecuritizationPoolValueService(securitizationPoolValueService.address);
     await registry.setDistributionAssessor(distributionAssessor.address);
-    await registry.setDistributionOperator(distributionOperator.address);
-    await registry.setDistributionTranche(distributionTranche.address);
+    await registry.setNoteTokenVault(noteTokenVault.address);
 
     const { loanAssetTokenContract, defaultLoanAssetTokenValidator } = await setUpLoanAssetToken(
         registry,
@@ -198,20 +177,12 @@ async function setup() {
 
     const securitizationPoolImpl = await setUpSecuritizationPoolImpl(registry);
 
-    await registry.setSecuritizationManager(securitizationManager.address);
-
-    await registry.setNoteTokenFactory(noteTokenFactory.address);
-    await registry.setPoolNAVFactory(poolNAVFactory.address);
-    await registry.setTokenGenerationEventFactory(tokenGenerationEventFactory.address);
-
     return {
         stableCoin,
         registry,
         loanAssetTokenContract,
         defaultLoanAssetTokenValidator,
 
-        loanInterestTermsContract,
-        loanRegistry,
         loanKernel,
         loanRepaymentRouter,
         securitizationManager,
@@ -220,12 +191,13 @@ async function setup() {
         go,
         uniqueIdentity,
         noteTokenFactory,
-        poolNAVFactory,
         tokenGenerationEventFactory,
         distributionOperator,
         distributionAssessor,
         distributionTranche,
+        noteTokenVault,
         factoryAdmin,
+        untangledAdminSigner,
     };
 }
 

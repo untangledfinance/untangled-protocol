@@ -39,15 +39,6 @@ describe('MintedNormalTGE', () => {
     assert.equal(await mintedNormalTGE.isLongSale(), true);
   });
 
-  it('Set Yield', async () => {
-    await mintedNormalTGE.setYield(20);
-    assert.equal(await mintedNormalTGE.yield(), 20);
-  });
-
-  it('Setup LongSale', async () => {
-    await mintedNormalTGE.setupLongSale(20, 86400, Math.trunc(Date.now() / 1000));
-  });
-
   it('Setup newRoundSale', async () => {
     const openingTime = (await ethers.provider.getBlock("latest")).timestamp + 60; // Starts 1 minute from now
 
@@ -61,7 +52,7 @@ describe('MintedNormalTGE', () => {
       mintedNormalTGE
         .connect(accounts[0])
         .startNewRoundSale(openingTime, closingTime, rate, cap)
-    ).to.be.revertedWith('MintedNormalTGE: Caller must be owner or pool');
+    ).to.be.revertedWith('MintedNormalTGE: Caller must be owner or manager');
 
     // The owner (or pool) should be able to start a new round sale
     await mintedNormalTGE
@@ -79,6 +70,14 @@ describe('MintedNormalTGE', () => {
     expect(_cap).to.equal(cap);
   });
 
+  it('Setup interest rate', async () => {
+    const expectedInterestRate = '100000'
+
+    await mintedNormalTGE.setInterestRate(expectedInterestRate);
+
+    const interestRate = await mintedNormalTGE.interestRate();
+    expect(interestRate).to.equal(expectedInterestRate);
+  });
   it('Setup initialAmount', async () => {
     const expectedInitialAmount = 1000; // Replace with your desired initial amount
 

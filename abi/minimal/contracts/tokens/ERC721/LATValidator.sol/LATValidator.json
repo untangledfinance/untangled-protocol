@@ -1,0 +1,9 @@
+[
+  "event EIP712DomainChanged()",
+  "event Initialized(uint8)",
+  "event NonceChanged(uint256,uint256)",
+  "function domainSeparatorV4() view returns (bytes32)",
+  "function eip712Domain() view returns (bytes1, string, string, uint256, address, bytes32, uint256[])",
+  "function isValidator(address) view returns (bool)",
+  "function nonce(uint256) view returns (uint256)"
+]

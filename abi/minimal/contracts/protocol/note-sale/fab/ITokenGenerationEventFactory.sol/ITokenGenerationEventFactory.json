@@ -1,0 +1,9 @@
+[
+  "event TokenGenerationEventCreated(address indexed)",
+  "event UpdateTGEImplAddress(uint8 indexed,address)",
+  "function TGEImplAddress(uint8) view returns (address)",
+  "function createNewSaleInstance(address,address,address,address,uint8,bool) returns (address)",
+  "function isExistingTge(address) view returns (bool)",
+  "function registry() view returns (address)",
+  "function tgeAddresses(uint256) view returns (address)"
+]

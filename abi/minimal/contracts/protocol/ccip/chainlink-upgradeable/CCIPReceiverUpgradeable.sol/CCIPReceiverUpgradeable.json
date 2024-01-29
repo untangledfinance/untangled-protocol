@@ -1,0 +1,7 @@
+[
+  "error InvalidRouter(address)",
+  "event Initialized(uint8)",
+  "function ccipReceive(tuple(bytes32,uint64,bytes,bytes,tuple(address,uint256)[]))",
+  "function getRouter() view returns (address)",
+  "function supportsInterface(bytes4) view returns (bool)"
+]

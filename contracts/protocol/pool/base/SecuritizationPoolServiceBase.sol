@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import {Registry} from '../../../storage/Registry.sol';
@@ -12,6 +12,7 @@ contract SecuritizationPoolServiceBase is UntangledBase {
     function initialize(Registry _registry) public initializer {
         __UntangledBase__init(_msgSender());
 
+        require(address(_registry) != address(0), 'Registry address cannot be empty');
         registry = _registry;
     }
 

@@ -1,0 +1,6 @@
+[
+  "event UpdatePoolNAVImplementation(address indexed)",
+  "function createPoolNAV() returns (address)",
+  "function poolNAVImplementation() view returns (address)",
+  "function setPoolNAVImplementation(address)"
+]

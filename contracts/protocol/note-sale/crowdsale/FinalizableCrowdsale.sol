@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import './IFinalizableCrowdsale.sol';
@@ -18,7 +18,7 @@ abstract contract FinalizableCrowdsale is IFinalizableCrowdsale, TimedCrowdsale 
     /// @param claimRemainToken claim remaining token or not
     /// @param remainTokenRecipient Wallet will receive remaining token
     function finalize(bool claimRemainToken, address remainTokenRecipient) public whenNotPaused {
-        require(_msgSender() == pool, 'FinalizableCrowdsale: Only pool contract can finalize');
+        require(_msgSender() == pool || _msgSender() == address(this), 'FinalizableCrowdsale: Only pool contract can finalize');
         require(!finalized(), 'FinalizableCrowdsale: already finalized');
         require(hasClosed() || totalCapReached(), 'FinalizableCrowdsale: not closed');
         _finalized = true;

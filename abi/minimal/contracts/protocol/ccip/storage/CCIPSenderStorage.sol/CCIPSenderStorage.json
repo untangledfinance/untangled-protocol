@@ -1,0 +1,6 @@
+[
+  "event MessageSent(bytes32 indexed,uint64 indexed,address,tuple(uint8,bytes),address,uint256)",
+  "event UpdateWhitelistSelector(uint8 indexed,bytes4 indexed,bool)",
+  "function linkToken() view returns (address)",
+  "function router() view returns (address)"
+]

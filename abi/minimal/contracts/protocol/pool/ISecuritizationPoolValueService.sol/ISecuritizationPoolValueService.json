@@ -1,0 +1,9 @@
+[
+  "function getExpectedAssetValue(address,address,uint256,uint256) view returns (uint256)",
+  "function getExpectedAssetsValue(address,uint256) view returns (uint256)",
+  "function getExpectedERC20AssetValue(address,address,address,uint256,uint256) view returns (uint256)",
+  "function getJuniorAsset(address) view returns (uint256)",
+  "function getJuniorRatio(address) view returns (uint256)",
+  "function getOutstandingPrincipalCurrencyByInvestor(address,address) view returns (uint256)",
+  "function getSeniorAsset(address) view returns (uint256)"
+]

@@ -1,0 +1,18 @@
+[
+  "event Initialized(uint8)",
+  "event UpdateOpeningBlockTimestamp(uint256)",
+  "event UpdateRegistry(address)",
+  "function amountOwedToOriginator() view returns (uint256)",
+  "function getFunctionSignatures() view returns (bytes4[])",
+  "function installExtension(bytes)",
+  "function isClosedState() view returns (bool)",
+  "function openingBlockTimestamp() view returns (uint64)",
+  "function poolNAV() view returns (address)",
+  "function pot() view returns (address)",
+  "function registry() view returns (address)",
+  "function secondTGEAddress() view returns (address)",
+  "function state() view returns (uint8)",
+  "function supportsInterface(bytes4) view returns (bool)",
+  "function tgeAddress() view returns (address)",
+  "function validatorRequired() view returns (bool)"
+]

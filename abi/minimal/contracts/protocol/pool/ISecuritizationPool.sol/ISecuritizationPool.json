@@ -1,0 +1,22 @@
+[
+  "event AddTokenAssetAddress(address)",
+  "event CollectAsset(uint256)",
+  "event InsertNFTAsset(address,uint256)",
+  "event RemoveNFTAsset(address,uint256)",
+  "function collectAssets(uint256[])",
+  "function collectERC20Assets(address[],address[],uint256[])",
+  "function exportAssets(address,address,uint256[])",
+  "function getNFTAssetsLength() view returns (uint256)",
+  "function getRiskScoresLength() view returns (uint256)",
+  "function getTokenAssetAddresses() view returns (address[])",
+  "function getTokenAssetAddressesLength() view returns (uint256)",
+  "function nftAssets(uint256) view returns (tuple(address,uint256))",
+  "function pause()",
+  "function riskScores(uint256) view returns (tuple(uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32,uint32))",
+  "function setUpOpeningBlockTimestamp()",
+  "function setupRiskScores(uint32[],uint32[],uint32[])",
+  "function tokenAssetAddresses(uint256) view returns (address)",
+  "function unpause()",
+  "function withdrawAssets(address[],uint256[],address[])",
+  "function withdrawERC20Assets(address[],address[],uint256[])"
+]

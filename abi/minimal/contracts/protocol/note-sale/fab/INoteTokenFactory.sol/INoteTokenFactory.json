@@ -1,0 +1,10 @@
+[
+  "event TokenCreated(address indexed,address indexed,uint8 indexed,uint8,string)",
+  "event UpdateNoteTokenImplementation(address indexed)",
+  "function changeMinterRole(address,address)",
+  "function createToken(address,uint8,uint8,string) returns (address)",
+  "function isExistingTokens(address) view returns (bool)",
+  "function noteTokenImplementation() view returns (address)",
+  "function setNoteTokenImplementation(address)",
+  "function tokens(uint256) view returns (address)"
+]

@@ -1,0 +1,5 @@
+[
+  "function pause()",
+  "function paused() view returns (bool)",
+  "function unpause()"
+]

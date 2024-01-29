@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import {IPauseable} from '../../../base/IPauseable.sol';
@@ -30,7 +30,7 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
         _;
     }
 
-    function initialize(Registry _registry, address _factoryAdmin) public reinitializer(3) {
+    function initialize(Registry _registry, address _factoryAdmin) public initializer {
         __UntangledBase__init(_msgSender());
         __Factory__init(_factoryAdmin);
 

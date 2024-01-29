@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
@@ -15,6 +15,7 @@ import {IUniqueIdentity} from './IUniqueIdentity.sol';
 
 contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
     bytes32 public constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
+    bytes32 public constant SUPER_ADMIN = keccak256('SUPER_ADMIN');
 
     uint256 public constant ID_TYPE_0 = 0; // non-US individual
     uint256 public constant ID_TYPE_1 = 1; // US accredited individual
@@ -51,6 +52,12 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
     function __UniqueIdentity_init_unchained(address owner) internal onlyInitializing {
         _setupRole(SIGNER_ROLE, owner);
         _setRoleAdmin(SIGNER_ROLE, OWNER_ROLE);
+        _setupRole(SUPER_ADMIN, owner);
+        _setRoleAdmin(SUPER_ADMIN, OWNER_ROLE);
+    }
+
+    function addSuperAdmin(address account) public onlyAdmin {
+        _setupRole(SUPER_ADMIN, account);
     }
 
     function setSupportedUIDTypes(uint256[] calldata ids, bool[] calldata values) public onlyAdmin {
@@ -108,6 +115,13 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
         uint256 expiresAt,
         bytes calldata signature
     ) public override onlySigner(account, id, expiresAt, signature) incrementNonce(account) {
+        _burn(account, id, 1);
+
+        uint256 accountBalance = balanceOf(account, id);
+        require(accountBalance == 0, 'Balance after burn must be 0');
+    }
+
+    function burnFrom(address account, uint256 id) public override onlyRole(SUPER_ADMIN) {
         _burn(account, id, 1);
 
         uint256 accountBalance = balanceOf(account, id);

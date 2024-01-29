@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-
 import {ContextUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import {ERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
@@ -20,11 +19,13 @@ import {IFinalizableCrowdsale} from '../note-sale/crowdsale/IFinalizableCrowdsal
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
 
-import {ORIGINATOR_ROLE} from './types.sol';
+import {ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
 
-import {IPoolNAV} from './IPoolNAV.sol';
-import {IPoolNAVFactory} from './IPoolNAVFactory.sol';
+interface ICrowdSaleLike {
+    function token() external view returns (address);
+}
 
 contract SecuritizationTGE is
     ERC165Upgradeable,
@@ -49,16 +50,25 @@ contract SecuritizationTGE is
         $.pot = address(this);
         $.state = CycleState.INITIATED;
 
+        require(params.currency != address(0), 'SecuritizationPool: Invalid currency');
         $.underlyingCurrency = params.currency;
-        $.minFirstLossCushion = params.minFirstLossCushion;
+
+        _setMinFirstLossCushion(params.minFirstLossCushion);
+        _setDebtCeiling(params.debtCeiling);
     }
 
+    // alias
     function sotToken() public view override returns (address) {
-        return _getStorage().sotToken;
+        address tge = tgeAddress();
+        if (tge == address(0)) return address(0);
+        return ICrowdSaleLike(tge).token();
     }
 
+    // alias
     function jotToken() public view override returns (address) {
-        return _getStorage().jotToken;
+        address tge = secondTGEAddress();
+        if (tge == address(0)) return address(0);
+        return ICrowdSaleLike(tge).token();
     }
 
     function underlyingCurrency() public view override returns (address) {
@@ -73,16 +83,12 @@ contract SecuritizationTGE is
         return _getStorage().minFirstLossCushion;
     }
 
-    function termLengthInSeconds() public view override returns (uint64) {
-        return _getStorage().termLengthInSeconds;
-    }
-
     function paidPrincipalAmountSOT() public view override returns (uint256) {
         return _getStorage().paidPrincipalAmountSOT;
     }
 
-    function principalAmountSOT() public view override returns (uint256) {
-        return _getStorage().principalAmountSOT;
+    function debtCeiling() public view override returns (uint256) {
+        return _getStorage().debtCeiling;
     }
 
     function interestRateSOT() public view override returns (uint32) {
@@ -102,23 +108,16 @@ contract SecuritizationTGE is
         _;
     }
 
-    // modifier notClosingStage() {
-    //     require(!isClosedState(), 'SecuritizationPool: Pool in closed state');
-    //     _;
-    // }
-
-    // function isClosedState() public view override returns (bool) {
-    //     return state() == CycleState.CLOSED;
-    // }
-
     /// @inheritdoc ISecuritizationTGE
     function injectTGEAddress(
         address _tgeAddress,
-        address _tokenAddress,
         Configuration.NOTE_TOKEN_TYPE _noteType
     ) external override whenNotPaused onlyIssuingTokenStage {
         registry().requireSecuritizationManager(_msgSender());
-        require(_tgeAddress != address(0x0) && _tokenAddress != address(0x0), 'SecuritizationPool: Address zero');
+
+        require(_tgeAddress != address(0), 'SecuritizationPool: Address zero');
+        address _tokenAddress = ICrowdSaleLike(_tgeAddress).token();
+        require(_tokenAddress != address(0), 'SecuritizationPool: Address zero');
 
         Storage storage $ = _getStorage();
 
@@ -132,46 +131,37 @@ contract SecuritizationTGE is
 
         $.state = CycleState.CROWDSALE;
 
-        emit UpdateTGEAddress(_tgeAddress, _tokenAddress, _noteType);
+        emit UpdateTGEAddress(_tgeAddress, _noteType);
     }
 
-    /// @notice allows the redemption of tokens
-    function redeem(
-        address usr,
-        address notesToken,
-        uint256 currencyAmount,
-        uint256 tokenAmount
-    ) external virtual override {
-        require(
-            _msgSender() == address(registry().getDistributionTranche()),
-            'SecuritizationPool: Caller must be DistributionTranche'
-        );
-
+    /// @inheritdoc ISecuritizationTGE
+    function disburse(address usr, uint256 currencyAmount) external virtual override {
         Storage storage $ = _getStorage();
-
-        if ($.sotToken == notesToken) {
-            $.paidPrincipalAmountSOTByInvestor[usr] += currencyAmount;
-            emit UpdatePaidPrincipalAmountSOTByInvestor(usr, currencyAmount);
-        }
-
-        $.reserve = $.reserve - currencyAmount;
-
-        if (tokenAmount > 0) {
-            ERC20BurnableUpgradeable(notesToken).burn(tokenAmount);
-        }
-
-        require(checkMinFirstLost(), 'MinFirstLoss is not satisfied');
+        require(
+            _msgSender() == address(registry().getNoteTokenVault()),
+            'SecuritizationPool: Caller must be NoteTokenVault'
+        );
         require(
             IERC20Upgradeable($.underlyingCurrency).transferFrom($.pot, usr, currencyAmount),
             'SecuritizationPool: currency-transfer-failed'
         );
-
-        emit UpdateReserve($.reserve);
     }
 
     function checkMinFirstLost() public view virtual returns (bool) {
         ISecuritizationPoolValueService poolService = registry().getSecuritizationPoolValueService();
         return _getStorage().minFirstLossCushion <= poolService.getJuniorRatio(address(this));
+    }
+
+    function isDebtCeilingValid() public view virtual override returns (bool) {
+        Storage storage $ = _getStorage();
+        uint256 totalDebt = 0;
+        if ($.tgeAddress != address(0)) {
+            totalDebt += ICrowdSale($.tgeAddress).currencyRaised();
+        }
+        if ($.secondTGEAddress != address(0)) {
+            totalDebt += ICrowdSale($.secondTGEAddress).currencyRaised();
+        }
+        return $.debtCeiling >= totalDebt;
     }
 
     // Increase by value
@@ -183,17 +173,18 @@ contract SecuritizationTGE is
         $.reserve = $.reserve + amount;
         $.totalAssetRepaidCurrency = $.totalAssetRepaidCurrency + amount;
 
-        emit UpdateReserve($.reserve);
+        emit IncreaseReserve(amount, $.reserve);
     }
 
     function hasFinishedRedemption() public view override returns (bool) {
-        Storage storage $ = _getStorage();
-
-        if ($.sotToken != address(0)) {
-            require(IERC20Upgradeable($.sotToken).totalSupply() == 0, 'SecuritizationPool: SOT still remain');
+        address stoken = sotToken();
+        if (stoken != address(0)) {
+            require(IERC20Upgradeable(stoken).totalSupply() == 0, 'SecuritizationPool: SOT still remain');
         }
-        if ($.jotToken != address(0)) {
-            require(IERC20Upgradeable($.jotToken).totalSupply() == 0, 'SecuritizationPool: JOT still remain');
+
+        address jtoken = jotToken();
+        if (jtoken != address(0)) {
+            require(IERC20Upgradeable(jtoken).totalSupply() == 0, 'SecuritizationPool: JOT still remain');
         }
 
         return true;
@@ -206,29 +197,49 @@ contract SecuritizationTGE is
 
         require($.pot != _pot, 'SecuritizationPool: Same address with current pot');
         $.pot = _pot;
+
         if (_pot == address(this)) {
             require(
-                IERC20Upgradeable($.underlyingCurrency).approve($.pot, type(uint256).max),
+                IERC20Upgradeable($.underlyingCurrency).approve(_pot, type(uint256).max),
                 'SecuritizationPool: Pot not approved'
             );
         }
-        registry().getSecuritizationManager().registerPot($.pot);
+        registry().getSecuritizationManager().registerPot(_pot);
     }
 
-    function setUpPoolNAV() public override {
-        require(poolNAV() == address(0), 'SecuritizationPool: PoolNAV already set');
-        IPoolNAVFactory poolNAVFactory = registry().getPoolNAVFactory();
-        require(address(poolNAVFactory) != address(0), 'Pool NAV Factory was not registered');
-        address poolNAVAddress = poolNAVFactory.createPoolNAV();
+    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external override whenNotPaused notClosingStage {
+        registry().requirePoolAdminOrOwner(address(this), _msgSender());
+        _setMinFirstLossCushion(_minFirstLossCushion);
+    }
+
+    function _setMinFirstLossCushion(uint32 _minFirstLossCushion) internal {
+        require(
+            _minFirstLossCushion <= 100 * RATE_SCALING_FACTOR,
+            'SecuritizationPool: minFirstLossCushion is greater than 100'
+        );
+
         Storage storage $ = _getStorage();
-        $.poolNAV = poolNAVAddress;
+        $.minFirstLossCushion = _minFirstLossCushion;
+        emit UpdateMintFirstLoss(_minFirstLossCushion);
+    }
+
+    function setDebtCeiling(uint256 _debtCeiling) external override whenNotPaused notClosingStage {
+        registry().requirePoolAdminOrOwner(address(this), _msgSender());
+
+        _setDebtCeiling(_debtCeiling);
+    }
+
+    function _setDebtCeiling(uint256 _debtCeiling) internal {
+        Storage storage $ = _getStorage();
+        $.debtCeiling = _debtCeiling;
+        emit UpdateDebtCeiling(_debtCeiling);
     }
 
     function increaseReserve(uint256 currencyAmount) external override whenNotPaused {
         require(
             _msgSender() == address(registry().getSecuritizationManager()) ||
-                _msgSender() == address(registry().getDistributionOperator()),
-            'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
+                _msgSender() == address(registry().getNoteTokenVault()),
+            'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
 
         Storage storage $ = _getStorage();
@@ -236,21 +247,25 @@ contract SecuritizationTGE is
         $.reserve = $.reserve + currencyAmount;
         require(checkMinFirstLost(), 'MinFirstLoss is not satisfied');
 
-        emit UpdateReserve($.reserve);
+        emit IncreaseReserve(currencyAmount, $.reserve);
     }
 
     function decreaseReserve(uint256 currencyAmount) external override whenNotPaused {
         require(
             _msgSender() == address(registry().getSecuritizationManager()) ||
-                _msgSender() == address(registry().getDistributionOperator()),
+                _msgSender() == address(registry().getNoteTokenVault()),
             'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
         );
 
+        _decreaseReserve(currencyAmount);
+    }
+
+    function _decreaseReserve(uint256 currencyAmount) private {
         Storage storage $ = _getStorage();
         $.reserve = $.reserve - currencyAmount;
         require(checkMinFirstLost(), 'MinFirstLoss is not satisfied');
 
-        emit UpdateReserve($.reserve);
+        emit DecreaseReserve(currencyAmount, $.reserve);
     }
 
     function setInterestRateForSOT(uint32 _interestRateSOT) external override whenNotPaused {
@@ -268,35 +283,19 @@ contract SecuritizationTGE is
         Storage storage $ = _getStorage();
 
         IERC20Upgradeable currency = IERC20Upgradeable($.underlyingCurrency);
-        require(
-            currency.transferFrom($.pot, recipientWallet, currency.balanceOf($.pot)),
-            'SecuritizationPool: Transfer failed'
-        );
+        uint256 balance = currency.balanceOf($.pot);
+        require(currency.transferFrom($.pot, recipientWallet, balance), 'SecuritizationPool: Transfer failed');
+
+        emit ClaimCashRemain($.pot, recipientWallet, balance);
     }
 
-    function startCycle(
-        uint64 _termLengthInSeconds,
-        uint256 _principalAmountForSOT,
-        uint32 _interestRateForSOT,
-        uint64 _timeStartEarningInterest
-    ) external override whenNotPaused nonReentrant onlyOwner onlyIssuingTokenStage {
-        require(_termLengthInSeconds > 0, 'SecuritizationPool: Term length is 0');
-
+    function startCycle() external override whenNotPaused nonReentrant onlyIssuingTokenStage {
         Storage storage $ = _getStorage();
-
-        $.termLengthInSeconds = _termLengthInSeconds;
-
-        $.principalAmountSOT = _principalAmountForSOT;
 
         $.state = CycleState.OPEN;
 
         if ($.tgeAddress != address(0)) {
             IMintedTGE mintedTokenGenerationEvent = IMintedTGE($.tgeAddress);
-            mintedTokenGenerationEvent.setupLongSale(
-                _interestRateForSOT,
-                _termLengthInSeconds,
-                _timeStartEarningInterest
-            );
             if (!IFinalizableCrowdsale($.tgeAddress).finalized()) {
                 IFinalizableCrowdsale($.tgeAddress).finalize(false, $.pot);
             }
@@ -309,31 +308,24 @@ contract SecuritizationTGE is
                 'SecuritizationPool: second sale is still on going'
             );
         }
+
+        emit StartCycle($.interestRateSOT);
     }
 
     function withdraw(address to, uint256 amount) public override whenNotPaused {
         registry().requireLoanKernel(_msgSender());
         require(hasRole(ORIGINATOR_ROLE, to), 'SecuritizationPool: Only Originator can drawdown');
+        require(!registry().getNoteTokenVault().redeemDisabled(address(this)), 'SecuritizationPool: withdraw paused');
         Storage storage $ = _getStorage();
         require($.reserve >= amount, 'SecuritizationPool: not enough reserve');
 
-        $.reserve = $.reserve - amount;
-
-        require(checkMinFirstLost(), 'MinFirstLoss is not satisfied');
+        _decreaseReserve(amount);
         require(
             IERC20Upgradeable(underlyingCurrency()).transferFrom(pot(), to, amount),
             'SecuritizationPool: Transfer failed'
         );
         emit Withdraw(to, amount);
     }
-
-    // function tgeAddress() public view override(ISecuritizationTGE, SecuritizationPoolStorage) returns (address) {
-    //     return super.tgeAddress();
-    // }
-
-    // function secondTGEAddress() public view override(ISecuritizationTGE, SecuritizationPoolStorage) returns (address) {
-    //     return super.secondTGEAddress();
-    // }
 
     function supportsInterface(
         bytes4 interfaceId
@@ -364,9 +356,8 @@ contract SecuritizationTGE is
         override(SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](27);
+        bytes4[] memory _functionSignatures = new bytes4[](30);
 
-        _functionSignatures[0] = this.termLengthInSeconds.selector;
         _functionSignatures[1] = this.setPot.selector;
         _functionSignatures[2] = this.increaseReserve.selector;
         _functionSignatures[3] = this.decreaseReserve.selector;
@@ -376,23 +367,25 @@ contract SecuritizationTGE is
         _functionSignatures[7] = this.paidPrincipalAmountSOT.selector;
         _functionSignatures[8] = this.paidPrincipalAmountSOTByInvestor.selector;
         _functionSignatures[9] = this.reserve.selector;
-        _functionSignatures[10] = this.principalAmountSOT.selector;
         _functionSignatures[11] = this.interestRateSOT.selector;
         _functionSignatures[12] = this.minFirstLossCushion.selector;
         _functionSignatures[13] = this.totalAssetRepaidCurrency.selector;
         _functionSignatures[14] = this.injectTGEAddress.selector;
         _functionSignatures[15] = this.increaseTotalAssetRepaidCurrency.selector;
-        _functionSignatures[16] = this.redeem.selector;
-        _functionSignatures[17] = this.hasFinishedRedemption.selector;
-        _functionSignatures[18] = this.setInterestRateForSOT.selector;
-        _functionSignatures[19] = this.claimCashRemain.selector;
-        _functionSignatures[20] = this.startCycle.selector;
-        _functionSignatures[21] = this.withdraw.selector;
-        _functionSignatures[22] = this.supportsInterface.selector;
-        _functionSignatures[23] = this.paused.selector;
-        _functionSignatures[24] = this.pause.selector;
-        _functionSignatures[25] = this.unpause.selector;
-        _functionSignatures[26] = this.setUpPoolNAV.selector;
+        _functionSignatures[16] = this.hasFinishedRedemption.selector;
+        _functionSignatures[17] = this.setInterestRateForSOT.selector;
+        _functionSignatures[18] = this.claimCashRemain.selector;
+        _functionSignatures[19] = this.startCycle.selector;
+        _functionSignatures[20] = this.withdraw.selector;
+        _functionSignatures[21] = this.supportsInterface.selector;
+        _functionSignatures[22] = this.paused.selector;
+        _functionSignatures[23] = this.pause.selector;
+        _functionSignatures[24] = this.unpause.selector;
+        _functionSignatures[25] = this.isDebtCeilingValid.selector;
+        _functionSignatures[26] = this.setDebtCeiling.selector;
+        _functionSignatures[27] = this.debtCeiling.selector;
+        _functionSignatures[28] = this.disburse.selector;
+        _functionSignatures[29] = this.setMinFirstLossCushion.selector;
 
         return _functionSignatures;
     }

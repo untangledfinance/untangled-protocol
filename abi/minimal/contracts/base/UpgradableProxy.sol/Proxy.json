@@ -1,0 +1,4 @@
+[
+  "function implementation() view returns (address)",
+  "function proxyType() pure returns (uint256)"
+]

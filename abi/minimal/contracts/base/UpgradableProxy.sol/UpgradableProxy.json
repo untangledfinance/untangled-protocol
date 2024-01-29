@@ -1,0 +1,11 @@
+[
+  "constructor(address)",
+  "event ProxyOwnerUpdate(address,address)",
+  "event ProxyUpdated(address indexed,address indexed)",
+  "function implementation() view returns (address)",
+  "function proxyOwner() view returns (address)",
+  "function proxyType() pure returns (uint256)",
+  "function transferProxyOwnership(address)",
+  "function updateAndCall(address,bytes) payable",
+  "function updateImplementation(address)"
+]

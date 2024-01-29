@@ -1,0 +1,11 @@
+[
+  "event SetHasStarted(bool)",
+  "function buyTokens(address,address,uint256) returns (uint256)",
+  "function currencyRaised() view returns (uint256)",
+  "function currencyRaisedByInvestor(address) view returns (uint256)",
+  "function firstNoteTokenMintedTimestamp() view returns (uint64)",
+  "function onRedeem(uint256)",
+  "function pool() view returns (address)",
+  "function setHasStarted(bool)",
+  "function token() view returns (address)"
+]

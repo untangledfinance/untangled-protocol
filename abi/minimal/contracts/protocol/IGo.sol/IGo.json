@@ -1,0 +1,16 @@
+[
+  "function ID_TYPE_0() view returns (uint256)",
+  "function ID_TYPE_1() view returns (uint256)",
+  "function ID_TYPE_10() view returns (uint256)",
+  "function ID_TYPE_2() view returns (uint256)",
+  "function ID_TYPE_3() view returns (uint256)",
+  "function ID_TYPE_4() view returns (uint256)",
+  "function ID_TYPE_5() view returns (uint256)",
+  "function ID_TYPE_6() view returns (uint256)",
+  "function ID_TYPE_7() view returns (uint256)",
+  "function ID_TYPE_8() view returns (uint256)",
+  "function ID_TYPE_9() view returns (uint256)",
+  "function go(address) view returns (bool)",
+  "function goOnlyIdTypes(address,uint256[]) view returns (bool)",
+  "function uniqueIdentity() returns (address)"
+]

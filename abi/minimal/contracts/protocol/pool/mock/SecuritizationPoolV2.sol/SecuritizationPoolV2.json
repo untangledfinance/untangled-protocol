@@ -1,0 +1,15 @@
+[
+  "event Initialized(uint8)",
+  "event UpdateRegistry(address)",
+  "function delegates(bytes4) view returns (address)",
+  "function extensionSignatures(address,uint256) view returns (bytes4)",
+  "function extensions(uint256) view returns (address)",
+  "function extensionsLength() view returns (uint256)",
+  "function greeting() pure returns (string)",
+  "function hello() pure returns (string)",
+  "function initialize(address,bytes)",
+  "function original() view returns (address)",
+  "function registerExtension(address)",
+  "function registry() view returns (address)",
+  "function supportsInterface(bytes4) view returns (bool)"
+]

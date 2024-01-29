@@ -1,0 +1,9 @@
+[
+  "function DAY_LENGTH_IN_SECONDS() view returns (uint256)",
+  "function HOUR_LENGTH_IN_SECONDS() view returns (uint256)",
+  "function INTEREST_RATE_SCALING_FACTOR_PERCENT() view returns (uint256)",
+  "function MINUTE_LENGTH_IN_SECONDS() view returns (uint256)",
+  "function ONE_HUNDRED_PERCENT() view returns (uint256)",
+  "function YEAR_LENGTH_IN_DAYS() view returns (uint256)",
+  "function YEAR_LENGTH_IN_SECONDS() view returns (uint256)"
+]

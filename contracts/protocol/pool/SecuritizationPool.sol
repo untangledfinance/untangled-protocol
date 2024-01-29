@@ -6,14 +6,13 @@ import {StringsUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/Stri
 import {ERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {POOL_ADMIN, ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
+import {OWNER_ROLE} from './types.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {ISecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
-
-import 'hardhat/console.sol';
+import {StorageSlot} from '@openzeppelin/contracts/utils/StorageSlot.sol';
 
 /**
  * @title Untangled's SecuritizationPool contract
@@ -27,17 +26,19 @@ import 'hardhat/console.sol';
 // SecuritizationPoolStorage,
 // SecuritizationTGE,
 // SecuritizationPoolAsset,
-// SecuritizationLockDistribution
+// SecuritizationPoolNAV
 contract SecuritizationPool is Initializable, RegistryInjection, ERC165Upgradeable {
     using ConfigHelper for Registry;
     using AddressUpgradeable for address;
     using ERC165CheckerUpgradeable for address;
 
-    address public original;
+    event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
 
+    address public original;
     address[] public extensions;
     mapping(bytes4 => address) public delegates;
     mapping(address => bytes4[]) public extensionSignatures;
+    mapping(address => mapping(bytes32 => bool)) privateRoles;
 
     function extensionsLength() public view returns (uint256) {
         return extensions.length;
@@ -50,6 +51,16 @@ contract SecuritizationPool is Initializable, RegistryInjection, ERC165Upgradeab
 
     constructor() {
         original = address(this); // default original
+        _setPrivateRole(OWNER_ROLE, msg.sender);
+    }
+
+    function hasPrivateRole(bytes32 role, address account) public view returns (bool) {
+        return privateRoles[account][role];
+    }
+
+    function _setPrivateRole(bytes32 role, address account) internal virtual {
+        privateRoles[account][role] = true;
+        emit RoleGranted(role, account, msg.sender);
     }
 
     function registerExtension(address ext) public onlyCallInOriginal {
@@ -72,49 +83,22 @@ contract SecuritizationPool is Initializable, RegistryInjection, ERC165Upgradeab
         ext.functionDelegateCall(abi.encodeWithSelector(0x326cd970, data));
     }
 
+    // bytes32 internal constant _IMPLEMENTATION_SLOT = 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc;
+    /**
+     * @dev Returns the current implementation address.
+     */
+    function _getImplementation() internal view returns (address) {
+        // EIP 1967
+        return StorageSlot.getAddressSlot(0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc).value;
+    }
+
     /** CONSTRUCTOR */
-    function initialize(
-        Registry registry_,
-        bytes memory params
-    )
-        public
-        // address _currency,
-        // uint32 _minFirstLossCushion
-        initializer
-    {
+    function initialize(Registry registry_, bytes memory params) public initializer {
         __ERC165_init_unchained();
 
-        address poolImpl = address(registry_.getSecuritizationPool());
+        address poolImpl = address(_getImplementation());
         require(poolImpl != address(0), 'SecuritizationPool: No pool implementation');
         original = poolImpl;
-
-        ISecuritizationPoolStorage.NewPoolParams memory newPoolParams = abi.decode(
-            params,
-            (ISecuritizationPoolStorage.NewPoolParams)
-        );
-
-        require(
-            newPoolParams.minFirstLossCushion < 100 * RATE_SCALING_FACTOR,
-            'minFirstLossCushion is greater than 100'
-        );
-        require(newPoolParams.currency != address(0), 'SecuritizationPool: Invalid currency');
-
-        // __ReentrancyGuard_init_unchained();
-
-        // __SecuritizationAccessControl_init_unchained(_msgSender());
-        // // __UntangledBase__init(_msgSender());
-
-        // // _setRoleAdmin(ORIGINATOR_ROLE, OWNER_ROLE);
-        // _setRegistry(registry_);
-
-        // __SecuritizationTGE_init_unchained(
-        //     address(this),
-        //     CycleState.INITIATED,
-        //     newPoolParams.currency,
-        //     newPoolParams.minFirstLossCushion
-        // );
-
-        // __SecuritizationPoolAsset_init_unchained(newPoolParams);
 
         _setRegistry(registry_);
 
@@ -170,13 +154,4 @@ contract SecuritizationPool is Initializable, RegistryInjection, ERC165Upgradeab
 
         return false;
     }
-
-
-    // function pause() public override(SecuritizationLockDistribution, SecuritizationPoolAsset, SecuritizationTGE) {
-    //     SecuritizationTGE.pause();
-    // }
-
-    // function unpause() public override(SecuritizationLockDistribution, SecuritizationPoolAsset, SecuritizationTGE) {
-    //     SecuritizationTGE.unpause();
-    // }
 }

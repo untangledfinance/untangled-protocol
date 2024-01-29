@@ -1,0 +1,12 @@
+[
+  "event UpdateLockedDistributeBalance(address indexed,address indexed,uint256,uint256,uint256,uint256)",
+  "event UpdateTotalLockedDistributeBalance(uint256,address)",
+  "event UpdateTotalRedeemedCurrency(uint256,address)",
+  "function decreaseLockedDistributeBalance(address,address,uint256,uint256)",
+  "function increaseLockedDistributeBalance(address,address,uint256,uint256)",
+  "function lockedDistributeBalances(address,address) view returns (uint256)",
+  "function lockedRedeemBalances(address,address) view returns (uint256)",
+  "function totalLockedDistributeBalance() view returns (uint256)",
+  "function totalLockedRedeemBalances(address) view returns (uint256)",
+  "function totalRedeemedCurrency() view returns (uint256)"
+]

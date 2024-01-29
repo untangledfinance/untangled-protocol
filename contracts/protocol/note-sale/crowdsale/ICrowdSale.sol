@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 interface ICrowdSale {
@@ -16,7 +16,9 @@ interface ICrowdSale {
 
     function buyTokens(address payee, address beneficiary, uint256 currencyAmount) external returns (uint256);
 
-    function onRedeem(uint256 currencyAmount) external;
-
     function setHasStarted(bool _hasStarted) external;
+
+    function setMinBidAmount(uint256 _minBidAmount) external;
+
+    function onRedeem(uint256 currencyAmount) external;
 }

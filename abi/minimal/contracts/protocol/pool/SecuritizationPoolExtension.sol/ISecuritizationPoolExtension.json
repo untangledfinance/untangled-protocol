@@ -1,0 +1,4 @@
+[
+  "function getFunctionSignatures() view returns (bytes4[])",
+  "function installExtension(bytes)"
+]

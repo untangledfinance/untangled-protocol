@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity >=0.5.10;
 
 library UnpackLoanParamtersLib {
@@ -26,13 +26,15 @@ library UnpackLoanParamtersLib {
      * Notice: * uint256 (a) reinterprets a as 256-bit unsigned integer. As long as 256 bit = 32 bytes
      */
     function _bitShiftRight(bytes32 value, uint256 amount) internal pure returns (uint256) {
-        return uint256(value) / 2**amount;
+        return uint256(value) / 2 ** amount;
     }
 
     /**
      * Unpack parameters from packed bytes32 data
      */
-    function _unpackLoanTermsParametersFromBytes(bytes32 parameters)
+    function _unpackLoanTermsParametersFromBytes(
+        bytes32 parameters
+    )
         internal
         pure
         returns (
@@ -71,7 +73,9 @@ library UnpackLoanParamtersLib {
     /**
      * Unpack data from hex string which including informations about Loan
      */
-    function unpackParametersFromBytes(bytes32 parameters)
+    function unpackParametersFromBytes(
+        bytes32 parameters
+    )
         internal
         pure
         returns (

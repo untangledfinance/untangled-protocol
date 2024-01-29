@@ -1,0 +1,8 @@
+[
+  "error BridgeRouterExecutedFailed(uint8,bytes)",
+  "event MessageReceived(bytes32 indexed,uint64 indexed,address,bytes)",
+  "function failedMessageDataGroup(bytes32) view returns (uint8, bytes)",
+  "function lastReceivedData() view returns (uint8, bytes)",
+  "function lastReceivedMessageId() view returns (bytes32)",
+  "function messageDataGroup(bytes32) view returns (uint8, bytes)"
+]

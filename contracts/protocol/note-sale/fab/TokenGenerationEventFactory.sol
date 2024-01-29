@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import {UntangledBase} from '../../../base/UntangledBase.sol';
@@ -11,18 +11,14 @@ import {MintedIncreasingInterestTGE} from '../MintedIncreasingInterestTGE.sol';
 import {MintedNormalTGE} from '../MintedNormalTGE.sol';
 import {Registry} from '../../../storage/Registry.sol';
 
+interface INoteTokenLike {
+    function poolAddress() external view returns (address);
+}
+
 contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledBase, Factory {
     using ConfigHelper for Registry;
 
     bytes4 constant TGE_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,address,address,address,bool)'));
-
-    modifier onlySecuritizationManager() {
-        require(
-            _msgSender() == address(registry.getSecuritizationManager()),
-            'SecuritizationPool: Only SecuritizationManager'
-        );
-        _;
-    }
 
     function __TokenGenerationEventFactory_init(Registry _registry, address _factoryAdmin) internal onlyInitializing {
         __UntangledBase__init(_msgSender());
@@ -32,10 +28,6 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
     }
 
     function initialize(Registry _registry, address _factoryAdmin) public initializer {
-        __TokenGenerationEventFactory_init(_registry, _factoryAdmin);
-    }
-
-    function initializeV2(Registry _registry, address _factoryAdmin) public reinitializer(2) {
         __TokenGenerationEventFactory_init(_registry, _factoryAdmin);
     }
 
@@ -55,12 +47,15 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
 
     function createNewSaleInstance(
         address issuerTokenController,
-        address pool,
         address token,
         address currency,
         uint8 saleType,
         bool longSale
-    ) external override whenNotPaused nonReentrant onlySecuritizationManager returns (address) {
+    ) external override whenNotPaused nonReentrant returns (address) {
+        registry.requireSecuritizationManager(_msgSender());
+
+        address pool = INoteTokenLike(token).poolAddress();
+
         if (saleType == uint8(SaleType.MINTED_INCREASING_INTEREST_SOT)) {
             return
                 _newSale(
@@ -130,70 +125,6 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
 
         return tgeAddress;
     }
-
-    // function _newMintedIncreasingInterestSale(
-    //     address issuerTokenController,
-    //     address pool,
-    //     address token,
-    //     address currency,
-    //     bool longSale
-    // ) private returns (address) {
-    //     address mintedIncreasingInterestTGEImplAddress = address(registry.getMintedIncreasingInterestTGE());
-
-    //     bytes memory _initialData = abi.encodeWithSelector(
-    //         TGE_INIT_FUNC_SELECTOR,
-    //         registry,
-    //         pool,
-    //         token,
-    //         currency,
-    //         longSale
-    //     );
-
-    //     address tgeAddress = _deployInstance(mintedIncreasingInterestTGEImplAddress, _initialData);
-    //     MintedIncreasingInterestTGE tge = MintedIncreasingInterestTGE(tgeAddress);
-
-    //     tge.grantRole(tge.OWNER_ROLE(), issuerTokenController);
-    //     tge.renounceRole(tge.OWNER_ROLE(), address(this));
-
-    //     tgeAddresses.push(tgeAddress);
-    //     isExistingTge[tgeAddress] = true;
-
-    //     emit TokenGenerationEventCreated(tgeAddress);
-
-    //     return tgeAddress;
-    // }
-
-    // function _newNormalSale(
-    //     address issuerTokenController,
-    //     address pool,
-    //     address token,
-    //     address currency,
-    //     bool longSale
-    // ) private returns (address) {
-    //     address mintedNormalTGEImplAddress = address(registry.getMintedNormalTGE());
-
-    //     bytes memory _initialData = abi.encodeWithSelector(
-    //         TGE_INIT_FUNC_SELECTOR,
-    //         registry,
-    //         pool,
-    //         token,
-    //         currency,
-    //         longSale
-    //     );
-
-    //     address tgeAddress = _deployInstance(mintedNormalTGEImplAddress, _initialData);
-    //     MintedNormalTGE tge = MintedNormalTGE(tgeAddress);
-
-    //     tge.grantRole(tge.OWNER_ROLE(), issuerTokenController);
-    //     tge.renounceRole(tge.OWNER_ROLE(), address(this));
-
-    //     tgeAddresses.push(tgeAddress);
-    //     isExistingTge[tgeAddress] = true;
-
-    //     emit TokenGenerationEventCreated(tgeAddress);
-
-    //     return tgeAddress;
-    // }
 
     function pauseUnpauseTge(address tgeAdress) external whenNotPaused onlyRole(DEFAULT_ADMIN_ROLE) {
         require(isExistingTge[tgeAdress], 'TokenGenerationEventFactory: tge does not exist');

@@ -1,46 +1,28 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {AccessControlEnumerableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import {ERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
-import {ERC20BurnableUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol';
 import {IERC721ReceiverUpgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC721ReceiverUpgradeable.sol';
-import {IAccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol';
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+
 import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
 import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
-import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
-
 import {ISecuritizationPool} from './ISecuritizationPool.sol';
-import {ISecuritizationPoolValueService} from './ISecuritizationPoolValueService.sol';
-
-import {MintedIncreasingInterestTGE} from '../note-sale/MintedIncreasingInterestTGE.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-import {Configuration} from '../../libraries/Configuration.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {FinalizableCrowdsale} from './../note-sale/crowdsale/FinalizableCrowdsale.sol';
 import {POOL_ADMIN, ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
-
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
-import {ISecuritizationLockDistribution} from './ISecuritizationLockDistribution.sol';
-import {SecuritizationLockDistribution} from './SecuritizationLockDistribution.sol';
-import {SecuritizationTGE} from './SecuritizationTGE.sol';
-import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
+import {ISecuritizationPoolNAV} from './ISecuritizationPoolNAV.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
-
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 import {ISecuritizationAccessControl} from './ISecuritizationAccessControl.sol';
-
-import {RiskScore} from './base/types.sol';
-
+import {RiskScore, LoanEntry} from './base/types.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
-import {IPoolNAV} from './IPoolNAV.sol';
-import {IPoolNAVFactory} from './IPoolNAVFactory.sol';
 
 /**
  * @title Untangled's SecuritizationPool contract
@@ -112,17 +94,6 @@ contract SecuritizationPoolAsset is
         return _getStorage().riskScores.length;
     }
 
-    // function hasFinishedRedemption() public view override returns (bool) {
-    //     if (sotToken != address(0)) {
-    //         require(IERC20Upgradeable(sotToken).totalSupply() == 0, 'SecuritizationPool: SOT still remain');
-    //     }
-    //     if (jotToken != address(0)) {
-    //         require(IERC20Upgradeable(jotToken).totalSupply() == 0, 'SecuritizationPool: JOT still remain');
-    //     }
-
-    //     return true;
-    // }
-
     /** UTILITY FUNCTION */
     function _removeNFTAsset(address tokenAddress, uint256 tokenId) private returns (bool) {
         NFTAsset[] storage _nftAssets = _getStorage().nftAssets;
@@ -144,7 +115,7 @@ contract SecuritizationPoolAsset is
         _nftAssets[indexToRemove] = _nftAssets[_nftAssets.length - 1];
 
         NFTAsset storage nft = _nftAssets[_nftAssets.length - 1];
-        emit RemoveNFTAsset(nft.tokenAddress, nft.tokenId);
+
         _nftAssets.pop();
     }
 
@@ -153,7 +124,6 @@ contract SecuritizationPoolAsset is
 
         if (!$.existsTokenAssetAddress[tokenAddress]) $.tokenAssetAddresses.push(tokenAddress);
         $.existsTokenAssetAddress[tokenAddress] = true;
-        emit AddTokenAssetAddress(tokenAddress);
     }
 
     function onERC721Received(address, address, uint256 tokenId, bytes memory) external returns (bytes4) {
@@ -210,7 +180,7 @@ contract SecuritizationPoolAsset is
                     writeOffAfterCollectionPeriod: _periodsAndWriteOffs[i + _daysPastDuesLength * 3]
                 })
             );
-            IPoolNAV(poolNAV()).file(
+            ISecuritizationPoolNAV(address(this)).file(
                 'writeOffGroup',
                 _interestRate,
                 _writeOffAfterGracePeriod,
@@ -218,7 +188,7 @@ contract SecuritizationPoolAsset is
                 _ratesAndDefaults[i + _daysPastDuesLength],
                 i
             );
-            IPoolNAV(poolNAV()).file(
+            ISecuritizationPoolNAV(address(this)).file(
                 'writeOffGroup',
                 _interestRate,
                 _writeOffAfterCollectionPeriod,
@@ -229,7 +199,9 @@ contract SecuritizationPoolAsset is
         }
 
         // Set discount rate
-        IPoolNAV(poolNAV()).file('discountRate', $.riskScores[0].discountRate);
+        ISecuritizationPoolNAV(address(this)).file('discountRate', $.riskScores[0].discountRate);
+
+        emit SetRiskScore($.riskScores);
     }
 
     /// @inheritdoc ISecuritizationPool
@@ -248,6 +220,8 @@ contract SecuritizationPoolAsset is
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
             IUntangledERC721(tokenAddress).safeTransferFrom(address(this), toPoolAddress, tokenIds[i]);
         }
+
+        emit ExportNFTAsset(tokenAddress, toPoolAddress, tokenIds);
     }
 
     /// @inheritdoc ISecuritizationPool
@@ -269,16 +243,22 @@ contract SecuritizationPoolAsset is
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
             IUntangledERC721(tokenAddresses[i]).safeTransferFrom(address(this), recipients[i], tokenIds[i]);
         }
+
+        emit WithdrawNFTAsset(tokenAddresses, tokenIds, recipients);
     }
 
     /// @inheritdoc ISecuritizationPool
-    function collectAssets(uint256[] calldata tokenIds) external override whenNotPaused {
+    function collectAssets(
+        uint256[] calldata tokenIds,
+        LoanEntry[] calldata loanEntries
+    ) external override whenNotPaused returns (uint256) {
         registry().requireLoanKernel(_msgSender());
         uint256 tokenIdsLength = tokenIds.length;
         uint256 expectedAssetsValue = 0;
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
-            IPoolNAV(poolNAV()).addLoan(tokenIds[i]);
-            expectedAssetsValue = expectedAssetsValue + IPoolNAV(poolNAV()).debt(tokenIds[i]);
+            expectedAssetsValue =
+                expectedAssetsValue +
+                ISecuritizationPoolNAV(address(this)).addLoan(tokenIds[i], loanEntries[i]);
         }
 
         Storage storage $ = _getStorage();
@@ -292,48 +272,22 @@ contract SecuritizationPoolAsset is
             _setOpeningBlockTimestamp(openingBlockTimestamp());
         }
 
-        emit CollectAsset(expectedAssetsValue);
+        emit CollectNFTAsset(tokenIds, expectedAssetsValue);
+        return expectedAssetsValue;
     }
 
-    // function amountOwedToOriginator() public view returns (uint256) {
-    //     return _getStorage().amountOwedToOriginator;
-    // }
-
     /// @inheritdoc ISecuritizationPool
-    function collectERC20Assets(
-        address[] calldata tokenAddresses,
-        address[] calldata senders,
-        uint256[] calldata amounts
-    ) external override whenNotPaused notClosingStage onlyRole(ORIGINATOR_ROLE) {
-        uint256 tokenAddressesLength = tokenAddresses.length;
-        require(
-            tokenAddressesLength == senders.length && senders.length == amounts.length,
-            'SecuritizationPool: Params length are not equal'
-        );
+    function collectERC20Asset(address tokenAddress) external override whenNotPaused notClosingStage {
+        registry().requireSecuritizationManager(_msgSender());
 
-        // check
-        for (uint256 i = 0; i < tokenAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            require(
-                registry().getNoteTokenFactory().isExistingTokens(tokenAddresses[i]),
-                'SecuritizationPool: unknown-token-address'
-            );
-        }
-
-        for (uint256 i = 0; i < tokenAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            _pushTokenAssetAddress(tokenAddresses[i]);
-        }
-
-        for (uint256 i = 0; i < tokenAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            require(
-                IERC20Upgradeable(tokenAddresses[i]).transferFrom(senders[i], address(this), amounts[i]),
-                'SecuritizationPool: Transfer failed'
-            );
-        }
+        _pushTokenAssetAddress(tokenAddress);
 
         if (openingBlockTimestamp() == 0) {
             // If openingBlockTimestamp is not set
             _setOpeningBlockTimestamp(uint64(block.timestamp));
         }
+
+        emit CollectERC20Asset(tokenAddress);
     }
 
     /// @inheritdoc ISecuritizationPool
@@ -356,6 +310,8 @@ contract SecuritizationPoolAsset is
                 'SecuritizationPool: Transfer failed'
             );
         }
+
+        emit WithdrawERC20Asset(tokenAddresses, recipients, amounts);
     }
 
     function firstAssetTimestamp() public view returns (uint64) {
@@ -381,8 +337,6 @@ contract SecuritizationPoolAsset is
                 _setOpeningBlockTimestamp(_firstNoteTokenMintedTimestamp);
             }
         }
-
-        emit UpdateOpeningBlockTimestamp(openingBlockTimestamp());
     }
 
     function _setOpeningBlockTimestamp(uint64 _openingBlockTimestamp) internal {
@@ -431,7 +385,7 @@ contract SecuritizationPoolAsset is
         _functionSignatures[6] = this.exportAssets.selector;
         _functionSignatures[7] = this.withdrawAssets.selector;
         _functionSignatures[8] = this.collectAssets.selector;
-        _functionSignatures[9] = this.collectERC20Assets.selector;
+        _functionSignatures[9] = this.collectERC20Asset.selector;
         _functionSignatures[10] = this.withdrawERC20Assets.selector;
         _functionSignatures[11] = this.nftAssets.selector;
         _functionSignatures[12] = this.tokenAssetAddresses.selector;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import '../../../libraries/UntangledMath.sol';
@@ -24,10 +24,9 @@ contract LongSaleInterest {
     //     10,000 => 1% interest rate
     /// @dev A constant used to convert an encoded interest rate into its equivalent in percentage.
     /// To convert an encoded interest rate to a percentage, divide it by this scaling factor
-    uint256 public constant INTEREST_RATE_SCALING_FACTOR_PERCENT = 10**4;
+    uint256 public constant INTEREST_RATE_SCALING_FACTOR_PERCENT = 10 ** 4;
     /// @dev represents the scaling factor for the purchase price calculation
-    uint256 public constant PURCHASE_PRICE_SCALING_FACTOR = 10**4;
-
+    uint256 public constant PURCHASE_PRICE_SCALING_FACTOR = 10 ** 4;
 
     uint256[50] private __gap;
 }

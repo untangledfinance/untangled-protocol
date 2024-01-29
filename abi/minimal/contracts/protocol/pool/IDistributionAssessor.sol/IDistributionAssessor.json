@@ -1,0 +1,7 @@
+[
+  "function calcCorrespondingTotalAssetValue(address,address) view returns (uint256)",
+  "function calcTokenPrice(address,address) view returns (uint256)",
+  "function getCashBalance(address) view returns (uint256)",
+  "function getJOTTokenPrice(address) view returns (uint256)",
+  "function getSOTTokenPrice(address) view returns (uint256)"
+]

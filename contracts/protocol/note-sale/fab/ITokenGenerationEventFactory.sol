@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import '../../../storage/Registry.sol';
@@ -22,7 +22,7 @@ abstract contract ITokenGenerationEventFactory {
     /// @notice creates a new TGE instance based on the provided parameters and the sale type
     function createNewSaleInstance(
         address issuerTokenController,
-        address pool,
+        // address pool,
         address token,
         address currency,
         uint8 saleType,

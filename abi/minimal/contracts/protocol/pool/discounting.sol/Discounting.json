@@ -1,0 +1,13 @@
+[
+  "function calcDiscount(uint256,uint256,uint256,uint256) pure returns (uint256)",
+  "function calcFutureValue(uint256,uint256,uint256,uint256) view returns (uint256)",
+  "function rdiv(uint256,uint256) pure returns (uint256)",
+  "function rmul(uint256,uint256) pure returns (uint256)",
+  "function rpow(uint256,uint256,uint256) pure returns (uint256)",
+  "function safeAdd(uint256,uint256) pure returns (uint256)",
+  "function safeDiv(uint256,uint256) pure returns (uint256)",
+  "function safeMul(uint256,uint256) pure returns (uint256)",
+  "function safeSub(uint256,uint256) pure returns (uint256)",
+  "function secureSub(uint256,uint256) pure returns (uint256)",
+  "function uniqueDayTimestamp(uint256) pure returns (uint256)"
+]

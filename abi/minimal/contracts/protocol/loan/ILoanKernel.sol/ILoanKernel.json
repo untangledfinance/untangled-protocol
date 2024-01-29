@@ -1,0 +1,14 @@
+[
+  "event IssuedNewInputLoans(address[],uint256[])",
+  "event LogDebtKernelError(uint8 indexed,bytes32 indexed,string)",
+  "event LogDebtOrderFilled(bytes32,uint256,address,address)",
+  "event LogFeeTransfer(address indexed,address,uint256,address indexed)",
+  "function NULL_ADDRESS() view returns (address)",
+  "function NULL_COLLATERAL_INFO_HASH() view returns (bytes16)",
+  "function NULL_ISSUANCE_HASH() view returns (bytes32)",
+  "function concludeLoan(address,bytes32,address)",
+  "function debtOrderCancelled(bytes32) view returns (bool)",
+  "function debtOrderCompleted(bytes32) view returns (bool)",
+  "function issuanceCancelled(bytes32) view returns (bool)",
+  "function registry() view returns (address)"
+]

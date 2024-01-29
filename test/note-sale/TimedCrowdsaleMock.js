@@ -1,7 +1,9 @@
 const { artifacts, ethers } = require('hardhat');
+const { parseEther } = ethers.utils;
 const { setup } = require('../setup');
 const { expect, assert } = require('chai');
 const { BigNumber, providers, utils } = require('ethers');
+const UntangledProtocol = require('../shared/untangled-protocol');
 const { keccak256 } = require('@ethersproject/keccak256');
 const { OWNER_ROLE, POOL_ADMIN_ROLE } = require('../constants');
 const { getPoolByAddress } = require('../utils');
@@ -12,12 +14,18 @@ describe('TimedCrowdsaleMock', () => {
   let registry;
   let securitizationPool;
   let timedCrowdsale;
+  let untangledProtocol;
+  let noteTokenFactory;
+  let securitizationManager;
 
   before('create fixture', async () => {
-    ({ registry, noteTokenFactory, securitizationManager, stableCoin } = await setup());
     const NoteToken = await ethers.getContractFactory('NoteToken');
 
-    const [untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, relayer] =
+    const contracts = await setup();
+    untangledProtocol = UntangledProtocol.bind(contracts);
+    ({ registry, noteTokenFactory, securitizationManager, stableCoin } = contracts);
+
+    const [untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner] =
       await ethers.getSigners();
 
 
@@ -25,48 +33,7 @@ describe('TimedCrowdsaleMock', () => {
     await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);
     await securitizationManager.connect(borrowerSigner).grantRole(POOL_ADMIN_ROLE, poolCreatorSigner.address);
 
-
-    // securitizationPool = await SecuritizationPool.deploy();
-    // await initPool(securitizationPool);
-    const salt = utils.keccak256(Date.now());
-
-    // Create new pool
-    let transaction = await securitizationManager
-      .connect(poolCreatorSigner)
-
-      .newPoolInstance(
-        salt,
-
-        poolCreatorSigner.address,
-        utils.defaultAbiCoder.encode([
-          {
-            type: 'tuple',
-            components: [
-              {
-                name: 'currency',
-                type: 'address'
-              },
-              {
-                name: 'minFirstLossCushion',
-                type: 'uint32'
-              },
-              {
-                name: 'validatorRequired',
-                type: 'bool'
-              }
-            ]
-          }
-        ], [
-          {
-            currency: stableCoin.address,
-            minFirstLossCushion: '100000',
-            validatorRequired: true
-          }
-        ]));
-
-
-    let receipt = await transaction.wait();
-    let [securitizationPoolAddress] = receipt.events.find((e) => e.event == 'NewPoolCreated').args;
+    const securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(poolCreatorSigner);
 
     securitizationPool = await getPoolByAddress(securitizationPoolAddress);
 

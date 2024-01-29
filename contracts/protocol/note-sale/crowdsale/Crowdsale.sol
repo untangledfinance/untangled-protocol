@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
@@ -6,6 +6,7 @@ import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/
 import '../../../base/UntangledBase.sol';
 import '@openzeppelin/contracts/interfaces/IERC20.sol';
 import '../../pool/ISecuritizationPool.sol';
+import {ISecuritizationTGE} from '../../pool/ISecuritizationTGE.sol';
 
 import {ConfigHelper} from '../../../libraries/ConfigHelper.sol';
 import '../../../interfaces/INoteToken.sol';
@@ -16,6 +17,7 @@ abstract contract Crowdsale is UntangledBase, ICrowdSale {
     using ConfigHelper for Registry;
 
     event UpdateTotalCap(uint256 totalCap);
+    event UpdateMinBidAmount(uint256 minBidAmount);
 
     Registry public registry;
 
@@ -44,6 +46,9 @@ abstract contract Crowdsale is UntangledBase, ICrowdSale {
 
     /// @dev Target raised currency amount
     uint256 public totalCap;
+
+    /// @dev Minimum currency bid amount for note token
+    uint256 public minBidAmount;
 
     mapping(address => uint256) public _currencyRaisedByInvestor;
 
@@ -83,13 +88,24 @@ abstract contract Crowdsale is UntangledBase, ICrowdSale {
     function addFunding(uint256 additionalCap) public nonReentrant whenNotPaused {
         require(
             hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
-            'Crowdsale: caller must be owner or pool'
+            'Crowdsale: caller must be owner or manager'
         );
         require(additionalCap > 0, 'Crowdsale: total cap is 0');
 
         totalCap = additionalCap + totalCap;
 
         emit UpdateTotalCap(totalCap);
+    }
+
+    /// @notice Setup minimum bid amount in currency for note token
+    /// @param _minBidAmount Expected minimum amount
+    function setMinBidAmount(uint256 _minBidAmount) external override whenNotPaused {
+        require(
+            hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
+            'Crowdsale: caller must be owner or manager'
+        );
+        minBidAmount = _minBidAmount;
+        emit UpdateMinBidAmount(_minBidAmount);
     }
 
     /// @notice Set hasStarted variable
@@ -119,6 +135,7 @@ abstract contract Crowdsale is UntangledBase, ICrowdSale {
         address beneficiary,
         uint256 currencyAmount
     ) public virtual whenNotPaused nonReentrant smpRestricted returns (uint256) {
+        require(currencyAmount >= minBidAmount, 'Crowdsale: Less than minBidAmount');
         uint256 tokenAmount = getTokenAmount(currencyAmount);
 
         _preValidatePurchase(beneficiary, currencyAmount, tokenAmount);
@@ -127,6 +144,8 @@ abstract contract Crowdsale is UntangledBase, ICrowdSale {
         _currencyRaised += currencyAmount;
         _currencyRaisedByInvestor[beneficiary] += currencyAmount;
 
+        ISecuritizationTGE securitizationPool = ISecuritizationTGE(pool);
+        require(securitizationPool.isDebtCeilingValid(), 'Crowdsale: Exceeds Debt Ceiling');
         tokenRaised += tokenAmount;
 
         _claimPayment(payee, currencyAmount);
@@ -146,10 +165,7 @@ abstract contract Crowdsale is UntangledBase, ICrowdSale {
     /// @notice Catch event redeem token
     /// @param currencyAmount amount of currency investor want to redeem
     function onRedeem(uint256 currencyAmount) public virtual override {
-        require(
-            _msgSender() == address(registry.getDistributionOperator()),
-            'Crowdsale: Caller must be distribution operator'
-        );
+        require(_msgSender() == address(registry.getNoteTokenVault()), 'Crowdsale: Caller must be Note token vault');
         _currencyRaised -= currencyAmount;
     }
 

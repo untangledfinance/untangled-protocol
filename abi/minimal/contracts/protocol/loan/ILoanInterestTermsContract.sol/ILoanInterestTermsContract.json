@@ -1,0 +1,16 @@
+[
+  "function completedRepayment(bytes32) view returns (bool)",
+  "function getExpectedRepaymentValues(bytes32,uint256) view returns (uint256, uint256)",
+  "function getInterestRate(bytes32) view returns (uint256)",
+  "function getMultiExpectedRepaymentValues(bytes32[],uint256) view returns (uint256[], uint256[])",
+  "function getValueRepaidToDate(bytes32) view returns (uint256, uint256)",
+  "function isCompletedRepayments(bytes32[]) view returns (bool[])",
+  "function registerConcludeLoan(bytes32) returns (bool)",
+  "function registerRepayment(bytes32,address,address,uint256,address) returns (uint256)",
+  "function registerTermStart(bytes32) returns (bool)",
+  "function registry() view returns (address)",
+  "function repaidInterestAmounts(bytes32) view returns (uint256)",
+  "function repaidPrincipalAmounts(bytes32) view returns (uint256)",
+  "function startedLoan(bytes32) view returns (bool)",
+  "function unpackParamsForAgreementID(bytes32) view returns (tuple(uint256,uint256,uint256,uint8,uint256,uint256))"
+]

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import {AccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
@@ -42,24 +42,8 @@ contract Registry is UntangledBase {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_FACTORY), newAddress);
     }
 
-    // function setNoteToken(address newAddress) public onlyAdmin whenNotPaused {
-    //     _setAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN), newAddress);
-    // }
-
     function setTokenGenerationEventFactory(address newAddress) public onlyAdmin whenNotPaused {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.TOKEN_GENERATION_EVENT_FACTORY), newAddress);
-    }
-
-    // function setMintedIncreasingInterestTGE(address newAddress) public onlyAdmin whenNotPaused {
-    //     _setAddress(uint8(Configuration.CONTRACT_TYPE.MINTED_INCREASING_INTEREST_TGE), newAddress);
-    // }
-
-    // function setMintedNormalTGE(address newAddress) public onlyAdmin whenNotPaused {
-    //     _setAddress(uint8(Configuration.CONTRACT_TYPE.MINTED_NORMAL_TGE), newAddress);
-    // }
-
-    function setDistributionOperator(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.DISTRIBUTION_OPERATOR), newAddress);
     }
 
     function setDistributionAssessor(address newAddress) public onlyAdmin whenNotPaused {
@@ -70,20 +54,8 @@ contract Registry is UntangledBase {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.LOAN_ASSET_TOKEN), newAddress);
     }
 
-    function setDistributionTranche(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.DISTRIBUTION_TRANCHE), newAddress);
-    }
-
     function setSecuritizationPoolValueService(address newAddress) public onlyAdmin whenNotPaused {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.SECURITIZATION_POOL_VALUE_SERVICE), newAddress);
-    }
-
-    function setLoanRegistry(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.LOAN_REGISTRY), newAddress);
-    }
-
-    function setLoanInterestTermsContract(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.LOAN_INTEREST_TERMS_CONTRACT), newAddress);
     }
 
     function setLoanRepaymentRouter(address newAddress) public onlyAdmin whenNotPaused {
@@ -98,8 +70,8 @@ contract Registry is UntangledBase {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.GO), newAddress);
     }
 
-    function setPoolNAVFactory(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.POOL_NAV_FACTORY), newAddress);
+    function setNoteTokenVault(address newAddress) public onlyAdmin whenNotPaused {
+        _setAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT), newAddress);
     }
 
     uint256[49] private __gap;

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import './Crowdsale.sol';
@@ -56,7 +56,10 @@ abstract contract TimedCrowdsale is Crowdsale {
 
     /// @notice Updates the opening time and closing time accordingly
     function newSaleRoundTime(uint256 newOpeningTime, uint256 newClosingTime) public whenNotPaused {
-        require(hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()), "Crowdsale: Caller must be owner or pool");
+        require(
+            hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
+            'Crowdsale: Caller must be owner or pool'
+        );
         require(newClosingTime >= newOpeningTime, 'TimedCrowdsale: opening time is not before closing time');
         // not accept opening time in the past
         if (newOpeningTime < block.timestamp) {

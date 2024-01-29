@@ -390,30 +390,6 @@ describe('LoanKernel', () => {
             );
         });
 
-        it('LoanKernel: Invalid creditor account', async () => {
-            await impersonateAccount(loanRepaymentRouter.address);
-            await setBalance(loanRepaymentRouter.address, ethers.utils.parseEther('1'));
-            const signer = await ethers.getSigner(loanRepaymentRouter.address);
-            await expect(loanKernel.connect(signer).concludeLoans([ZERO_ADDRESS], [tokenIds[0]])).to.be.revertedWith(
-                `Invalid creditor account.`
-            );
-        });
-
-        it('LoanKernel: Invalid agreement id', async () => {
-            const signer = await ethers.getSigner(loanRepaymentRouter.address);
-            await expect(
-                loanKernel
-                    .connect(signer)
-                    .concludeLoans([securitizationPoolContract.address], [formatBytes32String('')])
-            ).to.be.revertedWith(`Invalid agreement id.`);
-        });
-
-        it('Cannot conclude agreement id if caller is not LoanRepaymentRouter', async () => {
-            await expect(
-                loanKernel.concludeLoans([securitizationPoolContract.address], [tokenIds[0]])
-            ).to.be.revertedWith('LoanKernel: Only LoanRepaymentRouter');
-        });
-
         it('only LoanKernel contract can burn', async () => {
             const stablecoinBalanceOfPayerBefore = await stableCoin.balanceOf(untangledAdminSigner.address);
             expect(stablecoinBalanceOfPayerBefore).to.closeTo(parseEther('99019.000'), parseEther('0.01'));
@@ -437,11 +413,5 @@ describe('LoanKernel', () => {
             expect(stablecoinBalanceOfPoolAfter).to.closeTo(parseEther('190.5'), parseEther('0.01'));
         });
 
-        it('Cannot conclude agreement id again', async () => {
-            const signer = await ethers.getSigner(loanRepaymentRouter.address);
-            await expect(
-                loanKernel.connect(signer).concludeLoans([securitizationPoolContract.address], [tokenIds[0]])
-            ).to.be.revertedWith(`ERC721: invalid token ID`);
-        });
     });
 });

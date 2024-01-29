@@ -205,16 +205,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
     // EXTERNAL FUNCTIONS
     /*********************** */
 
-    function concludeLoans(
-        address[] calldata creditors,
-        bytes32[] calldata agreementIds
-    ) external whenNotPaused nonReentrant {
-        uint256 creditorsLength = creditors.length;
-        for (uint256 i = 0; i < creditorsLength; i = UntangledMath.uncheckedInc(i)) {
-            concludeLoan(creditors[i], agreementIds[i]);
-        }
-    }
-
     /**
      * Filling new Debt Order
      * Notice:

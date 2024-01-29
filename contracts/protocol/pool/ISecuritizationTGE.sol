@@ -77,9 +77,6 @@ interface ISecuritizationTGE {
     ///@notice check current debt ceiling is valid
     function isDebtCeilingValid() external view returns (bool);
 
-    /// @notice sets the interest rate for the senior tranche of tokens
-    function setInterestRateForSOT(uint32 _interestRateSOT) external;
-
     function claimCashRemain(address recipientWallet) external;
 
     // function openingBlockTimestamp() external view returns (uint64);

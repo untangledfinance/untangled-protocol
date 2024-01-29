@@ -22,7 +22,7 @@ import {MintedNormalTGE} from '../protocol/note-sale/MintedNormalTGE.sol';
 import {IGo} from '../interfaces/IGo.sol';
 
 import {POOL_ADMIN, OWNER_ROLE} from './types.sol';
-import {INoteTokenVault} from '../protocol/pool/INoteTokenVault.sol';
+import {INoteTokenVault} from '../interfaces/INoteTokenVault.sol';
 
 /**
  * @title ConfigHelper

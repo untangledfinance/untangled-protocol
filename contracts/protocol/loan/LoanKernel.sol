@@ -10,7 +10,7 @@ import '../../libraries/UntangledMath.sol';
 import '../../tokens/ERC721/types.sol';
 import {LoanEntry} from '../../protocol/pool/base/types.sol';
 import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-import {ISecuritizationTGE} from '../pool/ISecuritizationTGE.sol';
+import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
 
 /// @title LoanKernel
 /// @author Untangled Team

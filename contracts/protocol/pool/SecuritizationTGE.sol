@@ -9,7 +9,7 @@ import {ERC20BurnableUpgradeable} from '@openzeppelin/contracts-upgradeable/toke
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
+import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
 import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
 import {RegistryInjection} from './RegistryInjection.sol';

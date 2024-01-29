@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {Configuration} from '../../libraries/Configuration.sol';
-import {LoanEntry} from './base/types.sol';
-import '../../libraries/UnpackLoanParamtersLib.sol';
-import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
+import {Configuration} from '../libraries/Configuration.sol';
+import {LoanEntry} from '../protocol/pool/base/types.sol';
+import '../libraries/UnpackLoanParamtersLib.sol';
+import {ISecuritizationPoolStorage} from '../interfaces/ISecuritizationPoolStorage.sol';
 
 interface ISecuritizationPoolNAV {
     /// Events

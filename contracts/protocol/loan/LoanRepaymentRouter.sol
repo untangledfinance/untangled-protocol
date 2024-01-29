@@ -3,22 +3,25 @@ pragma solidity 0.8.19;
 
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
 
-import {ILoanRepaymentRouter} from './ILoanRepaymentRouter.sol';
+import {ILoanRepaymentRouter} from '../../interfaces/ILoanRepaymentRouter.sol';
 import {ILoanAssetToken} from '../../interfaces/ILoanAssetToken.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-import {ISecuritizationTGE} from '../pool/ISecuritizationTGE.sol';
-import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
-import {ISecuritizationPoolNAV} from '../pool/ISecuritizationPoolNAV.sol';
+import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
+import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolNAV} from '../../interfaces/ISecuritizationPoolNAV.sol';
+import {UntangledBase} from '../../base/UntangledBase.sol';
 
 /// @title LoanRepaymentRouter
 /// @author Untangled Team
 /// @dev Repay for loan
-contract LoanRepaymentRouter is ILoanRepaymentRouter {
+contract LoanRepaymentRouter is UntangledBase, ILoanRepaymentRouter {
     using ConfigHelper for Registry;
 
-    function initialize(Registry _registry) public override initializer {
+    Registry public registry;
+
+    function initialize(Registry _registry) public initializer {
         __UntangledBase__init(_msgSender());
         registry = _registry;
     }

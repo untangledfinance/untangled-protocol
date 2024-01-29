@@ -4,8 +4,7 @@ pragma solidity 0.8.19;
 import {Registry} from '../../storage/Registry.sol';
 import '../../tokens/ERC721/types.sol';
 
-abstract contract ILoanKernel {
-    Registry public registry;
+ interface ILoanKernel {
 
     /****************** */
     // CONSTANTS
@@ -65,5 +64,5 @@ abstract contract ILoanKernel {
     /*********** */
 
     /// @notice conclude a loan by stopping lending/loan terms or allowing the loan loss. It takes the creditor, agreement ID, and term contract as input
-    function concludeLoan(address creditor, bytes32 agreementId) public virtual;
+    function concludeLoan(address creditor, bytes32 agreementId) external;
 }

@@ -19,6 +19,8 @@ contract LoanKernel is ILoanKernel, UntangledBase {
     using ConfigHelper for Registry;
     using ERC165CheckerUpgradeable for address;
 
+    Registry public registry;
+
     function initialize(Registry _registry) public initializer {
         __UntangledBase__init_unchained(_msgSender());
         registry = _registry;

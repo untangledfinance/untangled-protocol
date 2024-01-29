@@ -18,7 +18,7 @@ import {IMintedTGE} from '../note-sale/IMintedTGE.sol';
 import {IFinalizableCrowdsale} from '../note-sale/crowdsale/IFinalizableCrowdsale.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
-import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
+import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
 
 import {ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
@@ -333,12 +333,12 @@ contract SecuritizationTGE is
         return interfaceId == type(ISecuritizationTGE).interfaceId || super.supportsInterface(interfaceId);
     }
 
-    function pause() public virtual {
+    function pauseTGE() public virtual {
         registry().requirePoolAdminOrOwner(address(this), _msgSender());
         _pause();
     }
 
-    function unpause() public virtual {
+    function unpauseTGE() public virtual {
         registry().requirePoolAdminOrOwner(address(this), _msgSender());
         _unpause();
     }
@@ -350,7 +350,7 @@ contract SecuritizationTGE is
         override(SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](30);
+        bytes4[] memory _functionSignatures = new bytes4[](29);
 
         _functionSignatures[1] = this.setPot.selector;
         _functionSignatures[2] = this.increaseReserve.selector;
@@ -367,18 +367,18 @@ contract SecuritizationTGE is
         _functionSignatures[14] = this.injectTGEAddress.selector;
         _functionSignatures[15] = this.increaseTotalAssetRepaidCurrency.selector;
         _functionSignatures[16] = this.hasFinishedRedemption.selector;
-        _functionSignatures[18] = this.claimCashRemain.selector;
-        _functionSignatures[19] = this.startCycle.selector;
-        _functionSignatures[20] = this.withdraw.selector;
-        _functionSignatures[21] = this.supportsInterface.selector;
-        _functionSignatures[22] = this.paused.selector;
-        _functionSignatures[23] = this.pause.selector;
-        _functionSignatures[24] = this.unpause.selector;
-        _functionSignatures[25] = this.isDebtCeilingValid.selector;
-        _functionSignatures[26] = this.setDebtCeiling.selector;
-        _functionSignatures[27] = this.debtCeiling.selector;
-        _functionSignatures[28] = this.disburse.selector;
-        _functionSignatures[29] = this.setMinFirstLossCushion.selector;
+        _functionSignatures[17] = this.claimCashRemain.selector;
+        _functionSignatures[18] = this.startCycle.selector;
+        _functionSignatures[19] = this.withdraw.selector;
+        _functionSignatures[20] = this.supportsInterface.selector;
+        _functionSignatures[21] = this.paused.selector;
+        _functionSignatures[22] = this.pauseTGE.selector;
+        _functionSignatures[23] = this.unpauseTGE.selector;
+        _functionSignatures[24] = this.isDebtCeilingValid.selector;
+        _functionSignatures[25] = this.setDebtCeiling.selector;
+        _functionSignatures[26] = this.debtCeiling.selector;
+        _functionSignatures[27] = this.disburse.selector;
+        _functionSignatures[28] = this.setMinFirstLossCushion.selector;
 
         return _functionSignatures;
     }

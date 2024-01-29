@@ -15,11 +15,11 @@ import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {POOL_ADMIN, ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
-import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
+import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
 import {ISecuritizationPoolNAV} from './ISecuritizationPoolNAV.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
-import {ISecuritizationAccessControl} from "../../interfaces/ISecuritizationAccessControl.sol";
+import {ISecuritizationAccessControl} from '../../interfaces/ISecuritizationAccessControl.sol';
 import {RiskScore, LoanEntry} from './base/types.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
@@ -358,12 +358,12 @@ contract SecuritizationPoolAsset is
         return _getStorage().tokenAssetAddresses[idx];
     }
 
-    function pause() public virtual override {
+    function pausePoolAsset() public virtual {
         registry().requirePoolAdminOrOwner(address(this), _msgSender());
         _pause();
     }
 
-    function unpause() public virtual override {
+    function unpausePoolAsset() public virtual {
         registry().requirePoolAdminOrOwner(address(this), _msgSender());
         _unpause();
     }
@@ -393,8 +393,8 @@ contract SecuritizationPoolAsset is
         _functionSignatures[13] = this.setUpOpeningBlockTimestamp.selector;
         _functionSignatures[14] = this.supportsInterface.selector;
         _functionSignatures[15] = this.onERC721Received.selector;
-        _functionSignatures[16] = this.pause.selector;
-        _functionSignatures[17] = this.unpause.selector;
+        _functionSignatures[16] = this.pausePoolAsset.selector;
+        _functionSignatures[17] = this.unpausePoolAsset.selector;
         _functionSignatures[18] = this.paused.selector;
 
         return _functionSignatures;

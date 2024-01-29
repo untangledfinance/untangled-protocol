@@ -8,7 +8,7 @@ import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {OWNER_ROLE} from './types.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
 import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {ISecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';

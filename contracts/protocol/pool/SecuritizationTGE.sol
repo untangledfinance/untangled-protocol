@@ -11,14 +11,14 @@ import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-import {ISecuritizationPoolValueService} from './ISecuritizationPoolValueService.sol';
+import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
 import {RegistryInjection} from './RegistryInjection.sol';
 import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 import {IMintedTGE} from '../note-sale/IMintedTGE.sol';
 import {IFinalizableCrowdsale} from '../note-sale/crowdsale/IFinalizableCrowdsale.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
 
 import {ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';

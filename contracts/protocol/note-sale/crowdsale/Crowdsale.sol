@@ -5,13 +5,15 @@ import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/
 
 import '../../../base/UntangledBase.sol';
 import '@openzeppelin/contracts/interfaces/IERC20.sol';
-import '../../pool/ISecuritizationPool.sol';
+import {ISecuritizationPool} from '../../../interfaces/ISecuritizationPool.sol';
 import {ISecuritizationTGE} from '../../pool/ISecuritizationTGE.sol';
+
+import {Registry} from '../../../storage/Registry.sol';
 
 import {ConfigHelper} from '../../../libraries/ConfigHelper.sol';
 import '../../../interfaces/INoteToken.sol';
 import '../../../interfaces/ICrowdSale.sol';
-import {ISecuritizationPoolStorage} from '../../pool/ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../../interfaces/ISecuritizationPoolStorage.sol";
 
 abstract contract Crowdsale is UntangledBase, ICrowdSale {
     using ConfigHelper for Registry;

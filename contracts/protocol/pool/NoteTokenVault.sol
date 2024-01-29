@@ -12,7 +12,7 @@ import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {INoteTokenVault} from './INoteTokenVault.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
 import {BACKEND_ADMIN, SIGNER_ROLE} from './types.sol';

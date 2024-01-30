@@ -12,10 +12,9 @@ import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {INoteTokenVault} from '../../interfaces/INoteTokenVault.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
-import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
-import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
 import {BACKEND_ADMIN, SIGNER_ROLE} from './types.sol';
+import {IPool} from '../../interfaces/IPool.sol';
 import '../../storage/Registry.sol';
 import '../../libraries/ConfigHelper.sol';
 
@@ -94,8 +93,8 @@ contract NoteTokenVault is
         address noteTokenAddress = redeemParam.noteTokenAddress;
         uint256 noteTokenRedeemAmount = redeemParam.noteTokenRedeemAmount;
 
-        address jotTokenAddress = ISecuritizationTGE(pool).jotToken();
-        address sotTokenAddress = ISecuritizationTGE(pool).sotToken();
+        address jotTokenAddress = IPool(pool).jotToken();
+        address sotTokenAddress = IPool(pool).sotToken();
         require(
             _isJotToken(noteTokenAddress, jotTokenAddress) || _isSotToken(noteTokenAddress, sotTokenAddress),
             'NoteTokenVault: Invalid token address'
@@ -131,7 +130,7 @@ contract NoteTokenVault is
         address[] calldata noteTokenAddresses,
         uint256[] calldata totalRedeemedNoteAmounts
     ) public onlyRole(BACKEND_ADMIN) nonReentrant {
-        ISecuritizationTGE poolTGE = ISecuritizationTGE(pool);
+        IPool poolTGE = IPool(pool);
 
         for (uint i = 0; i < noteTokenAddresses.length; i++) {
             ERC20BurnableUpgradeable(noteTokenAddresses[i]).burn(totalRedeemedNoteAmounts[i]);
@@ -149,7 +148,7 @@ contract NoteTokenVault is
         uint256[] memory currencyAmounts,
         uint256[] memory redeemedNoteAmounts
     ) public onlyRole(BACKEND_ADMIN) nonReentrant {
-        ISecuritizationTGE poolTGE = ISecuritizationTGE(pool);
+        IPool poolTGE = IPool(pool);
         address jotTokenAddress = poolTGE.jotToken();
         address sotTokenAddress = poolTGE.sotToken();
         require(
@@ -175,16 +174,16 @@ contract NoteTokenVault is
             // Update pot pool reserve in P2P investment
             address poolOfPot = registry.getSecuritizationManager().potToPool(toAddresses[i]);
             if (poolOfPot != address(0)) {
-                ISecuritizationTGE(poolOfPot).increaseReserve(currencyAmounts[i]);
+                IPool(poolOfPot).increaseReserve(currencyAmounts[i]);
             }
         }
 
         if (_isJotToken(noteTokenAddress, jotTokenAddress)) {
             poolTotalJOTRedeem[pool] -= totalNoteRedeemed;
-            ICrowdSale(ISecuritizationPoolStorage(pool).secondTGEAddress()).onRedeem(totalCurrencyAmount);
+            ICrowdSale(IPool(pool).secondTGEAddress()).onRedeem(totalCurrencyAmount);
         } else {
             poolTotalSOTRedeem[pool] -= totalNoteRedeemed;
-            ICrowdSale(ISecuritizationPoolStorage(pool).tgeAddress()).onRedeem(totalCurrencyAmount);
+            ICrowdSale(IPool(pool).tgeAddress()).onRedeem(totalCurrencyAmount);
         }
 
         emit DisburseOrder(pool, noteTokenAddress, toAddresses, currencyAmounts, redeemedNoteAmounts);
@@ -214,8 +213,8 @@ contract NoteTokenVault is
         _incrementNonce(usr);
 
         address pool = cancelParam.pool;
-        address jotTokenAddress = ISecuritizationTGE(pool).jotToken();
-        address sotTokenAddress = ISecuritizationTGE(pool).sotToken();
+        address jotTokenAddress = IPool(pool).jotToken();
+        address sotTokenAddress = IPool(pool).sotToken();
         address noteTokenAddress = cancelParam.noteTokenAddress;
 
         require(

@@ -95,11 +95,32 @@ const initPool = async (securitizationPoolImpl) => {
 };
 
 const setUpSecuritizationPoolImpl = async (registry) => {
-    const SecuritizationPool = await ethers.getContractFactory('SecuritizationPool');
+    const PoolNAVLogic = await ethers.getContractFactory('PoolNAVLogic');
+    const poolNAVLogic = await PoolNAVLogic.deploy();
+    await poolNAVLogic.deployed();
+    const PoolAssetLogic = await ethers.getContractFactory('PoolAssetLogic', {
+        libraries: {
+            PoolNAVLogic: poolNAVLogic.address,
+        },
+    });
+    const poolAssetLogic = await PoolAssetLogic.deploy();
+    await poolAssetLogic.deployed();
+    const TGELogic = await ethers.getContractFactory('TGELogic');
+    const tgeLogic = await TGELogic.deploy();
+    await tgeLogic.deployed();
+
+    const SecuritizationPool = await ethers.getContractFactory('Pool', {
+        libraries: {
+            PoolAssetLogic: poolAssetLogic.address,
+            PoolNAVLogic: poolNAVLogic.address,
+            TGELogic: tgeLogic.address,
+        },
+    });
     const securitizationPoolImpl = await SecuritizationPool.deploy();
+    await securitizationPoolImpl.deployed();
     await registry.setSecuritizationPool(securitizationPoolImpl.address);
 
-    await initPool(securitizationPoolImpl);
+    // await initPool(securitizationPoolImpl);
 
     return securitizationPoolImpl;
 };
@@ -182,7 +203,6 @@ async function setup() {
         registry,
         loanAssetTokenContract,
         defaultLoanAssetTokenValidator,
-
         loanKernel,
         loanRepaymentRouter,
         securitizationManager,

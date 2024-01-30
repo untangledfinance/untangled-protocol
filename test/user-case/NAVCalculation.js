@@ -304,7 +304,7 @@ describe('NAV', () => {
 
             // PoolNAV contract
             securitizationPoolNAV = await ethers.getContractAt(
-                'SecuritizationPoolNAV',
+                'Pool',
                 securitizationPoolContract.address
             );
         });

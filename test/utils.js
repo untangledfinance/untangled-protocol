@@ -1,4 +1,4 @@
-const { ethers } = require('hardhat');
+const { ethers, artifacts } = require('hardhat');
 const { utils, Contract } = require('ethers');
 
 const { BigNumber } = require('bignumber.js');
@@ -225,8 +225,8 @@ const getPoolAbi = async () => {
     const storage = await artifacts.readArtifact('SecuritizationPoolStorage');
     const tge = await artifacts.readArtifact('SecuritizationTGE');
     const nav = await artifacts.readArtifact('SecuritizationPoolNAV');
-
-    const abis = [...storage.abi, ...asset.abi, ...control.abi, ...tge.abi, ...nav.abi];
+    const pool = await artifacts.readArtifact('Pool');
+    const abis = [...storage.abi, ...asset.abi, ...control.abi, ...tge.abi, ...nav.abi,...pool.abi];
 
     const resultAbis = [];
     // remove duplicate

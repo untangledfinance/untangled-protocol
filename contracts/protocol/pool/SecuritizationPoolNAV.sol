@@ -33,7 +33,8 @@ import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {Discounting} from './libs/discounting.sol';
+import {Discounting} from '../../libraries/Discounting.sol';
+import {Math} from '../../libraries/Math.sol';
 import {POOL, ONE_HUNDRED_PERCENT, RATE_SCALING_FACTOR, WRITEOFF_RATE_GROUP_START} from './types.sol';
 
 import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
@@ -53,7 +54,6 @@ import 'contracts/libraries/UnpackLoanParamtersLib.sol';
  * @author Untangled Team
  */
 contract SecuritizationPoolNAV is
-    Discounting,
     ERC165Upgradeable,
     RegistryInjection,
     PausableUpgradeable,
@@ -89,14 +89,14 @@ contract SecuritizationPoolNAV is
 
     function __SecuritizationPoolNAV_init_unchained() internal {
         Storage storage $ = _getStorage();
-        $.lastNAVUpdate = uniqueDayTimestamp(block.timestamp);
+        $.lastNAVUpdate = Discounting.uniqueDayTimestamp(block.timestamp);
 
         // pre-definition for loans without interest rates
-        $.rates[0].chi = ONE;
-        $.rates[0].ratePerSecond = ONE;
+        $.rates[0].chi = Math.ONE;
+        $.rates[0].ratePerSecond = Math.ONE;
 
         // Default discount rate
-        $.discountRate = ONE;
+        $.discountRate = Math.ONE;
     }
 
     modifier onlySecuritizationPool() {
@@ -144,8 +144,8 @@ contract SecuritizationPoolNAV is
     function recoveryRatePD(uint256 riskID, uint256 termLength) public view returns (uint256 recoveryRatePD_) {
         RiskScore memory riskParam = getRiskScoreByIdx(riskID);
         return
-            ONE -
-            (ONE * riskParam.probabilityOfDefault * riskParam.lossGivenDefault * termLength) /
+            Math.ONE -
+            (Math.ONE * riskParam.probabilityOfDefault * riskParam.lossGivenDefault * termLength) /
             (ONE_HUNDRED_PERCENT * ONE_HUNDRED_PERCENT * 365 days);
     }
 
@@ -208,7 +208,7 @@ contract SecuritizationPoolNAV is
         uint256 _convertedInterestRate;
 
         principalAmount = (principalAmount * riskParam.advanceRate) / (ONE_HUNDRED_PERCENT);
-        _convertedInterestRate = ONE + (riskParam.interestRate * ONE) / (ONE_HUNDRED_PERCENT * 365 days);
+        _convertedInterestRate = Math.ONE + (riskParam.interestRate * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
 
         $.loanToNFT[$.loanCount] = _tokenId;
         $.loanCount++;
@@ -220,8 +220,8 @@ contract SecuritizationPoolNAV is
         setRate(loan, _convertedInterestRate);
         accrue(loan);
 
-        $.balances[loan] = safeAdd($.balances[loan], principalAmount);
-        $.balance = safeAdd($.balance, principalAmount);
+        $.balances[loan] = Math.safeAdd($.balances[loan], principalAmount);
+        $.balance = Math.safeAdd($.balance, principalAmount);
 
         // increase NAV
         borrow(loan, principalAmount);
@@ -243,7 +243,7 @@ contract SecuritizationPoolNAV is
     function setLoanMaturityDate(bytes32 nftID_, uint256 maturityDate_) internal {
         require((futureValue(nftID_) == 0), 'can-not-change-maturityDate-outstanding-debt');
         Storage storage $ = _getStorage();
-        $.details[nftID_].maturityDate = toUint128(uniqueDayTimestamp(maturityDate_));
+        $.details[nftID_].maturityDate = toUint128(Discounting.uniqueDayTimestamp(maturityDate_));
         emit SetLoanMaturity(nftID_, maturityDate_);
     }
 
@@ -254,7 +254,7 @@ contract SecuritizationPoolNAV is
         if (name == 'discountRate') {
             Storage storage $ = _getStorage();
             uint256 oldDiscountRate = $.discountRate;
-            $.discountRate = ONE + (value * ONE) / (ONE_HUNDRED_PERCENT * 365 days);
+            $.discountRate = Math.ONE + (value * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
             // the nav needs to be re-calculated based on the new discount rate
             // no need to recalculate it if initialized the first time
             if (oldDiscountRate != 0) {
@@ -280,10 +280,10 @@ contract SecuritizationPoolNAV is
         if (name == 'writeOffGroup') {
             Storage storage $ = _getStorage();
             uint256 index = $.writeOffGroups.length;
-            uint256 _convertedInterestRate = ONE + (rate_ * ONE) / (ONE_HUNDRED_PERCENT * 365 days);
-            uint256 _convertedWriteOffPercentage = ONE - (writeOffPercentage_ * ONE) / ONE_HUNDRED_PERCENT;
-            uint256 _convertedPenaltyRate = ONE +
-                (ONE * penaltyRate_ * rate_) /
+            uint256 _convertedInterestRate = Math.ONE + (rate_ * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
+            uint256 _convertedWriteOffPercentage = Math.ONE - (writeOffPercentage_ * Math.ONE) / ONE_HUNDRED_PERCENT;
+            uint256 _convertedPenaltyRate = Math.ONE +
+                (Math.ONE * penaltyRate_ * rate_) /
                 (ONE_HUNDRED_PERCENT * ONE_HUNDRED_PERCENT * 365 days);
             uint256 _convertedOverdueDays = overdueDays_ / 1 days;
             $.writeOffGroups.push(
@@ -293,8 +293,8 @@ contract SecuritizationPoolNAV is
                     toUint128(riskIndex)
                 )
             );
-            _file('rate', safeAdd(WRITEOFF_RATE_GROUP_START, index), _convertedInterestRate);
-            _file('penalty', safeAdd(WRITEOFF_RATE_GROUP_START, index), _convertedPenaltyRate);
+            _file('rate', Math.safeAdd(WRITEOFF_RATE_GROUP_START, index), _convertedInterestRate);
+            _file('penalty', Math.safeAdd(WRITEOFF_RATE_GROUP_START, index), _convertedPenaltyRate);
         } else {
             revert('unknown name');
         }
@@ -310,7 +310,7 @@ contract SecuritizationPoolNAV is
         if (what == 'rate') {
             require(value != 0, 'rate-per-second-can-not-be-0');
             if ($.rates[rate].chi == 0) {
-                $.rates[rate].chi = ONE;
+                $.rates[rate].chi = Math.ONE;
                 $.rates[rate].lastUpdated = uint48(block.timestamp);
             } else {
                 drip(rate);
@@ -319,7 +319,7 @@ contract SecuritizationPoolNAV is
         } else if (what == 'penalty') {
             require(value != 0, 'penalty-per-second-can-not-be-0');
             if ($.rates[rate].penaltyChi == 0) {
-                $.rates[rate].penaltyChi = ONE;
+                $.rates[rate].penaltyChi = Math.ONE;
                 $.rates[rate].lastUpdated = uint48(block.timestamp);
             } else {
                 drip(rate);
@@ -336,7 +336,7 @@ contract SecuritizationPoolNAV is
     /// @param amount the amount borrowed
     /// @return navIncrease the increase of the NAV impacted by the new borrow
     function borrow(uint256 loan, uint256 amount) private returns (uint256 navIncrease) {
-        uint256 nnow = uniqueDayTimestamp(block.timestamp);
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
         bytes32 nftID_ = nftID(loan);
         uint256 maturityDate_ = maturityDate(nftID_);
 
@@ -355,35 +355,35 @@ contract SecuritizationPoolNAV is
 
         // calculate future value FV
         NFTDetails memory nftDetail = getAsset(bytes32(loan));
-        uint256 fv = calcFutureValue(
+        uint256 fv = Discounting.calcFutureValue(
             _rate.ratePerSecond,
             amount,
             maturityDate_,
             recoveryRatePD(nftDetail.risk, nftDetail.expirationTimestamp - nftDetail.issuanceBlockTimestamp)
         );
-        $.details[nftID_].futureValue = toUint128(safeAdd(futureValue(nftID_), fv));
+        $.details[nftID_].futureValue = toUint128(Math.safeAdd(futureValue(nftID_), fv));
 
         // add future value to the bucket of assets with the same maturity date
-        $.buckets[maturityDate_] = safeAdd($.buckets[maturityDate_], fv);
+        $.buckets[maturityDate_] = Math.safeAdd($.buckets[maturityDate_], fv);
 
         // increase borrowed amount for future ceiling computations
-        $.loanDetails[loan].borrowed = toUint128(safeAdd(borrowed(loan), amount));
+        $.loanDetails[loan].borrowed = toUint128(Math.safeAdd(borrowed(loan), amount));
 
         // return increase NAV amount
-        navIncrease = calcDiscount($.discountRate, fv, nnow, maturityDate_);
-        $.latestDiscount = safeAdd($.latestDiscount, navIncrease);
+        navIncrease = Discounting.calcDiscount($.discountRate, fv, nnow, maturityDate_);
+        $.latestDiscount = Math.safeAdd($.latestDiscount, navIncrease);
         $.latestDiscountOfNavAssets[nftID_] += navIncrease;
 
-        $.latestNAV = safeAdd($.latestNAV, navIncrease);
+        $.latestNAV = Math.safeAdd($.latestNAV, navIncrease);
 
         return navIncrease;
     }
 
     function _decreaseLoan(uint256 loan, uint256 amount) private {
         Storage storage $ = _getStorage();
-        $.latestNAV = secureSub(
+        $.latestNAV = Discounting.secureSub(
             $.latestNAV,
-            rmul(amount, toUint128($.writeOffGroups[$.loanRates[loan] - WRITEOFF_RATE_GROUP_START].percentage))
+            Math.rmul(amount, toUint128($.writeOffGroups[$.loanRates[loan] - WRITEOFF_RATE_GROUP_START].percentage))
         );
         decDebt(loan, amount);
     }
@@ -392,7 +392,7 @@ contract SecuritizationPoolNAV is
         Storage storage $ = _getStorage();
         Rate memory _rate = $.rates[$.loanRates[loan]];
         NFTDetails memory nftDetail = getAsset(nftID(loan));
-        uint256 fv = calcFutureValue(
+        uint256 fv = Discounting.calcFutureValue(
             _rate.ratePerSecond,
             _debt,
             _maturityDate,
@@ -407,7 +407,7 @@ contract SecuritizationPoolNAV is
     function repayLoan(uint256 loan, uint256 amount) external returns (uint256) {
         require(address(registry().getLoanRepaymentRouter()) == msg.sender, 'not authorized');
         accrue(loan);
-        uint256 nnow = uniqueDayTimestamp(block.timestamp);
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
         Storage storage $ = _getStorage();
         if (nnow > $.lastNAVUpdate) {
             calcUpdateNAV();
@@ -427,7 +427,7 @@ contract SecuritizationPoolNAV is
             _decreaseLoan(loan, amount);
             return amount;
         }
-        uint256 _debt = safeSub(_currentDebt, amount); // Remaining
+        uint256 _debt = Math.safeSub(_currentDebt, amount); // Remaining
         uint256 preFV = futureValue(nftID_);
         // in case of partial repayment, compute the fv of the remaining debt and add to the according fv bucket
         uint256 fv = 0;
@@ -435,7 +435,7 @@ contract SecuritizationPoolNAV is
         if (_debt != 0) {
             fv = _calcFutureValue(loan, _debt, maturityDate_);
             if (preFV >= fv) {
-                fvDecrease = safeSub(preFV, fv);
+                fvDecrease = Math.safeSub(preFV, fv);
             } else {
                 fvDecrease = 0;
             }
@@ -446,19 +446,19 @@ contract SecuritizationPoolNAV is
         // case 2: repayment of a loan before or on maturity date
         if (maturityDate_ >= nnow) {
             // remove future value decrease from bucket
-            $.buckets[maturityDate_] = safeSub($.buckets[maturityDate_], fvDecrease);
+            $.buckets[maturityDate_] = Math.safeSub($.buckets[maturityDate_], fvDecrease);
 
-            uint256 discountDecrease = calcDiscount($.discountRate, fvDecrease, nnow, maturityDate_);
+            uint256 discountDecrease = Discounting.calcDiscount($.discountRate, fvDecrease, nnow, maturityDate_);
 
-            $.latestDiscount = secureSub($.latestDiscount, discountDecrease);
-            $.latestDiscountOfNavAssets[nftID_] = secureSub($.latestDiscountOfNavAssets[nftID_], discountDecrease);
+            $.latestDiscount = Discounting.secureSub($.latestDiscount, discountDecrease);
+            $.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub($.latestDiscountOfNavAssets[nftID_], discountDecrease);
 
-            $.latestNAV = secureSub($.latestNAV, discountDecrease);
+            $.latestNAV = Discounting.secureSub($.latestNAV, discountDecrease);
         } else {
             // case 3: repayment of an overdue loan
-            $.overdueLoans = safeSub($.overdueLoans, fvDecrease);
-            $.overdueLoansOfNavAssets[nftID_] = safeSub($.overdueLoansOfNavAssets[nftID_], fvDecrease);
-            $.latestNAV = secureSub($.latestNAV, fvDecrease);
+            $.overdueLoans = Math.safeSub($.overdueLoans, fvDecrease);
+            $.overdueLoansOfNavAssets[nftID_] = Math.safeSub($.overdueLoansOfNavAssets[nftID_], fvDecrease);
+            $.latestNAV = Discounting.secureSub($.latestNAV, fvDecrease);
         }
 
         decDebt(loan, amount);
@@ -478,7 +478,7 @@ contract SecuritizationPoolNAV is
         require(maturityDate_ > 0, 'loan-does-not-exist');
 
         // can not write-off healthy loans
-        uint256 nnow = uniqueDayTimestamp(block.timestamp);
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
         NFTDetails memory nftDetail = getAsset(bytes32(loan));
         RiskScore memory riskParam = getRiskScoreByIdx(nftDetail.risk);
         require(maturityDate_ + riskParam.gracePeriod <= nnow, 'maturity-date-in-the-future');
@@ -501,7 +501,7 @@ contract SecuritizationPoolNAV is
     /// @param maturityDate_ the maturity date of the loan
     function _writeOff(uint256 loan, uint256 writeOffGroupIndex_, bytes32 nftID_, uint256 maturityDate_) internal {
         Storage storage $ = _getStorage();
-        uint256 nnow = uniqueDayTimestamp(block.timestamp);
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
         // Ensure we have an up to date NAV
         if (nnow > $.lastNAVUpdate) {
             calcUpdateNAV();
@@ -512,25 +512,25 @@ contract SecuritizationPoolNAV is
         // first time written-off
         if (isLoanWrittenOff(loan) == false) {
             uint256 fv = futureValue(nftID_);
-            if (uniqueDayTimestamp($.lastNAVUpdate) > maturityDate_) {
+            if (Discounting.uniqueDayTimestamp($.lastNAVUpdate) > maturityDate_) {
                 // write off after the maturity date
-                $.overdueLoans = secureSub($.overdueLoans, fv);
-                $.overdueLoansOfNavAssets[nftID_] = secureSub($.overdueLoansOfNavAssets[nftID_], fv);
-                latestNAV_ = secureSub(latestNAV_, fv);
+                $.overdueLoans = Discounting.secureSub($.overdueLoans, fv);
+                $.overdueLoansOfNavAssets[nftID_] = Discounting.secureSub($.overdueLoansOfNavAssets[nftID_], fv);
+                latestNAV_ = Discounting.secureSub(latestNAV_, fv);
             } else {
                 // write off before or on the maturity date
-                $.buckets[maturityDate_] = safeSub($.buckets[maturityDate_], fv);
+                $.buckets[maturityDate_] = Math.safeSub($.buckets[maturityDate_], fv);
 
-                uint256 pv = rmul(fv, rpow($.discountRate, safeSub(uniqueDayTimestamp(maturityDate_), nnow), ONE));
-                $.latestDiscount = secureSub($.latestDiscount, pv);
-                $.latestDiscountOfNavAssets[nftID_] = secureSub($.latestDiscountOfNavAssets[nftID_], pv);
+                uint256 pv = Math.rmul(fv, Discounting.rpow($.discountRate, Math.safeSub(Discounting.uniqueDayTimestamp(maturityDate_), nnow), Math.ONE));
+                $.latestDiscount = Discounting.secureSub($.latestDiscount, pv);
+                $.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub($.latestDiscountOfNavAssets[nftID_], pv);
 
-                latestNAV_ = secureSub(latestNAV_, pv);
+                latestNAV_ = Discounting.secureSub(latestNAV_, pv);
             }
         }
 
         changeRate(loan, WRITEOFF_RATE_GROUP_START + writeOffGroupIndex_);
-        $.latestNAV = safeAdd(latestNAV_, rmul(debt(loan), $.writeOffGroups[writeOffGroupIndex_].percentage));
+        $.latestNAV = Math.safeAdd(latestNAV_, Math.rmul(debt(loan), $.writeOffGroups[writeOffGroupIndex_].percentage));
     }
 
     /// @notice returns if a loan is written off
@@ -543,12 +543,12 @@ contract SecuritizationPoolNAV is
     /// @return nav_ current NAV
     function currentNAV() public view override returns (uint256 nav_) {
         (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentPVs();
-        return safeAdd(totalDiscount, safeAdd(overdue, writeOffs));
+        return Math.safeAdd(totalDiscount, Math.safeAdd(overdue, writeOffs));
     }
 
     function currentNAVAsset(bytes32 tokenId) public view override returns (uint256) {
         (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentAV(tokenId);
-        return safeAdd(totalDiscount, safeAdd(overdue, writeOffs));
+        return Math.safeAdd(totalDiscount, Math.safeAdd(overdue, writeOffs));
     }
 
     /// @notice calculates the present value of the loans together with overdue and written off loans
@@ -563,7 +563,7 @@ contract SecuritizationPoolNAV is
         }
 
         uint256 errPV = 0;
-        uint256 nnow = uniqueDayTimestamp(block.timestamp);
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
 
         // find all new overdue loans since the last update
         // calculate the discount of the overdue loans which is needed
@@ -571,17 +571,17 @@ contract SecuritizationPoolNAV is
         for (uint256 i = $.lastNAVUpdate; i < nnow; i = i + 1 days) {
             uint256 b = $.buckets[i];
             if (b != 0) {
-                errPV = safeAdd(errPV, rmul(b, rpow($.discountRate, safeSub(nnow, i), ONE)));
-                overdue = safeAdd(overdue, b);
+                errPV = Math.safeAdd(errPV, Math.rmul(b, Discounting.rpow($.discountRate, Math.safeSub(nnow, i), Math.ONE)));
+                overdue = Math.safeAdd(overdue, b);
             }
         }
 
         return (
             // calculate current totalDiscount based on the previous totalDiscount (optimized calculation)
             // the overdue loans are incorrectly in this new result with their current PV and need to be removed
-            secureSub(rmul($.latestDiscount, rpow($.discountRate, safeSub(nnow, $.lastNAVUpdate), ONE)), errPV),
+            Discounting.secureSub(Math.rmul($.latestDiscount, Discounting.rpow($.discountRate, Math.safeSub(nnow, $.lastNAVUpdate), Math.ONE)), errPV),
             // current overdue loans not written off
-            safeAdd($.overdueLoans, overdue),
+            Math.safeAdd($.overdueLoans, overdue),
             // current write-offs loans
             currentWriteOffs()
         );
@@ -591,7 +591,7 @@ contract SecuritizationPoolNAV is
         Storage storage $ = _getStorage();
         uint256 _currentWriteOffs = 0;
         uint256 writeOffGroupIndex = currentValidWriteOffGroup(uint256(tokenId));
-        _currentWriteOffs = rmul(debt(uint256(tokenId)), uint256($.writeOffGroups[writeOffGroupIndex].percentage));
+        _currentWriteOffs = Math.rmul(debt(uint256(tokenId)), uint256($.writeOffGroups[writeOffGroupIndex].percentage));
         return _currentWriteOffs;
     }
 
@@ -603,7 +603,7 @@ contract SecuritizationPoolNAV is
 
         if (isLoanWrittenOff(uint256(tokenId))) {
             uint256 writeOffGroupIndex = currentValidWriteOffGroup(uint256(tokenId));
-            _currentWriteOffs = rmul(debt(uint256(tokenId)), uint256($.writeOffGroups[writeOffGroupIndex].percentage));
+            _currentWriteOffs = Math.rmul(debt(uint256(tokenId)), uint256($.writeOffGroups[writeOffGroupIndex].percentage));
         }
 
         if ($.latestDiscountOfNavAssets[tokenId] == 0) {
@@ -612,22 +612,22 @@ contract SecuritizationPoolNAV is
         }
 
         uint256 errPV = 0;
-        uint256 nnow = uniqueDayTimestamp(block.timestamp);
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
 
         // loan is overdue since lastNAVUpdate
-        uint256 mat = uniqueDayTimestamp(maturityDate(tokenId));
+        uint256 mat = Discounting.uniqueDayTimestamp(maturityDate(tokenId));
         if (mat >= $.lastNAVUpdate && mat < nnow) {
             uint256 b = futureValue(tokenId);
-            errPV = rmul(b, rpow($.discountRate, safeSub(nnow, mat), ONE));
+            errPV = Math.rmul(b, Discounting.rpow($.discountRate, Math.safeSub(nnow, mat), Math.ONE));
             overdue = b;
         }
 
         return (
-            secureSub(
-                rmul($.latestDiscountOfNavAssets[tokenId], rpow($.discountRate, safeSub(nnow, $.lastNAVUpdate), ONE)),
+            Discounting.secureSub(
+                Math.rmul($.latestDiscountOfNavAssets[tokenId], Discounting.rpow($.discountRate, Math.safeSub(nnow, $.lastNAVUpdate), Math.ONE)),
                 errPV
             ),
-            safeAdd($.overdueLoansOfNavAssets[tokenId], overdue),
+            Math.safeAdd($.overdueLoansOfNavAssets[tokenId], overdue),
             _currentWriteOffs
         );
     }
@@ -639,7 +639,7 @@ contract SecuritizationPoolNAV is
         for (uint256 i = 0; i < $.writeOffGroups.length; i++) {
             // multiply writeOffGroupDebt with the writeOff rate
 
-            sum = safeAdd(sum, rmul(rateDebt(WRITEOFF_RATE_GROUP_START + i), uint256($.writeOffGroups[i].percentage)));
+            sum = Math.safeAdd(sum, Math.rmul(rateDebt(WRITEOFF_RATE_GROUP_START + i), uint256($.writeOffGroups[i].percentage)));
         }
         return sum;
     }
@@ -661,8 +661,8 @@ contract SecuritizationPoolNAV is
         $.overdueLoans = overdue;
         $.latestDiscount = totalDiscount;
 
-        $.latestNAV = safeAdd(safeAdd(totalDiscount, overdue), writeOffs);
-        $.lastNAVUpdate = uniqueDayTimestamp(block.timestamp);
+        $.latestNAV = Math.safeAdd(Math.safeAdd(totalDiscount, overdue), writeOffs);
+        $.lastNAVUpdate = Discounting.uniqueDayTimestamp(block.timestamp);
         return $.latestNAV;
     }
 
@@ -683,17 +683,17 @@ contract SecuritizationPoolNAV is
                 continue;
             }
 
-            uint256 discountIncrease_ = calcDiscount(
+            uint256 discountIncrease_ = Discounting.calcDiscount(
                 $.discountRate,
                 futureValue(nftID_),
                 $.lastNAVUpdate,
                 maturityDate_
             );
-            latestDiscount_ = safeAdd(latestDiscount_, discountIncrease_);
+            latestDiscount_ = Math.safeAdd(latestDiscount_, discountIncrease_);
             $.latestDiscountOfNavAssets[nftID_] = discountIncrease_;
         }
 
-        $.latestNAV = safeAdd(latestDiscount_, safeSub($.latestNAV, $.latestDiscount));
+        $.latestNAV = Math.safeAdd(latestDiscount_, Math.safeSub($.latestNAV, $.latestDiscount));
         $.latestDiscount = latestDiscount_;
 
         return $.latestNAV;
@@ -705,7 +705,7 @@ contract SecuritizationPoolNAV is
     /// @param risk_ the new risk group
     function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) public {
         registry().requirePoolAdmin(_msgSender());
-        uint256 nnow = uniqueDayTimestamp(block.timestamp);
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
 
         // no change in risk group
         if (risk_ == risk(nftID_)) {
@@ -725,7 +725,7 @@ contract SecuritizationPoolNAV is
         uint256 loan = uint256(nftID_);
         if ($.pie[loan] != 0) {
             RiskScore memory riskParam = getRiskScoreByIdx(risk_);
-            uint256 _convertedInterestRate = ONE + (riskParam.interestRate * ONE) / (ONE_HUNDRED_PERCENT * 365 days);
+            uint256 _convertedInterestRate = Math.ONE + (riskParam.interestRate * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
             if ($.rates[_convertedInterestRate].ratePerSecond == 0) {
                 // If interest rate is not set
                 _file('rate', _convertedInterestRate, _convertedInterestRate);
@@ -746,21 +746,21 @@ contract SecuritizationPoolNAV is
         // recalculation required
         uint256 fvDecrease = futureValue(nftID_);
 
-        uint256 navDecrease = calcDiscount($.discountRate, fvDecrease, nnow, maturityDate_);
+        uint256 navDecrease = Discounting.calcDiscount($.discountRate, fvDecrease, nnow, maturityDate_);
 
-        $.buckets[maturityDate_] = safeSub($.buckets[maturityDate_], fvDecrease);
+        $.buckets[maturityDate_] = Math.safeSub($.buckets[maturityDate_], fvDecrease);
 
-        $.latestDiscount = secureSub($.latestDiscount, navDecrease);
-        $.latestDiscountOfNavAssets[nftID_] = secureSub($.latestDiscountOfNavAssets[nftID_], navDecrease);
+        $.latestDiscount = Discounting.secureSub($.latestDiscount, navDecrease);
+        $.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub($.latestDiscountOfNavAssets[nftID_], navDecrease);
 
-        $.latestNAV = secureSub($.latestNAV, navDecrease);
+        $.latestNAV = Discounting.secureSub($.latestNAV, navDecrease);
 
         // update latest NAV
         // update latest Discount
         Rate memory _rate = $.rates[$.loanRates[loan]];
         NFTDetails memory nftDetail = getAsset(bytes32(loan));
         $.details[nftID_].futureValue = toUint128(
-            calcFutureValue(
+            Discounting.calcFutureValue(
                 _rate.ratePerSecond,
                 debt(loan),
                 maturityDate(nftID_),
@@ -769,14 +769,14 @@ contract SecuritizationPoolNAV is
         );
 
         uint256 fvIncrease = futureValue(nftID_);
-        uint256 navIncrease = calcDiscount($.discountRate, fvIncrease, nnow, maturityDate_);
+        uint256 navIncrease = Discounting.calcDiscount($.discountRate, fvIncrease, nnow, maturityDate_);
 
-        $.buckets[maturityDate_] = safeAdd($.buckets[maturityDate_], fvIncrease);
+        $.buckets[maturityDate_] = Math.safeAdd($.buckets[maturityDate_], fvIncrease);
 
-        $.latestDiscount = safeAdd($.latestDiscount, navIncrease);
+        $.latestDiscount = Math.safeAdd($.latestDiscount, navIncrease);
         $.latestDiscountOfNavAssets[nftID_] += navIncrease;
 
-        $.latestNAV = safeAdd($.latestNAV, navIncrease);
+        $.latestNAV = Math.safeAdd($.latestNAV, navIncrease);
         emit UpdateAssetRiskScore(nftID_, risk_);
     }
 
@@ -793,7 +793,7 @@ contract SecuritizationPoolNAV is
     function currentValidWriteOffGroup(uint256 loan) public view returns (uint256 writeOffGroup_) {
         bytes32 nftID_ = nftID(loan);
         uint256 maturityDate_ = maturityDate(nftID_);
-        uint256 nnow = uniqueDayTimestamp(block.timestamp);
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
 
         NFTDetails memory nftDetail = getAsset(nftID_);
 
@@ -825,8 +825,8 @@ contract SecuritizationPoolNAV is
         require(block.timestamp == $.rates[rate].lastUpdated, 'rate-group-not-updated');
         uint256 pieAmount = toPie($.rates[rate].chi, currencyAmount);
 
-        $.pie[loan] = safeAdd($.pie[loan], pieAmount);
-        $.rates[rate].pie = safeAdd($.rates[rate].pie, pieAmount);
+        $.pie[loan] = Math.safeAdd($.pie[loan], pieAmount);
+        $.rates[rate].pie = Math.safeAdd($.rates[rate].pie, pieAmount);
 
         emit IncreaseDebt(nftID(loan), currencyAmount);
     }
@@ -841,8 +841,8 @@ contract SecuritizationPoolNAV is
         }
         uint256 pieAmount = toPie($.rates[rate].chi, currencyAmount);
 
-        $.pie[loan] = safeSub($.pie[loan], pieAmount);
-        $.rates[rate].pie = safeSub($.rates[rate].pie, pieAmount);
+        $.pie[loan] = Math.safeSub($.pie[loan], pieAmount);
+        $.rates[rate].pie = Math.safeSub($.rates[rate].pie, pieAmount);
 
         emit DecreaseDebt(nftID(loan), currencyAmount);
     }
@@ -910,9 +910,9 @@ contract SecuritizationPoolNAV is
         drip(newRate);
         uint256 pie_ = $.pie[loan];
         uint256 debt_ = toAmount($.rates[currentRate].chi, pie_);
-        $.rates[currentRate].pie = safeSub($.rates[currentRate].pie, pie_);
+        $.rates[currentRate].pie = Math.safeSub($.rates[currentRate].pie, pie_);
         $.pie[loan] = toPie($.rates[newRate].chi, debt_);
-        $.rates[newRate].pie = safeAdd($.rates[newRate].pie, $.pie[loan]);
+        $.rates[newRate].pie = Math.safeAdd($.rates[newRate].pie, $.pie[loan]);
         $.loanRates[loan] = newRate;
         emit ChangeRate(nftID(loan), newRate);
     }
@@ -963,7 +963,7 @@ contract SecuritizationPoolNAV is
         require(chi != 0);
         // instead of a interestBearingAmount we use a accumulated interest rate index (chi)
         uint updatedChi = _chargeInterest(chi, ratePerSecond, lastUpdated, block.timestamp);
-        return (updatedChi, safeSub(rmul(updatedChi, _pie), rmul(chi, _pie)));
+        return (updatedChi, Math.safeSub(Math.rmul(updatedChi, _pie), Math.rmul(chi, _pie)));
     }
 
     // @notice This function charge interest on a interestBearingAmount
@@ -988,17 +988,17 @@ contract SecuritizationPoolNAV is
         uint lastUpdated,
         uint current
     ) internal pure returns (uint) {
-        return rmul(rpow(ratePerSecond, current - lastUpdated, ONE), interestBearingAmount);
+        return Math.rmul(Discounting.rpow(ratePerSecond, current - lastUpdated, Math.ONE), interestBearingAmount);
     }
 
     // convert pie to debt/savings amount
     function toAmount(uint chi, uint _pie) public pure returns (uint) {
-        return rmul(_pie, chi);
+        return Math.rmul(_pie, chi);
     }
 
     // convert debt/savings amount to pie
     function toPie(uint chi, uint amount) public pure returns (uint) {
-        return rdivup(amount, chi);
+        return Math.rdivup(amount, chi);
     }
 
     /// @inheritdoc ISecuritizationPoolNAV

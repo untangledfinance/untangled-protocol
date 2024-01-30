@@ -3,14 +3,14 @@ pragma solidity 0.8.19;
 
 import '../storage/Registry.sol';
 import './ISecuritizationPool.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
-
+// import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import {DataTypes} from '../libraries/DataTypes.sol';
 interface ISecuritizationManager {
     event NewPoolCreated(address indexed instanceAddress);
     event NewPoolDeployed(
         address indexed instanceAddress,
         address poolOwner,
-        ISecuritizationPoolStorage.NewPoolParams newPoolParams
+        DataTypes.NewPoolParams newPoolParams
     );
     event UpdatePotToPool(address indexed pot, address indexed pool);
     event SotDeployed(address indexed sotAddress, address tgeAddress, address poolAddress);

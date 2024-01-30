@@ -7,12 +7,7 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { parseEther, formatEther } = ethers.utils;
 const UntangledProtocol = require('./shared/untangled-protocol');
 
-const {
-    unlimitedAllowance,
-    genSalt,
-    getPoolByAddress,
-    getPoolAbi,
-} = require('./utils.js');
+const { unlimitedAllowance, genSalt, getPoolByAddress, getPoolAbi } = require('./utils.js');
 const { setup } = require('./setup.js');
 const { SaleType } = require('./shared/constants.js');
 
@@ -86,8 +81,17 @@ describe('SecuritizationPool', () => {
 
             const salt = utils.keccak256(Date.now());
 
+
             // Create new pool
-            let securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(poolCreatorSigner, 10, 99, "cUSD", true, salt);
+            let securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(
+                poolCreatorSigner,
+                10,
+                99,
+                'cUSD',
+                true,
+                salt
+            );
+
 
             // expect address, create2
             const { bytecode } = await artifacts.readArtifact('TransparentUpgradeableProxy');
@@ -108,8 +112,10 @@ describe('SecuritizationPool', () => {
                 )
             );
 
+
             const create2 = utils.getCreate2Address(securitizationManager.address, salt, initCodeHash);
             expect(create2).to.be.eq(securitizationPoolAddress);
+
 
             securitizationPoolContract = await getPoolByAddress(securitizationPoolAddress);
             await securitizationPoolContract
@@ -119,12 +125,15 @@ describe('SecuritizationPool', () => {
                 .connect(poolCreatorSigner)
                 .grantRole(ORIGINATOR_ROLE, untangledAdminSigner.address);
 
+
             securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(poolCreatorSigner);
+
 
             secondSecuritizationPool = await getPoolByAddress(securitizationPoolAddress);
             await secondSecuritizationPool
                 .connect(poolCreatorSigner)
                 .grantRole(ORIGINATOR_ROLE, originatorSigner.address);
+
 
             const oneDayInSecs = 1 * 24 * 3600;
             const halfOfADay = oneDayInSecs / 2;
@@ -164,8 +173,7 @@ describe('SecuritizationPool', () => {
             };
 
             await expect(
-                untangledProtocol
-                    .setupRiskScore(poolCreatorSigner, securitizationPoolContract, [riskScore, riskScore])
+                untangledProtocol.setupRiskScore(poolCreatorSigner, securitizationPoolContract, [riskScore, riskScore])
             ).to.be.revertedWith(`SecuritizationPool: Risk scores must be sorted`);
         });
     });
@@ -195,8 +203,8 @@ describe('SecuritizationPool', () => {
                 finalInterest,
                 timeInterval,
                 amountChangeEachInterval,
-                ticker: prefixOfNoteTokenSaleName
-            })
+                ticker: prefixOfNoteTokenSaleName,
+            });
             expect(sotTGEAddress).to.be.properAddress;
 
             mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', sotTGEAddress);
@@ -263,7 +271,7 @@ describe('SecuritizationPool', () => {
         });
         it('Should buy tokens successfully', async () => {
             await untangledProtocol.buyToken(lenderSigner, jotMintedIncreasingInterestTGE.address, parseEther('100'));
-            await untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'))
+            await untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'));
 
             const stablecoinBalanceOfPayerAfter = await stableCoin.balanceOf(lenderSigner.address);
             expect(formatEther(stablecoinBalanceOfPayerAfter)).equal('800.0');
@@ -314,16 +322,16 @@ describe('SecuritizationPool', () => {
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
                     riskScore: '1',
-                    salt: genSalt()
+                    salt: genSalt(),
                 },
                 {
                     principalAmount,
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
                     riskScore: '1',
-                    salt: genSalt()
-                }
-            ]
+                    salt: genSalt(),
+                },
+            ];
 
             tokenIds = await untangledProtocol.uploadLoans(
                 untangledAdminSigner,
@@ -356,9 +364,9 @@ describe('SecuritizationPool', () => {
                     principalAmount,
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
-                    riskScore: '1'
-                }
-            ]
+                    riskScore: '1',
+                },
+            ];
 
             const pledgeTokenIds = await untangledProtocol.uploadLoans(
                 untangledAdminSigner,
@@ -388,7 +396,34 @@ describe('SecuritizationPool', () => {
 
     describe('Upgradeables', async () => {
         it('Should upgrade to new Implementation successfully', async () => {
-            const SecuritizationPoolV2 = await ethers.getContractFactory('SecuritizationPoolV2');
+            let SecuritizationPoolV2;
+            {
+                const PoolNAVLogic = await ethers.getContractFactory('PoolNAVLogic');
+                const poolNAVLogic = await PoolNAVLogic.deploy();
+                await poolNAVLogic.deployed();
+                const PoolAssetLogic = await ethers.getContractFactory('PoolAssetLogic', {
+                    libraries: {
+                        PoolNAVLogic: poolNAVLogic.address,
+                    },
+                });
+                const poolAssetLogic = await PoolAssetLogic.deploy();
+                await poolAssetLogic.deployed();
+                const TGELogic = await ethers.getContractFactory('TGELogic');
+                const tgeLogic = await TGELogic.deploy();
+                await tgeLogic.deployed();
+                SecuritizationPoolV2 = await ethers.getContractFactory('SecuritizationPoolV2', {
+                    libraries: {
+                        PoolAssetLogic: poolAssetLogic.address,
+                        PoolNAVLogic: poolNAVLogic.address,
+                        TGELogic: tgeLogic.address,
+                    },
+                });
+                // const securitizationPoolImpl = await SecuritizationPool.deploy();
+                // await securitizationPoolImpl.deployed();
+                // await registry.setSecuritizationPool(securitizationPoolImpl.address);
+            }
+            
+            // const SecuritizationPoolV2 = await ethers.getContractFactory('SecuritizationPoolV2');
             const spV2Impl = await SecuritizationPoolV2.deploy();
 
             const spImpl = await factoryAdmin.getProxyImplementation(securitizationPoolContract.address);
@@ -507,11 +542,9 @@ describe('SecuritizationPool', () => {
                 parseEther('199.9999'),
                 parseEther('0.001')
             );
-            await expect(
-                securitizationPoolContract
-                    .connect(poolCreatorSigner)
-                    .startCycle()
-            ).to.be.revertedWith(`FinalizableCrowdsale: not closed`);
+            await expect(securitizationPoolContract.connect(poolCreatorSigner).startCycle()).to.be.revertedWith(
+                `FinalizableCrowdsale: not closed`
+            );
 
             await time.increaseTo(dayjs(new Date()).add(8, 'days').unix());
 
@@ -519,9 +552,7 @@ describe('SecuritizationPool', () => {
                 `FinalizableCrowdsale: Only pool contract can finalize`
             );
 
-            await securitizationPoolContract
-                .connect(poolCreatorSigner)
-                .startCycle();
+            await securitizationPoolContract.connect(poolCreatorSigner).startCycle();
         });
     });
 

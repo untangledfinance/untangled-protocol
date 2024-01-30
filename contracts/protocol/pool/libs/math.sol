@@ -20,7 +20,7 @@
 
 pragma solidity 0.8.19;
 
-contract Math {
+library Math {
     uint256 constant ONE = 10 ** 27;
 
     function safeAdd(uint x, uint y) public pure returns (uint z) {

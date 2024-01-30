@@ -24,7 +24,7 @@ pragma solidity 0.8.19;
 import './math.sol';
 
 /// @notice Discounting contract without a state which defines the relevant formulas for the navfeed
-contract Discounting is Math {
+library Discounting{
     /// @notice calculates the discount for a given loan
     /// @param discountRate the discount rate
     /// @param fv the future value of the loan
@@ -37,7 +37,7 @@ contract Discounting is Math {
         uint256 normalizedBlockTimestamp,
         uint256 maturityDate
     ) public pure returns (uint256 result) {
-        return rdiv(fv, rpow(discountRate, safeSub(maturityDate, normalizedBlockTimestamp), ONE));
+        return Math.rdiv(fv, rpow(discountRate, Math.safeSub(maturityDate, normalizedBlockTimestamp), Math.ONE));
     }
 
     /// @notice calculate the future value based on the amount, maturityDate interestRate and recoveryRate
@@ -55,10 +55,10 @@ contract Discounting is Math {
         uint256 nnow = uniqueDayTimestamp(block.timestamp);
         uint256 timeRemaining = 0;
         if (maturityDate > nnow) {
-            timeRemaining = safeSub(maturityDate, nnow);
+            timeRemaining = Math.safeSub(maturityDate, nnow);
         }
 
-        return rmul(rmul(rpow(loanInterestRate, timeRemaining, ONE), amount), recoveryRatePD);
+        return Math.rmul(Math.rmul(rpow(loanInterestRate, timeRemaining, Math.ONE), amount), recoveryRatePD);
     }
 
     /// @notice substracts to values if the result smaller than 0 it returns 0
@@ -69,7 +69,7 @@ contract Discounting is Math {
         if (y > x) {
             return 0;
         }
-        return safeSub(x, y);
+        return Math.safeSub(x, y);
     }
 
     /// @notice normalizes a timestamp to round down to the nearest midnight (UTC)

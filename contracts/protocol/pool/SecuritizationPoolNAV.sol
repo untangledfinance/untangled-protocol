@@ -33,8 +33,8 @@ import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {Discounting} from './libs/discounting.sol';
-import {Math} from './libs/math.sol';
+import {Discounting} from '../../libraries/Discounting.sol';
+import {Math} from '../../libraries/Math.sol';
 import {POOL, ONE_HUNDRED_PERCENT, RATE_SCALING_FACTOR, WRITEOFF_RATE_GROUP_START} from './types.sol';
 
 import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";

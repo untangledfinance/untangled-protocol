@@ -21,7 +21,7 @@
 
 pragma solidity 0.8.19;
 
-import './math.sol';
+import './Math.sol';
 
 /// @notice Discounting contract without a state which defines the relevant formulas for the navfeed
 library Discounting{

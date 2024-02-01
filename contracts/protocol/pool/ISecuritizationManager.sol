@@ -6,6 +6,8 @@ import './ISecuritizationPool.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
 
 interface ISecuritizationManager {
+    event NewTGECreated(address indexed instanceAddress);
+    event NewNotesTokenCreated(address indexed instanceAddress);
     event NewPoolCreated(address indexed instanceAddress);
     event NewPoolDeployed(
         address indexed instanceAddress,

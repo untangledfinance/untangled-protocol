@@ -163,6 +163,8 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
         isExistingTGEs[tgeAddress] = true;
 
+        emit NewTGECreated(tgeAddress);
+        emit NewNotesTokenCreated(sotToken);
         emit SotDeployed(sotToken, tgeAddress, address(pool));
         return (sotToken, tgeAddress);
     }
@@ -255,6 +257,8 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
         isExistingTGEs[tgeAddress] = true;
 
+        emit NewTGECreated(tgeAddress);
+        emit NewNotesTokenCreated(jotToken);
         emit JotDeployed(jotToken, tgeAddress, address(pool));
         return (jotToken, tgeAddress);
     }

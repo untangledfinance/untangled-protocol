@@ -99,7 +99,9 @@ module.exports = {
         ...networks,
     },
     etherscan: {
-        apiKey: '',
+        apiKey: {
+            alfajores: process.env.ALFAJORES_SCAN_API_KEY,
+        },
         customChains: [
             {
                 network: 'alfajores',

@@ -68,7 +68,7 @@ contract LoanRepaymentRouter is ILoanRepaymentRouter {
         }
 
         // Log event for repayment
-        emit AssetRepay(_agreementId, _payer, beneficiary, _amount, _tokenAddress);
+        emit AssetRepay(_agreementId, _payer, beneficiary, repayAmount, outstandingAmount, _tokenAddress);
         return true;
     }
 
@@ -89,7 +89,6 @@ contract LoanRepaymentRouter is ILoanRepaymentRouter {
                 'LoanRepaymentRouter: Repayment has failed'
             );
         }
-        emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
         return true;
     }
 

@@ -10,6 +10,7 @@ import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/se
 import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
 import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
+import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ISecuritizationPool} from './ISecuritizationPool.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
@@ -287,7 +288,7 @@ contract SecuritizationPoolAsset is
             _setOpeningBlockTimestamp(uint64(block.timestamp));
         }
 
-        emit CollectERC20Asset(tokenAddress);
+        emit CollectERC20Asset(tokenAddress, INoteToken(tokenAddress).balanceOf(address(this)));
     }
 
     /// @inheritdoc ISecuritizationPool

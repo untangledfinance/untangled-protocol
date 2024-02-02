@@ -13,7 +13,7 @@ interface ISecuritizationPool {
     event CollectNFTAsset(uint256[] tokenIds, uint256 expectedAssetsValue);
     // event UpdateOpeningBlockTimestamp(uint256 newTimestamp);
     event SecuritizationPoolWithdraw(address originatorAddress, uint256 amount);
-    event CollectERC20Asset(address token);
+    event CollectERC20Asset(address token, uint256 amount);
     event WithdrawERC20Asset(address[] tokenAddresses, address[] recipients, uint256[] amounts);
     event InsertNFTAsset(address token, uint256 tokenId);
     event ExportNFTAsset(address tokenAddress, address toPoolAddress, uint256[] tokenIds);

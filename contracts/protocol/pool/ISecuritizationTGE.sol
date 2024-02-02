@@ -8,7 +8,6 @@ interface ISecuritizationTGE {
     event UpdatePaidPrincipalAmountSOTByInvestor(address indexed user, uint256 currencyAmount);
     event IncreaseReserve(uint256 increasingAmount, uint256 currencyAmount);
     event DecreaseReserve(uint256 decreasingAmount, uint256 currencyAmount);
-    event UpdateInterestRateSOT(uint32 _interestRateSOT);
     event UpdateDebtCeiling(uint256 _debtCeiling);
     event UpdateMintFirstLoss(uint32 _mintFirstLoss);
     event Withdraw(address originatorAddress, uint256 amount);
@@ -76,9 +75,6 @@ interface ISecuritizationTGE {
 
     ///@notice check current debt ceiling is valid
     function isDebtCeilingValid() external view returns (bool);
-
-    /// @notice sets the interest rate for the senior tranche of tokens
-    function setInterestRateForSOT(uint32 _interestRateSOT) external;
 
     function claimCashRemain(address recipientWallet) external;
 

@@ -268,14 +268,6 @@ contract SecuritizationTGE is
         emit DecreaseReserve(currencyAmount, $.reserve);
     }
 
-    function setInterestRateForSOT(uint32 _interestRateSOT) external override whenNotPaused {
-        Storage storage $ = _getStorage();
-        require(_msgSender() == $.tgeAddress, 'SecuritizationPool: Only tge can update interest');
-
-        $.interestRateSOT = _interestRateSOT;
-        emit UpdateInterestRateSOT(_interestRateSOT);
-    }
-
     // After closed pool and redeem all not -> get remain cash to recipient wallet
     function claimCashRemain(
         address recipientWallet
@@ -356,7 +348,7 @@ contract SecuritizationTGE is
         override(SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](30);
+        bytes4[] memory _functionSignatures = new bytes4[](29);
 
         _functionSignatures[1] = this.setPot.selector;
         _functionSignatures[2] = this.increaseReserve.selector;
@@ -373,19 +365,18 @@ contract SecuritizationTGE is
         _functionSignatures[14] = this.injectTGEAddress.selector;
         _functionSignatures[15] = this.increaseTotalAssetRepaidCurrency.selector;
         _functionSignatures[16] = this.hasFinishedRedemption.selector;
-        _functionSignatures[17] = this.setInterestRateForSOT.selector;
-        _functionSignatures[18] = this.claimCashRemain.selector;
-        _functionSignatures[19] = this.startCycle.selector;
-        _functionSignatures[20] = this.withdraw.selector;
-        _functionSignatures[21] = this.supportsInterface.selector;
-        _functionSignatures[22] = this.paused.selector;
-        _functionSignatures[23] = this.pause.selector;
-        _functionSignatures[24] = this.unpause.selector;
-        _functionSignatures[25] = this.isDebtCeilingValid.selector;
-        _functionSignatures[26] = this.setDebtCeiling.selector;
-        _functionSignatures[27] = this.debtCeiling.selector;
-        _functionSignatures[28] = this.disburse.selector;
-        _functionSignatures[29] = this.setMinFirstLossCushion.selector;
+        _functionSignatures[17] = this.claimCashRemain.selector;
+        _functionSignatures[18] = this.startCycle.selector;
+        _functionSignatures[19] = this.withdraw.selector;
+        _functionSignatures[20] = this.supportsInterface.selector;
+        _functionSignatures[21] = this.paused.selector;
+        _functionSignatures[22] = this.pause.selector;
+        _functionSignatures[23] = this.unpause.selector;
+        _functionSignatures[24] = this.isDebtCeilingValid.selector;
+        _functionSignatures[25] = this.setDebtCeiling.selector;
+        _functionSignatures[26] = this.debtCeiling.selector;
+        _functionSignatures[27] = this.disburse.selector;
+        _functionSignatures[28] = this.setMinFirstLossCushion.selector;
 
         return _functionSignatures;
     }

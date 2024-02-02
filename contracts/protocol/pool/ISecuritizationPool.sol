@@ -20,7 +20,6 @@ interface ISecuritizationPool {
     event WithdrawNFTAsset(address[] tokenAddresses, uint256[] tokenIds, address[] recipients);
     event SetRiskScore(RiskScore[] riskscores);
     event UpdateTGEAddress(address tge, address token, Configuration.NOTE_TOKEN_TYPE noteType);
-    event UpdateInterestRateSOT(uint32 _interestRateSOT);
     event UpdateLockedDistributeBalance(
         address indexed tokenAddress,
         address indexed investor,

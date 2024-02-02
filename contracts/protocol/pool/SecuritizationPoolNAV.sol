@@ -959,7 +959,7 @@ contract SecuritizationPoolNAV is
     // @param _pie Total sum of all amounts accumulating under one interest rate, divided by that rate
     // @return The new accumulated rate, as well as the difference between the debt calculated with the old and new accumulated rates.
     function compounding(uint chi, uint ratePerSecond, uint lastUpdated, uint _pie) public view returns (uint, uint) {
-        require(block.timestamp >= lastUpdated, 'tinlake-math/invalid-timestamp');
+        require(block.timestamp >= lastUpdated, 'invalid-timestamp');
         require(chi != 0);
         // instead of a interestBearingAmount we use a accumulated interest rate index (chi)
         uint updatedChi = _chargeInterest(chi, ratePerSecond, lastUpdated, block.timestamp);

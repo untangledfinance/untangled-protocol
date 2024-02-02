@@ -1,4 +1,10 @@
-// SPDX-License-Identifier: AGPL-3.0-only
+// SPDX-License-Identifier: MIT
+
+// https://github.com/goldfinch-eng/mono
+// packages/protocol/contracts/protocol/core/Go.sol -- GoldFinch Go
+
+// Copyright (C) 2022 GoldFinch
+// Copyright (C) 2023 Untangled.Finance
 
 pragma solidity 0.8.19;
 
@@ -59,11 +65,11 @@ contract Go is IGo, AccessControlEnumerableUpgradeable {
 
     /**
      * @notice Returns whether the provided account is:
-     * 1. go-listed for use of the Goldfinch protocol for any of the provided UID token types
+     * 1. go-listed for use of the Untangled protocol for any of the provided UID token types
      * 2. is allowed to act on behalf of the go-listed EOA initiating this transaction
      * Go-listed is defined as: whether `balanceOf(account, id)` on the UniqueIdentity
      * contract is non-zero (where `id` is a supported token id on UniqueIdentity), falling back to the
-     * account's status on the legacy go-list maintained on GoldfinchConfig.
+     * account's status on the legacy go-list.
      * @dev If tx.origin is 0x0 (e.g. in blockchain explorers such as Etherscan) this function will
      *      throw an error if the account is not go listed.
      * @param account The account whose go status to obtain

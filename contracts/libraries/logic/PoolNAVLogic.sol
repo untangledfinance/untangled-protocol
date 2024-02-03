@@ -52,6 +52,7 @@ import {Discounting} from '../Discounting.sol';
  */
 library PoolNAVLogic 
 {
+    // move to DataTypes later
     bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');
     bytes32 constant POOL_ADMIN = keccak256('POOL_CREATOR');
     bytes32 constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
@@ -581,9 +582,19 @@ library PoolNAVLogic
     /// @return writeOffs the present value of the written off loans
     function currentPVs(DataTypes.Storage storage _poolStorage) public view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
         // Storage storage $ = _getStorage();
-        if (_poolStorage.latestDiscount == 0) {
+        uint256 latestDiscount;
+        uint256 overdueLoans;
+        uint256 discountRate;
+        uint256 lastNAVUpdate;
+        {
+            latestDiscount = _poolStorage.latestDiscount; 
+            overdueLoans = _poolStorage.overdueLoans; 
+            discountRate = _poolStorage.discountRate;
+            lastNAVUpdate = _poolStorage.lastNAVUpdate;
+        }
+        if (latestDiscount == 0) {
             // all loans are overdue or writtenOff
-            return (0, _poolStorage.overdueLoans, currentWriteOffs(_poolStorage));
+            return (0, overdueLoans, currentWriteOffs(_poolStorage));
         }
 
         uint256 errPV = 0;
@@ -592,10 +603,10 @@ library PoolNAVLogic
         // find all new overdue loans since the last update
         // calculate the discount of the overdue loans which is needed
         // for the total discount calculation
-        for (uint256 i = _poolStorage.lastNAVUpdate; i < nnow; i = i + 1 days) {
+        for (uint256 i = lastNAVUpdate; i < nnow; i = i + 1 days) {
             uint256 b = _poolStorage.buckets[i];
             if (b != 0) {
-                errPV = Math.safeAdd(errPV, Math.rmul(b, Discounting.rpow(_poolStorage.discountRate, Math.safeSub(nnow, i), Math.ONE)));
+                errPV = Math.safeAdd(errPV, Math.rmul(b, Discounting.rpow(discountRate, Math.safeSub(nnow, i), Math.ONE)));
                 overdue = Math.safeAdd(overdue, b);
             }
         }
@@ -603,9 +614,9 @@ library PoolNAVLogic
         return (
             // calculate current totalDiscount based on the previous totalDiscount (optimized calculation)
             // the overdue loans are incorrectly in this new result with their current PV and need to be removed
-            Discounting.secureSub(Math.rmul(_poolStorage.latestDiscount, Discounting.rpow(_poolStorage.discountRate, Math.safeSub(nnow, _poolStorage.lastNAVUpdate), Math.ONE)), errPV),
+            Discounting.secureSub(Math.rmul(latestDiscount, Discounting.rpow(discountRate, Math.safeSub(nnow, lastNAVUpdate), Math.ONE)), errPV),
             // current overdue loans not written off
-            Math.safeAdd(_poolStorage.overdueLoans, overdue),
+            Math.safeAdd(overdueLoans, overdue),
             // current write-offs loans
             currentWriteOffs(_poolStorage)
         );
@@ -625,15 +636,25 @@ library PoolNAVLogic
     ) public view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
         // Storage storage $ = _getStorage();
         uint256 _currentWriteOffs = 0;
+        uint256 discountRate;
+        uint256 latestDiscountOfNavAssetsID;
+        uint256 lastNAVUpdate;
+        uint256 overdueLoansOfNavAssetsID;
+        {
+            discountRate = _poolStorage.discountRate;
+            latestDiscountOfNavAssetsID = _poolStorage.latestDiscountOfNavAssets[tokenId];
+            lastNAVUpdate = _poolStorage.lastNAVUpdate;
+            overdueLoansOfNavAssetsID = _poolStorage.overdueLoansOfNavAssets[tokenId];
+        }
 
         if (isLoanWrittenOff(_poolStorage,uint256(tokenId))) {
             uint256 writeOffGroupIndex = currentValidWriteOffGroup(_poolStorage,uint256(tokenId));
             _currentWriteOffs = Math.rmul(debt(_poolStorage,uint256(tokenId)), uint256(_poolStorage.writeOffGroups[writeOffGroupIndex].percentage));
         }
 
-        if (_poolStorage.latestDiscountOfNavAssets[tokenId] == 0) {
+        if (latestDiscountOfNavAssetsID == 0) {
             // all loans are overdue or writtenOff
-            return (0, _poolStorage.overdueLoansOfNavAssets[tokenId], _currentWriteOffs);
+            return (0, overdueLoansOfNavAssetsID, _currentWriteOffs);
         }
 
         uint256 errPV = 0;
@@ -641,18 +662,18 @@ library PoolNAVLogic
 
         // loan is overdue since lastNAVUpdate
         uint256 mat = Discounting.uniqueDayTimestamp(maturityDate(_poolStorage,tokenId));
-        if (mat >= _poolStorage.lastNAVUpdate && mat < nnow) {
+        if (mat >= lastNAVUpdate && mat < nnow) {
             uint256 b = futureValue(_poolStorage,tokenId);
-            errPV = Math.rmul(b, Discounting.rpow(_poolStorage.discountRate, Math.safeSub(nnow, mat), Math.ONE));
+            errPV = Math.rmul(b, Discounting.rpow(discountRate, Math.safeSub(nnow, mat), Math.ONE));
             overdue = b;
         }
 
         return (
             Discounting.secureSub(
-                Math.rmul(_poolStorage.latestDiscountOfNavAssets[tokenId], Discounting.rpow(_poolStorage.discountRate, Math.safeSub(nnow, _poolStorage.lastNAVUpdate), Math.ONE)),
+                Math.rmul(latestDiscountOfNavAssetsID, Discounting.rpow(discountRate, Math.safeSub(nnow, lastNAVUpdate), Math.ONE)),
                 errPV
             ),
-            Math.safeAdd(_poolStorage.overdueLoansOfNavAssets[tokenId], overdue),
+            Math.safeAdd(overdueLoansOfNavAssetsID, overdue),
             _currentWriteOffs
         );
     }
@@ -769,6 +790,7 @@ library PoolNAVLogic
         // Changing the risk group of an nft, might lead to a new interest rate for the dependant loan.
         // New interest rate leads to a future value.
         // recalculation required
+        {
         uint256 fvDecrease = futureValue(_poolStorage,nftID_);
 
         uint256 navDecrease = Discounting.calcDiscount(_poolStorage.discountRate, fvDecrease, nnow, maturityDate_);
@@ -779,6 +801,7 @@ library PoolNAVLogic
         _poolStorage.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub(_poolStorage.latestDiscountOfNavAssets[nftID_], navDecrease);
 
         _poolStorage.latestNAV = Discounting.secureSub(_poolStorage.latestNAV, navDecrease);
+        }
 
         // update latest NAV
         // update latest Discount

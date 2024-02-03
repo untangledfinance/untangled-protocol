@@ -10,7 +10,7 @@ import {UntangledMath} from '../../libraries/UntangledMath.sol';
 // import {Registry} from '../../storage/Registry.sol';
 // import {POOL_ADMIN, ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
 // import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
-import {ISecuritizationPoolNAV} from '../../protocol/pool/ISecuritizationPoolNAV.sol';
+// import {ISecuritizationPoolNAV} from '../../protocol/pool/ISecuritizationPoolNAV.sol';
 // import {RegistryInjection} from './RegistryInjection.sol';
 // import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 // import {ISecuritizationAccessControl} from "../../interfaces/ISecuritizationAccessControl.sol";
@@ -19,6 +19,7 @@ import {ISecuritizationPoolNAV} from '../../protocol/pool/ISecuritizationPoolNAV
 // import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
+import './PoolNAVLogic.sol';
 /**
  * @title Untangled's SecuritizationPoolAsset contract
  * @notice Provides pool's asset related functions
@@ -134,7 +135,8 @@ library SecuritizationPoolAssetLogic
                     writeOffAfterCollectionPeriod: _periodsAndWriteOffs[i + _daysPastDuesLength * 3]
                 })
             );
-            ISecuritizationPoolNAV(address(this)).file(
+            PoolNAVLogic.file(
+                _poolStorage,
                 'writeOffGroup',
                 _interestRate,
                 _writeOffAfterGracePeriod,
@@ -142,7 +144,8 @@ library SecuritizationPoolAssetLogic
                 _ratesAndDefaults[i + _daysPastDuesLength],
                 i
             );
-            ISecuritizationPoolNAV(address(this)).file(
+            PoolNAVLogic.file(
+                _poolStorage,
                 'writeOffGroup',
                 _interestRate,
                 _writeOffAfterCollectionPeriod,
@@ -153,7 +156,7 @@ library SecuritizationPoolAssetLogic
         }
 
         // Set discount rate
-        ISecuritizationPoolNAV(address(this)).file('discountRate', _poolStorage.riskScores[0].discountRate);
+        PoolNAVLogic.file(_poolStorage,'discountRate', _poolStorage.riskScores[0].discountRate);
 
         emit SetRiskScore(_poolStorage.riskScores);
     }
@@ -215,7 +218,7 @@ library SecuritizationPoolAssetLogic
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
             expectedAssetsValue =
                 expectedAssetsValue +
-                ISecuritizationPoolNAV(address(this)).addLoan(tokenIds[i], loanEntries[i]);
+                PoolNAVLogic.addLoan(_poolStorage,tokenIds[i], loanEntries[i]);
         }
 
         // Storage storage $ = _getStorage();

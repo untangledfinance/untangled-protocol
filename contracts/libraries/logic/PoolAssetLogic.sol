@@ -25,7 +25,7 @@ import './PoolNAVLogic.sol';
  * @notice Provides pool's asset related functions
  * @author Untangled Team
  */
-library SecuritizationPoolAssetLogic
+library PoolAssetLogic
 {
     // using ConfigHelper for Registry;
     // using AddressUpgradeable for address;

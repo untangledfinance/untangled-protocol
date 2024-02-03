@@ -30,7 +30,7 @@ interface ICrowdSaleLike {
     function token() external view returns (address);
 }
 
-library SecuritizationTGE
+library TGELogic
 {
     // using ConfigHelper for Registry;
     bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');

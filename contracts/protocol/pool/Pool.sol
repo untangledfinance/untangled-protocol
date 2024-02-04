@@ -1,38 +1,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
-
-// import {ERC165CheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol';
-// import {StringsUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol';
-// import {ERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {OWNER_ROLE} from './types.sol';
-// import {RegistryInjection} from './RegistryInjection.sol';
-// import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
-// import {AddressUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/AddressUpgradeable.sol';
-// import {Initializable} from '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import {ISecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
-// import {StorageSlot} from '@openzeppelin/contracts/utils/StorageSlot.sol';
-// import {IPool} from '../../interfaces/IPool.sol';
 import {PoolStorage} from './PoolStorage.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
 import {UntangledBase} from "../../base/UntangledBase.sol";
 import {PoolNAVLogic} from '../../libraries/logic/PoolNAVLogic.sol';
 import {PoolAssetLogic} from '../../libraries/logic/PoolAssetLogic.sol';
 import {TGELogic} from '../../libraries/logic/TGELogic.sol';
+import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
+import {Configuration} from '../../libraries/Configuration.sol';
 /**
  * @title Untangled's SecuritizationPool contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
  *  Automatically invests across borrower pools using an adjustable strategy.
  * @author Untangled Team
  */
-// is
-// RegistryInjection,
-// SecuritizationAccessControl,
-// SecuritizationPoolStorage,
-// SecuritizationTGE,
-// SecuritizationPoolAsset,
-// SecuritizationPoolNAV
 contract Pool is PoolStorage, UntangledBase{
     using ConfigHelper for Registry;
     // using AddressUpgradeable for address;
@@ -40,25 +24,6 @@ contract Pool is PoolStorage, UntangledBase{
     // event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
 
     Registry public registry;
-    // mapping(address => mapping(bytes32 => bool)) privateRoles;
-
-    // modifier onlyCallInOriginal() {
-    //     require(original == address(this), 'Only call in original contract');
-    //     _;
-    // }
-
-    // constructor() {
-    //     original = address(this); // default original
-    //     _setPrivateRole(OWNER_ROLE, msg.sender);
-    // }
-
-    // function hasPrivateRole(bytes32 role, address account) public view returns (bool) {
-    //     return privateRoles[account][role];
-    // }
-
-    // function _setPrivateRole(bytes32 role, address account) internal virtual {
-    //     privateRoles[account][role] = true;
-    //     emit RoleGranted(role, account, msg.sender);
     // }
     modifier onlyIssuingTokenStage() {
         DataTypes.CycleState _state = state();
@@ -167,11 +132,187 @@ contract Pool is PoolStorage, UntangledBase{
     function setUpOpeningBlockTimestamp() external{
         require(_msgSender() == tgeAddress(), 'SecuritizationPool: Only tge address');
         PoolAssetLogic.setUpOpeningBlockTimestamp(_poolStorage);
+    }  
+    function addLoan(uint256 loan, DataTypes.LoanEntry calldata loanEntry) external returns (uint256){
+        return PoolNAVLogic.addLoan(_poolStorage,loan,loanEntry);
     }
 
-    // function pause() external{}
+    function repayLoan(uint256 loan, uint256 amount) external returns (uint256){
+        return PoolNAVLogic.repayLoan(_poolStorage,loan,amount);
+    }
 
-    // function unpause() external{}    
-    
-    
+    function file(bytes32 name, uint256 value) external{
+        PoolNAVLogic.file(_poolStorage,name,value);
+    }
+
+    function file(
+        bytes32 name,
+        uint256 rate_,
+        uint256 writeOffPercentage_,
+        uint256 overdueDays_,
+        uint256 penaltyRate_,
+        uint256 riskIndex
+    ) external{
+        PoolNAVLogic.file(_poolStorage,name,rate_,writeOffPercentage_,overdueDays_,penaltyRate_,riskIndex);
+    }
+
+    function debt(uint256 loan) external view returns (uint256 loanDebt){
+        return GenericLogic.debt(_poolStorage,loan);
+    }
+
+    function risk(bytes32 nft_) external view returns (uint256 risk_){
+        return uint256(_poolStorage.details[nft_].risk);
+    }
+
+    /// @notice calculates and returns the current NAV
+    /// @return nav_ current NAV
+    function currentNAV() external view returns (uint256 nav_){
+        return GenericLogic.currentNAV(_poolStorage);
+    }
+
+    function currentNAVAsset(bytes32 tokenId) external view returns (uint256){
+        return GenericLogic.currentNAVAsset(_poolStorage,tokenId);
+    }
+
+    function futureValue(bytes32 nft_) external view returns (uint256){
+        return uint256(_poolStorage.details[nft_].futureValue);
+    }
+
+    function maturityDate(bytes32 nft_) external view returns (uint256){
+        return uint256(_poolStorage.details[nft_].maturityDate);
+    }
+
+    function discountRate() external view returns (uint256){
+        return uint256(_poolStorage.discountRate);
+    }
+
+    function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) external{
+        PoolNAVLogic.updateAssetRiskScore(_poolStorage,nftID_,risk_);
+    }
+
+    /// @notice retrieves loan information
+    function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory){
+        return _poolStorage.details[agreementId];
+    }
+    /*==================== TGE ====================*/
+    function setPot(address _pot) external{
+        TGELogic.setPot(_poolStorage,_pot);
+    }
+
+    /// @notice sets debt ceiling value
+    function setDebtCeiling(uint256 _debtCeiling) external{
+        TGELogic.setDebtCeiling(_poolStorage,_debtCeiling);
+    }
+
+    /// @notice sets mint first loss value
+    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external{
+        TGELogic.setMinFirstLossCushion(_poolStorage,_minFirstLossCushion);
+    }
+
+    // function pot() external view returns (address);
+
+    /// @dev trigger update reserve when buy note token action happens
+    function increaseReserve(uint256 currencyAmount) external{
+        address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
+        TGELogic.increaseReserve(_poolStorage,poolServiceAddress,currencyAmount);
+    }
+
+    /// @dev trigger update reserve
+    function decreaseReserve(uint256 currencyAmount) external{
+        address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
+        TGELogic.decreaseReserve(_poolStorage,poolServiceAddress,currencyAmount);
+    }
+
+    // function tgeAddress() external view returns (address);
+
+    // function secondTGEAddress() external view returns (address);
+
+    function sotToken() external view returns (address){
+        TGELogic.sotToken(_poolStorage);
+    }
+
+    function jotToken() external view returns (address){
+        TGELogic.jotToken(_poolStorage);
+    }
+
+    function underlyingCurrency() external view returns (address){
+        return _poolStorage.underlyingCurrency;
+    }
+
+    function paidPrincipalAmountSOT() external view returns (uint256){
+        return _poolStorage.paidPrincipalAmountSOT;
+    }
+
+    function paidPrincipalAmountSOTByInvestor(address user) external view returns (uint256){
+        return _poolStorage.paidPrincipalAmountSOTByInvestor[user];
+    }
+
+    function reserve() external view returns (uint256){
+        return _poolStorage.reserve;
+    }
+
+    function debtCeiling() external view returns (uint256){
+        return _poolStorage.debtCeiling;
+    }
+
+    // Annually, support 4 decimals num
+    function interestRateSOT() external view returns (uint32){
+        return _poolStorage.interestRateSOT;
+    } 
+
+    function minFirstLossCushion() external view returns (uint32){
+        return _poolStorage.minFirstLossCushion;
+    }
+
+     // Total $ (cUSD) paid for Asset repayment - repayInBatch
+    function totalAssetRepaidCurrency() external view returns (uint256){
+        return _poolStorage.totalAssetRepaidCurrency;
+    }
+
+    /// @notice injects the address of the Token Generation Event (TGE) and the associated token address
+    function injectTGEAddress(
+        address _tgeAddress,
+        // address _tokenAddress,
+        Configuration.NOTE_TOKEN_TYPE _noteToken
+    ) external{
+        TGELogic.injectTGEAddress(_poolStorage,_tgeAddress,_noteToken);
+    }
+
+    /// @dev trigger update asset value repaid
+    function increaseTotalAssetRepaidCurrency(uint256 amount) external{
+        TGELogic.increaseTotalAssetRepaidCurrency(_poolStorage,amount);
+    }
+
+    /// @dev Disburses a specified amount of currency to the given user.
+    /// @param usr The address of the user to receive the currency.
+    /// @param currencyAmount The amount of currency to disburse.
+    function disburse(address usr, uint256 currencyAmount) external{
+        TGELogic.disburse(_poolStorage,usr,currencyAmount);
+    }
+
+    /// @notice checks if the redemption process has finished
+    function hasFinishedRedemption() external view returns (bool){
+        TGELogic.hasFinishedRedemption(_poolStorage);
+    }
+
+    ///@notice check current debt ceiling is valid
+    function isDebtCeilingValid() external view returns (bool){
+        TGELogic.isDebtCeilingValid(_poolStorage);
+    }
+
+    function claimCashRemain(address recipientWallet) external{
+        TGELogic.claimCashRemain(_poolStorage,recipientWallet);
+    }
+
+    // function openingBlockTimestamp() external view returns (uint64);
+
+    function startCycle() external{
+        TGELogic.startCycle(_poolStorage);
+    }
+
+    /// @notice allows the originator to withdraw from reserve
+    function withdraw(address to, uint256 amount) external{
+        address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
+        TGELogic.withdraw(_poolStorage,poolServiceAddress,to,amount);
+    }
 }

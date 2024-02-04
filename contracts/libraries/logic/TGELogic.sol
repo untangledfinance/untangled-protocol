@@ -1,28 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-// import {ContextUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
-// import {ERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
-// import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-// import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
-// import {ERC20BurnableUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol';
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
-// import {Registry} from '../../storage/Registry.sol';
-// import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-// import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
-// import {Configuration} from '../../libraries/Configuration.sol';
 import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
-// import {RegistryInjection} from './RegistryInjection.sol';
-// import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 import {IMintedTGE} from '../../protocol/note-sale/IMintedTGE.sol';
 import {IFinalizableCrowdsale} from '../../protocol/note-sale/crowdsale/IFinalizableCrowdsale.sol';
-// import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
-// import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
-// import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 import {ICrowdSale} from '../../interfaces/ICrowdSale.sol';
-
-
-// import {ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
 import {Configuration} from '../Configuration.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
@@ -32,23 +15,9 @@ interface ICrowdSaleLike {
 
 library TGELogic
 {
-    // using ConfigHelper for Registry;
-    bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');
-    bytes32 constant POOL_ADMIN = keccak256('POOL_CREATOR');
     bytes32 constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
-
-    bytes32 constant BACKEND_ADMIN = keccak256('BACKEND_ADMIN');
-    bytes32 constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
-
-    // In PoolNAV we use this
-    bytes32 constant POOL = keccak256('POOL');
-
     uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
-    uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
-
-    uint256 constant ONE = 10 ** 27;
-    uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
 
     event UpdateTGEAddress(address tge, Configuration.NOTE_TOKEN_TYPE noteType);
     event UpdatePaidPrincipalAmountSOTByInvestor(address indexed user, uint256 currencyAmount);

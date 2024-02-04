@@ -32,17 +32,6 @@ import {Discounting} from '../Discounting.sol';
  */
 library GenericLogic 
 {
-    // move to DataTypes later
-    bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');
-    bytes32 constant POOL_ADMIN = keccak256('POOL_CREATOR');
-    bytes32 constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
-
-    bytes32 constant BACKEND_ADMIN = keccak256('BACKEND_ADMIN');
-    bytes32 constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
-
-    // In PoolNAV we use this
-    bytes32 constant POOL = keccak256('POOL');
-
     uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
     uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
@@ -61,49 +50,7 @@ library GenericLogic
     event WriteOff(bytes32 indexed loan, uint256 indexed writeOffGroupsIndex, bool override_);
     event AddLoan(bytes32 indexed loan, uint256 principalAmount, DataTypes.NFTDetails nftdetails);
     event Repay(bytes32 indexed loan, uint256 currencyAmount);
-    event UpdateAssetRiskScore(bytes32 loan, uint256 risk);
-
-    // using ConfigHelper for Registry;
-
-    // function supportsInterface(
-    //     bytes4 interfaceId
-    // )
-    //     public
-    //     view
-    //     virtual
-    //     (ERC165Upgradeable, SecuritizationAccessControl, SecuritizationPoolStorage)
-    //     returns (bool)
-    // {
-    //     return
-    //         super.supportsInterface(interfaceId) ||
-    //         interfaceId == type(ISecuritizationPoolExtension).interfaceId ||
-    //         interfaceId == type(ISecuritizationAccessControl).interfaceId ||
-    //         interfaceId == type(ISecuritizationPoolStorage).interfaceId ||
-    //         interfaceId == type(ISecuritizationPoolNAV).interfaceId;
-    // }
-
-    // function installExtension(
-    //     bytes memory params
-    // ) public virtual (SecuritizationAccessControl, SecuritizationPoolStorage) onlyCallInTargetPool {
-    //     __SecuritizationPoolNAV_init_unchained();
-    // }
-
-    // function __SecuritizationPoolNAV_init_unchained() internal {
-    //     Storage storage $ = _getStorage();
-    //     $.lastNAVUpdate = Discounting.uniqueDayTimestamp(block.timestamp);
-
-    //     // pre-definition for loans without interest rates
-    //     $.rates[0].chi = Math.ONE;
-    //     $.rates[0].ratePerSecond = Math.ONE;
-
-    //     // Default discount rate
-    //     $.discountRate = Math.ONE;
-    // }
-
-    // modifier onlySecuritizationPool() {
-    //     require(_msgSender() == address(this), 'SecuritizationPool: Only SecuritizationPool');
-    //     _;
-    // }
+    // event UpdateAssetRiskScore(bytes32 loan, uint256 risk);
 
     /** GETTER */
     /// @notice getter function for the maturityDate
@@ -159,7 +106,7 @@ library GenericLogic
 
     /** UTILITY FUNCTION */
     // TODO have to use modifier in main contract
-    function getRiskScoreByIdx(DataTypes.RiskScore[] storage riskScores,uint256 idx) private view returns (DataTypes.RiskScore memory) {
+    function getRiskScoreByIdx(DataTypes.RiskScore[] storage riskScores,uint256 idx) public view returns (DataTypes.RiskScore memory) {
         // ISecuritizationPool securitizationPool = ISecuritizationPool(address(this));
         // require(address(securitizationPool) != address(0), 'Pool was not deployed');
         if (idx == 0 || riskScores.length == 0) {
@@ -184,56 +131,6 @@ library GenericLogic
         return riskScores[idx];
     }
 
-    // TODO have to use modifier in main contract
-    function addLoan(DataTypes.Storage storage _poolStorage, uint256 loan, DataTypes.LoanEntry calldata loanEntry) public returns (uint256) {
-        bytes32 _tokenId = bytes32(loan);
-        UnpackLoanParamtersLib.InterestParams memory loanParam = unpackParamsForAgreementID(loanEntry);
-
-        _poolStorage.details[_tokenId].risk = loanEntry.riskScore;
-        _poolStorage.details[_tokenId].debtor = loanEntry.debtor;
-        _poolStorage.details[_tokenId].expirationTimestamp = loanEntry.expirationTimestamp;
-        _poolStorage.details[_tokenId].principalTokenAddress = loanEntry.principalTokenAddress;
-        _poolStorage.details[_tokenId].salt = loanEntry.salt;
-        _poolStorage.details[_tokenId].issuanceBlockTimestamp = loanEntry.issuanceBlockTimestamp;
-        _poolStorage.details[_tokenId].assetPurpose = loanEntry.assetPurpose;
-        _poolStorage.details[_tokenId].termsParam = loanEntry.termsParam;
-
-        _poolStorage.details[_tokenId].principalAmount = loanParam.principalAmount;
-        _poolStorage.details[_tokenId].termStartUnixTimestamp = loanParam.termStartUnixTimestamp;
-        _poolStorage.details[_tokenId].termEndUnixTimestamp = loanParam.termEndUnixTimestamp;
-        _poolStorage.details[_tokenId].amortizationUnitType = loanParam.amortizationUnitType;
-        _poolStorage.details[_tokenId].termLengthInAmortizationUnits = loanParam.termLengthInAmortizationUnits;
-        _poolStorage.details[_tokenId].interestRate = loanParam.interestRate;
-
-        DataTypes.RiskScore memory riskParam = getRiskScoreByIdx(_poolStorage.riskScores,loanEntry.riskScore);
-        uint256 principalAmount = loanParam.principalAmount;
-        uint256 _convertedInterestRate;
-
-        principalAmount = (principalAmount * riskParam.advanceRate) / (ONE_HUNDRED_PERCENT);
-        _convertedInterestRate = Math.ONE + (riskParam.interestRate * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
-
-        _poolStorage.loanToNFT[_poolStorage.loanCount] = _tokenId;
-        _poolStorage.loanCount++;
-        setLoanMaturityDate(_poolStorage,_tokenId, loanParam.termEndUnixTimestamp);
-        if (_poolStorage.rates[_convertedInterestRate].ratePerSecond == 0) {
-            // If interest rate is not set
-            _file(_poolStorage,'rate', _convertedInterestRate, _convertedInterestRate);
-        }
-        setRate(_poolStorage,loan, _convertedInterestRate);
-        accrue(_poolStorage,loan);
-
-        _poolStorage.balances[loan] = Math.safeAdd(_poolStorage.balances[loan], principalAmount);
-        _poolStorage.balance = Math.safeAdd(_poolStorage.balance, principalAmount);
-
-        // increase NAV
-        borrow(_poolStorage,loan, principalAmount);
-        _incDebt(_poolStorage,loan, principalAmount);
-
-        emit AddLoan(_tokenId, principalAmount, _poolStorage.details[_tokenId]);
-
-        return principalAmount;
-    }
-
     /// @notice converts a uint256 to uint128
     /// @param value the value to be converted
     /// @return converted value to uint128
@@ -242,169 +139,7 @@ library GenericLogic
         return uint128(value);
     }
     // TODO have to use modifier in main contract
-    function setLoanMaturityDate(DataTypes.Storage storage _poolStorage,bytes32 nftID_, uint256 maturityDate_) internal {
-        require((futureValue(_poolStorage,nftID_) == 0), 'can-not-change-maturityDate-outstanding-debt');
-        // Storage storage $ = _getStorage();
-        _poolStorage.details[nftID_].maturityDate = toUint128(Discounting.uniqueDayTimestamp(maturityDate_));
-        emit SetLoanMaturity(nftID_, maturityDate_);
-    }
 
-    /// @notice file allows governance to change parameters of the contract
-    /// @param name name of the parameter
-    /// @param value new value of the parameter
-    // TODO have to use modifier in main contract
-    function file(DataTypes.Storage storage _poolStorage,bytes32 name, uint256 value) public {
-        if (name == 'discountRate') {
-            // Storage storage $ = _getStorage();
-            uint256 oldDiscountRate = _poolStorage.discountRate;
-            _poolStorage.discountRate = Math.ONE + (value * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
-            // the nav needs to be re-calculated based on the new discount rate
-            // no need to recalculate it if initialized the first time
-            if (oldDiscountRate != 0) {
-                reCalcNAV(_poolStorage);
-            }
-        } else {
-            revert('unknown config parameter');
-        }
-    }
-
-    /// @notice file allows governance to change parameters of the contract
-    /// @param name name of the parameter group
-    /// @param writeOffPercentage_ the write off rate in percent
-    /// @param overdueDays_ the number of days after which a loan is considered overdue
-    // TODO have to use modifier in main contract
-    function file(
-        DataTypes.Storage storage _poolStorage,
-        bytes32 name,
-        uint256 rate_,
-        uint256 writeOffPercentage_,
-        uint256 overdueDays_,
-        uint256 penaltyRate_,
-        uint256 riskIndex
-    ) public  {
-        if (name == 'writeOffGroup') {
-            // Storage storage $ = _getStorage();
-            uint256 index = _poolStorage.writeOffGroups.length;
-            uint256 _convertedInterestRate = Math.ONE + (rate_ * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
-            uint256 _convertedWriteOffPercentage = Math.ONE - (writeOffPercentage_ * Math.ONE) / ONE_HUNDRED_PERCENT;
-            uint256 _convertedPenaltyRate = Math.ONE +
-                (Math.ONE * penaltyRate_ * rate_) /
-                (ONE_HUNDRED_PERCENT * ONE_HUNDRED_PERCENT * 365 days);
-            uint256 _convertedOverdueDays = overdueDays_ / 1 days;
-            _poolStorage.writeOffGroups.push(
-                DataTypes.WriteOffGroup(
-                    toUint128(_convertedWriteOffPercentage),
-                    toUint128(_convertedOverdueDays),
-                    toUint128(riskIndex)
-                )
-            );
-            _file(_poolStorage,'rate', Math.safeAdd(WRITEOFF_RATE_GROUP_START, index), _convertedInterestRate);
-            _file(_poolStorage,'penalty', Math.safeAdd(WRITEOFF_RATE_GROUP_START, index), _convertedPenaltyRate);
-        } else {
-            revert('unknown name');
-        }
-    }
-
-    /// @notice file manages different state configs for the pile
-    /// only a ward can call this function
-    /// @param what what config to change
-    /// @param rate the interest rate group
-    /// @param value the value to change
-    function _file(DataTypes.Storage storage _poolStorage,bytes32 what, uint256 rate, uint256 value) private {
-        // Storage storage $ = _getStorage();
-        if (what == 'rate') {
-            require(value != 0, 'rate-per-second-can-not-be-0');
-            if (_poolStorage.rates[rate].chi == 0) {
-                _poolStorage.rates[rate].chi = Math.ONE;
-                _poolStorage.rates[rate].lastUpdated = uint48(block.timestamp);
-            } else {
-                drip(_poolStorage,rate);
-            }
-            _poolStorage.rates[rate].ratePerSecond = value;
-        } else if (what == 'penalty') {
-            require(value != 0, 'penalty-per-second-can-not-be-0');
-            if (_poolStorage.rates[rate].penaltyChi == 0) {
-                _poolStorage.rates[rate].penaltyChi = Math.ONE;
-                _poolStorage.rates[rate].lastUpdated = uint48(block.timestamp);
-            } else {
-                drip(_poolStorage,rate);
-            }
-
-            _poolStorage.rates[rate].penaltyRatePerSecond = value;
-        } else {
-            revert('unknown parameter');
-        }
-    }
-
-    /// @notice borrow updates the NAV for a new borrowed loan
-    /// @param loan the id of the loan
-    /// @param amount the amount borrowed
-    /// @return navIncrease the increase of the NAV impacted by the new borrow
-    function borrow(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 amount) private returns (uint256 navIncrease) {
-        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
-        bytes32 nftID_ = nftID(loan);
-        uint256 maturityDate_ = maturityDate(_poolStorage,nftID_);
-
-        require(maturityDate_ > nnow, 'maturity-date-is-not-in-the-future');
-
-        // Storage storage $ = _getStorage();
-
-        if (nnow > _poolStorage.lastNAVUpdate) {
-            calcUpdateNAV(_poolStorage);
-        }
-
-        // uint256 beforeNAV = latestNAV;
-
-        // calculate amount including fixed fee if applicatable
-        DataTypes.Rate memory _rate = _poolStorage.rates[_poolStorage.loanRates[loan]];
-
-        // calculate future value FV
-        DataTypes.NFTDetails memory nftDetail = getAsset(_poolStorage,bytes32(loan));
-        uint256 fv = Discounting.calcFutureValue(
-            _rate.ratePerSecond,
-            amount,
-            maturityDate_,
-            recoveryRatePD(_poolStorage.riskScores,nftDetail.risk, nftDetail.expirationTimestamp - nftDetail.issuanceBlockTimestamp)
-        );
-        _poolStorage.details[nftID_].futureValue = toUint128(Math.safeAdd(futureValue(_poolStorage,nftID_), fv));
-
-        // add future value to the bucket of assets with the same maturity date
-        _poolStorage.buckets[maturityDate_] = Math.safeAdd(_poolStorage.buckets[maturityDate_], fv);
-
-        // increase borrowed amount for future ceiling computations
-        _poolStorage.loanDetails[loan].borrowed = toUint128(Math.safeAdd(borrowed(_poolStorage,loan), amount));
-
-        // return increase NAV amount
-        navIncrease = Discounting.calcDiscount(_poolStorage.discountRate, fv, nnow, maturityDate_);
-        _poolStorage.latestDiscount = Math.safeAdd(_poolStorage.latestDiscount, navIncrease);
-        _poolStorage.latestDiscountOfNavAssets[nftID_] += navIncrease;
-
-        _poolStorage.latestNAV = Math.safeAdd(_poolStorage.latestNAV, navIncrease);
-
-        return navIncrease;
-    }
-
-    function _decreaseLoan(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 amount) private {
-        // Storage storage $ = _getStorage();
-        _poolStorage.latestNAV = Discounting.secureSub(
-            _poolStorage.latestNAV,
-            Math.rmul(amount, toUint128(_poolStorage.writeOffGroups[_poolStorage.loanRates[loan] - WRITEOFF_RATE_GROUP_START].percentage))
-        );
-        decDebt(_poolStorage,loan, amount);
-    }
-
-    function _calcFutureValue(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 _debt, uint256 _maturityDate) private view returns (uint256) {
-        // Storage storage $ = _getStorage();
-        DataTypes.Rate memory _rate = _poolStorage.rates[_poolStorage.loanRates[loan]];
-        DataTypes.NFTDetails memory nftDetail = getAsset(_poolStorage,nftID(loan));
-        uint256 fv = Discounting.calcFutureValue(
-            _rate.ratePerSecond,
-            _debt,
-            _maturityDate,
-            recoveryRatePD(_poolStorage.riskScores,nftDetail.risk, nftDetail.expirationTimestamp - nftDetail.issuanceBlockTimestamp)
-        );
-        return fv;
-    }
 
     /// @notice returns if a loan is written off
     /// @param loan the id of the loan
@@ -593,88 +328,6 @@ library GenericLogic
         return _poolStorage.latestNAV;
     }
 
-    /// @notice updates the risk group of active loans (borrowed and unborrowed loans)
-    /// @param nftID_ the nftID of the loan
-    /// @param risk_ the new value appraisal of the collateral NFT
-    /// @param risk_ the new risk group
-    function updateAssetRiskScore(DataTypes.Storage storage _poolStorage,bytes32 nftID_, uint256 risk_) public {
-        // registry().requirePoolAdmin(_msgSender());
-        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
-
-        // no change in risk group
-        if (risk_ == risk(_poolStorage,nftID_)) {
-            return;
-        }
-
-        // Storage storage $ = _getStorage();
-        _poolStorage.details[nftID_].risk = toUint128(risk_);
-
-        // update nav -> latestNAVUpdate = now
-        if (nnow > _poolStorage.lastNAVUpdate) {
-            calcUpdateNAV(_poolStorage);
-        }
-
-        // switch of collateral risk group results in new: ceiling, threshold and interest rate for existing loan
-        // change to new rate interestRate immediately in pile if loan debt exists
-        uint256 loan = uint256(nftID_);
-        if (_poolStorage.pie[loan] != 0) {
-            DataTypes.RiskScore memory riskParam = getRiskScoreByIdx(_poolStorage.riskScores,risk_);
-            uint256 _convertedInterestRate = Math.ONE + (riskParam.interestRate * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
-            if (_poolStorage.rates[_convertedInterestRate].ratePerSecond == 0) {
-                // If interest rate is not set
-                _file(_poolStorage,'rate', _convertedInterestRate, _convertedInterestRate);
-            }
-            changeRate(_poolStorage,loan, _convertedInterestRate);
-            _poolStorage.details[nftID_].interestRate = riskParam.interestRate;
-        }
-
-        // no currencyAmount borrowed yet
-        if (futureValue(_poolStorage,nftID_) == 0) {
-            return;
-        }
-
-        uint256 maturityDate_ = maturityDate(_poolStorage,nftID_);
-
-        // Changing the risk group of an nft, might lead to a new interest rate for the dependant loan.
-        // New interest rate leads to a future value.
-        // recalculation required
-        {
-        uint256 fvDecrease = futureValue(_poolStorage,nftID_);
-
-        uint256 navDecrease = Discounting.calcDiscount(_poolStorage.discountRate, fvDecrease, nnow, maturityDate_);
-
-        _poolStorage.buckets[maturityDate_] = Math.safeSub(_poolStorage.buckets[maturityDate_], fvDecrease);
-
-        _poolStorage.latestDiscount = Discounting.secureSub(_poolStorage.latestDiscount, navDecrease);
-        _poolStorage.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub(_poolStorage.latestDiscountOfNavAssets[nftID_], navDecrease);
-
-        _poolStorage.latestNAV = Discounting.secureSub(_poolStorage.latestNAV, navDecrease);
-        }
-
-        // update latest NAV
-        // update latest Discount
-        DataTypes.Rate memory _rate = _poolStorage.rates[_poolStorage.loanRates[loan]];
-        DataTypes.NFTDetails memory nftDetail = getAsset(_poolStorage,bytes32(loan));
-        _poolStorage.details[nftID_].futureValue = toUint128(
-            Discounting.calcFutureValue(
-                _rate.ratePerSecond,
-                debt(_poolStorage,loan),
-                maturityDate(_poolStorage,nftID_),
-                recoveryRatePD(_poolStorage.riskScores,risk_, nftDetail.expirationTimestamp - nftDetail.issuanceBlockTimestamp)
-            )
-        );
-
-        uint256 fvIncrease = futureValue(_poolStorage,nftID_);
-        uint256 navIncrease = Discounting.calcDiscount(_poolStorage.discountRate, fvIncrease, nnow, maturityDate_);
-
-        _poolStorage.buckets[maturityDate_] = Math.safeAdd(_poolStorage.buckets[maturityDate_], fvIncrease);
-
-        _poolStorage.latestDiscount = Math.safeAdd(_poolStorage.latestDiscount, navIncrease);
-        _poolStorage.latestDiscountOfNavAssets[nftID_] += navIncrease;
-
-        _poolStorage.latestNAV = Math.safeAdd(_poolStorage.latestNAV, navIncrease);
-        emit UpdateAssetRiskScore(nftID_, risk_);
-    }
 
     /// @notice returns the nftID for the underlying collateral nft
     /// @param loan the loan id
@@ -713,34 +366,6 @@ library GenericLogic
 
         // returns type(uint128).max if no write-off group is valid for this loan
         return lastValidWriteOff;
-    }
-
-    function _incDebt(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 currencyAmount) private {
-        // Storage storage $ = _getStorage();
-        uint256 rate = _poolStorage.loanRates[loan];
-        require(block.timestamp == _poolStorage.rates[rate].lastUpdated, 'rate-group-not-updated');
-        uint256 pieAmount = toPie(_poolStorage.rates[rate].chi, currencyAmount);
-
-        _poolStorage.pie[loan] = Math.safeAdd(_poolStorage.pie[loan], pieAmount);
-        _poolStorage.rates[rate].pie = Math.safeAdd(_poolStorage.rates[rate].pie, pieAmount);
-
-        emit IncreaseDebt(nftID(loan), currencyAmount);
-    }
-
-    function decDebt(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 currencyAmount) private {
-        // Storage storage $ = _getStorage();
-        uint256 rate = _poolStorage.loanRates[loan];
-        require(block.timestamp == _poolStorage.rates[rate].lastUpdated, 'rate-group-not-updated');
-        uint256 penaltyChi_ = _poolStorage.rates[rate].penaltyChi;
-        if (penaltyChi_ > 0) {
-            currencyAmount = toPie(penaltyChi_, currencyAmount);
-        }
-        uint256 pieAmount = toPie(_poolStorage.rates[rate].chi, currencyAmount);
-
-        _poolStorage.pie[loan] = Math.safeSub(_poolStorage.pie[loan], pieAmount);
-        _poolStorage.rates[rate].pie = Math.safeSub(_poolStorage.rates[rate].pie, pieAmount);
-
-        emit DecreaseDebt(nftID(loan), currencyAmount);
     }
 
     function debt(DataTypes.Storage storage _poolStorage,uint256 loan) public view  returns (uint256 loanDebt) {
@@ -817,7 +442,7 @@ library GenericLogic
         drip(_poolStorage,_poolStorage.loanRates[loan]);
     }
 
-    function drip(DataTypes.Storage storage _poolStorage,uint256 rate) internal {
+    function drip(DataTypes.Storage storage _poolStorage,uint256 rate) public {
         // Storage storage $ = _getStorage();
         if (block.timestamp >= _poolStorage.rates[rate].lastUpdated) {
             (uint256 chi, ) = compounding(

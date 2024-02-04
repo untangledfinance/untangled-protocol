@@ -36,7 +36,7 @@ library Discounting{
         uint256 fv,
         uint256 normalizedBlockTimestamp,
         uint256 maturityDate
-    ) public pure returns (uint256 result) {
+    ) internal pure returns (uint256 result) {
         return Math.rdiv(fv, rpow(discountRate, Math.safeSub(maturityDate, normalizedBlockTimestamp), Math.ONE));
     }
 
@@ -51,7 +51,7 @@ library Discounting{
         uint256 amount,
         uint256 maturityDate,
         uint256 recoveryRatePD
-    ) public view returns (uint256 fv) {
+    ) internal view returns (uint256 fv) {
         uint256 nnow = uniqueDayTimestamp(block.timestamp);
         uint256 timeRemaining = 0;
         if (maturityDate > nnow) {
@@ -65,7 +65,7 @@ library Discounting{
     /// @param x the first value (minuend)
     /// @param y the second value (subtrahend)
     /// @return result result of the subtraction
-    function secureSub(uint256 x, uint256 y) public pure returns (uint256 result) {
+    function secureSub(uint256 x, uint256 y) internal pure returns (uint256 result) {
         if (y > x) {
             return 0;
         }
@@ -75,7 +75,7 @@ library Discounting{
     /// @notice normalizes a timestamp to round down to the nearest midnight (UTC)
     /// @param timestamp the timestamp which should be normalized
     /// @return nTimestamp normalized timestamp
-    function uniqueDayTimestamp(uint256 timestamp) public pure returns (uint256 nTimestamp) {
+    function uniqueDayTimestamp(uint256 timestamp) internal pure returns (uint256 nTimestamp) {
         return (1 days) * (timestamp / (1 days));
     }
 
@@ -86,7 +86,7 @@ library Discounting{
     /// @param base the base of the fixed point number
     /// @return z the result of the pow operation
 
-    function rpow(uint256 x, uint256 n, uint256 base) public pure returns (uint256 z) {
+    function rpow(uint256 x, uint256 n, uint256 base) internal pure returns (uint256 z) {
         assembly {
             switch x
             case 0 {

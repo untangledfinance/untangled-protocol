@@ -184,7 +184,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
 
         uint256 seniorDebt = beginningSeniorDebt +
             (beginningSeniorDebt * seniorInterestRate * compoundingPeriods) /
-            (RATE_SCALING_FACTOR * oneYearInSeconds);
+            (ONE_HUNDRED_PERCENT * oneYearInSeconds);
         return seniorDebt;
     }
 

@@ -20,38 +20,17 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity 0.8.19;
-
-// import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
-// import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
-// import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
-// import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-// import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-// import {UntangledMath} from '../../libraries/UntangledMath.sol';
-// import {Registry} from '../../storage/Registry.sol';
-// import {Discounting} from '../../libraries/Discounting.sol';
-// import {Math} from '../../libraries/Math.sol';
-// import {POOL, ONE_HUNDRED_PERCENT, RATE_SCALING_FACTOR, WRITEOFF_RATE_GROUP_START} from './types.sol';
-
-// import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
-// import {RegistryInjection} from './RegistryInjection.sol';
-// import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
-// import {ISecuritizationAccessControl} from "../../interfaces/ISecuritizationAccessControl.sol";
-// import {ISecuritizationPoolNAV} from './ISecuritizationPoolNAV.sol';
-// import {RiskScore, LoanEntry} from './base/types.sol';
-// import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
-// import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 import '../UnpackLoanParamtersLib.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
-import {GenericLogic} from './GenericLogic.sol';
 /**
  * @title Untangled's SecuritizaionPoolNAV contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
  *  Automatically invests across borrower pools using an adjustable strategy.
  * @author Untangled Team
  */
-library PoolNAVLogic 
+library GenericLogic 
 {
     // move to DataTypes later
     bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');
@@ -208,7 +187,7 @@ library PoolNAVLogic
     // TODO have to use modifier in main contract
     function addLoan(DataTypes.Storage storage _poolStorage, uint256 loan, DataTypes.LoanEntry calldata loanEntry) public returns (uint256) {
         bytes32 _tokenId = bytes32(loan);
-        UnpackLoanParamtersLib.InterestParams memory loanParam = GenericLogic.unpackParamsForAgreementID(loanEntry);
+        UnpackLoanParamtersLib.InterestParams memory loanParam = unpackParamsForAgreementID(loanEntry);
 
         _poolStorage.details[_tokenId].risk = loanEntry.riskScore;
         _poolStorage.details[_tokenId].debtor = loanEntry.debtor;
@@ -427,138 +406,6 @@ library PoolNAVLogic
         return fv;
     }
 
-    /// @notice repay updates the NAV for a new repaid loan
-    /// @param loan the id of the loan
-    /// @param amount the amount repaid
-    function repayLoan(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 amount) external returns (uint256) {
-        // require(address(registry().getLoanRepaymentRouter()) == msg.sender, 'not authorized');
-        accrue(_poolStorage,loan);
-        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
-        // Storage storage $ = _getStorage();
-        if (nnow > _poolStorage.lastNAVUpdate) {
-            calcUpdateNAV(_poolStorage);
-        }
-
-        // In case of successful repayment the latestNAV is decreased by the repaid amount
-        bytes32 nftID_ = nftID(loan);
-        uint256 maturityDate_ = maturityDate(_poolStorage,nftID_);
-
-        uint256 _currentDebt = debt(_poolStorage,loan);
-        if (amount > _currentDebt) {
-            amount = _currentDebt;
-        }
-        // case 1: repayment of a written-off loan
-        if (isLoanWrittenOff(_poolStorage,loan)) {
-            // update nav with write-off decrease
-            _decreaseLoan(_poolStorage,loan, amount);
-            return amount;
-        }
-        uint256 _debt = Math.safeSub(_currentDebt, amount); // Remaining
-        uint256 preFV = futureValue(_poolStorage,nftID_);
-        // in case of partial repayment, compute the fv of the remaining debt and add to the according fv bucket
-        uint256 fv = 0;
-        uint256 fvDecrease = preFV;
-        if (_debt != 0) {
-            fv = _calcFutureValue(_poolStorage,loan, _debt, maturityDate_);
-            if (preFV >= fv) {
-                fvDecrease = Math.safeSub(preFV, fv);
-            } else {
-                fvDecrease = 0;
-            }
-        }
-
-        _poolStorage.details[nftID_].futureValue = toUint128(fv);
-
-        // case 2: repayment of a loan before or on maturity date
-        if (maturityDate_ >= nnow) {
-            // remove future value decrease from bucket
-            _poolStorage.buckets[maturityDate_] = Math.safeSub(_poolStorage.buckets[maturityDate_], fvDecrease);
-
-            uint256 discountDecrease = Discounting.calcDiscount(_poolStorage.discountRate, fvDecrease, nnow, maturityDate_);
-
-            _poolStorage.latestDiscount = Discounting.secureSub(_poolStorage.latestDiscount, discountDecrease);
-            _poolStorage.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub(_poolStorage.latestDiscountOfNavAssets[nftID_], discountDecrease);
-
-            _poolStorage.latestNAV = Discounting.secureSub(_poolStorage.latestNAV, discountDecrease);
-        } else {
-            // case 3: repayment of an overdue loan
-            _poolStorage.overdueLoans = Math.safeSub(_poolStorage.overdueLoans, fvDecrease);
-            _poolStorage.overdueLoansOfNavAssets[nftID_] = Math.safeSub(_poolStorage.overdueLoansOfNavAssets[nftID_], fvDecrease);
-            _poolStorage.latestNAV = Discounting.secureSub(_poolStorage.latestNAV, fvDecrease);
-        }
-
-        decDebt(_poolStorage,loan, amount);
-
-        emit Repay(nftID_, amount);
-        return amount;
-    }
-
-    /// @notice writeOff writes off a loan if it is overdue
-    /// @param loan the id of the loan
-    function writeOff(DataTypes.Storage storage _poolStorage,uint256 loan) public {
-        // Storage storage $ = _getStorage();
-        require(!_poolStorage.loanDetails[loan].authWriteOff, 'only-auth-write-off');
-
-        bytes32 nftID_ = nftID(loan);
-        uint256 maturityDate_ = maturityDate(_poolStorage,nftID_);
-        require(maturityDate_ > 0, 'loan-does-not-exist');
-
-        // can not write-off healthy loans
-        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
-        DataTypes.NFTDetails memory nftDetail = getAsset(_poolStorage,bytes32(loan));
-        DataTypes.RiskScore memory riskParam = getRiskScoreByIdx(_poolStorage.riskScores,nftDetail.risk);
-        require(maturityDate_ + riskParam.gracePeriod <= nnow, 'maturity-date-in-the-future');
-        // check the writeoff group based on the amount of days overdue
-        uint256 writeOffGroupIndex_ = currentValidWriteOffGroup(_poolStorage,loan);
-
-        if (
-            writeOffGroupIndex_ < type(uint128).max &&
-            _poolStorage.loanRates[loan] != WRITEOFF_RATE_GROUP_START + writeOffGroupIndex_
-        ) {
-            _writeOff(_poolStorage,loan, writeOffGroupIndex_, nftID_, maturityDate_);
-            emit WriteOff(nftID_, writeOffGroupIndex_, false);
-        }
-    }
-
-    /// @notice internal function for the write off
-    /// @param loan the id of the loan
-    /// @param writeOffGroupIndex_ the index of the writeoff group
-    /// @param nftID_ the nftID of the loan
-    /// @param maturityDate_ the maturity date of the loan
-    function _writeOff(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 writeOffGroupIndex_, bytes32 nftID_, uint256 maturityDate_) internal {
-        // Storage storage $ = _getStorage();
-        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
-        // Ensure we have an up to date NAV
-        if (nnow > _poolStorage.lastNAVUpdate) {
-            calcUpdateNAV(_poolStorage);
-        }
-
-        uint256 latestNAV_ = _poolStorage.latestNAV;
-
-        // first time written-off
-        if (isLoanWrittenOff(_poolStorage,loan) == false) {
-            uint256 fv = futureValue(_poolStorage,nftID_);
-            if (Discounting.uniqueDayTimestamp(_poolStorage.lastNAVUpdate) > maturityDate_) {
-                // write off after the maturity date
-                _poolStorage.overdueLoans = Discounting.secureSub(_poolStorage.overdueLoans, fv);
-                _poolStorage.overdueLoansOfNavAssets[nftID_] = Discounting.secureSub(_poolStorage.overdueLoansOfNavAssets[nftID_], fv);
-                latestNAV_ = Discounting.secureSub(latestNAV_, fv);
-            } else {
-                // write off before or on the maturity date
-                _poolStorage.buckets[maturityDate_] = Math.safeSub(_poolStorage.buckets[maturityDate_], fv);
-
-                uint256 pv = Math.rmul(fv, Discounting.rpow(_poolStorage.discountRate, Math.safeSub(Discounting.uniqueDayTimestamp(maturityDate_), nnow), Math.ONE));
-                _poolStorage.latestDiscount = Discounting.secureSub(_poolStorage.latestDiscount, pv);
-                _poolStorage.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub(_poolStorage.latestDiscountOfNavAssets[nftID_], pv);
-
-                latestNAV_ = Discounting.secureSub(latestNAV_, pv);
-            }
-        }
-
-        changeRate(_poolStorage,loan, WRITEOFF_RATE_GROUP_START + writeOffGroupIndex_);
-        _poolStorage.latestNAV = Math.safeAdd(latestNAV_, Math.rmul(debt(_poolStorage,loan), _poolStorage.writeOffGroups[writeOffGroupIndex_].percentage));
-    }
-
     /// @notice returns if a loan is written off
     /// @param loan the id of the loan
     function isLoanWrittenOff(DataTypes.Storage storage _poolStorage,uint256 loan) public view returns (bool) {
@@ -567,50 +414,183 @@ library PoolNAVLogic
 
     /// @notice calculates and returns the current NAV
     /// @return nav_ current NAV
-    function currentNAV(DataTypes.Storage storage _poolStorage) internal view returns (uint256 nav_) {
-        return GenericLogic.currentNAV(_poolStorage);
+    function currentNAV(DataTypes.Storage storage _poolStorage) public view returns (uint256 nav_) {
+        (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentPVs(_poolStorage);
+        return Math.safeAdd(totalDiscount, Math.safeAdd(overdue, writeOffs));
     }
 
-    function currentNAVAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) internal view returns (uint256) {
-        return GenericLogic.currentNAVAsset(_poolStorage, tokenId);
+    function currentNAVAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) public view returns (uint256) {
+        (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentAV(_poolStorage,tokenId);
+        return Math.safeAdd(totalDiscount, Math.safeAdd(overdue, writeOffs));
     }
 
     /// @notice calculates the present value of the loans together with overdue and written off loans
     /// @return totalDiscount the present value of the loans
     /// @return overdue the present value of the overdue loans
     /// @return writeOffs the present value of the written off loans
-    function currentPVs(DataTypes.Storage storage _poolStorage) internal view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
-        return GenericLogic.currentPVs(_poolStorage);
+    function currentPVs(DataTypes.Storage storage _poolStorage) public view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
+        // Storage storage $ = _getStorage();
+        uint256 latestDiscount;
+        uint256 overdueLoans;
+        uint256 discountRate;
+        uint256 lastNAVUpdate;
+        {
+            latestDiscount = _poolStorage.latestDiscount; 
+            overdueLoans = _poolStorage.overdueLoans; 
+            discountRate = _poolStorage.discountRate;
+            lastNAVUpdate = _poolStorage.lastNAVUpdate;
+        }
+        if (latestDiscount == 0) {
+            // all loans are overdue or writtenOff
+            return (0, overdueLoans, currentWriteOffs(_poolStorage));
+        }
+
+        uint256 errPV = 0;
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
+
+        // find all new overdue loans since the last update
+        // calculate the discount of the overdue loans which is needed
+        // for the total discount calculation
+        for (uint256 i = lastNAVUpdate; i < nnow; i = i + 1 days) {
+            uint256 b = _poolStorage.buckets[i];
+            if (b != 0) {
+                errPV = Math.safeAdd(errPV, Math.rmul(b, Discounting.rpow(discountRate, Math.safeSub(nnow, i), Math.ONE)));
+                overdue = Math.safeAdd(overdue, b);
+            }
+        }
+
+        return (
+            // calculate current totalDiscount based on the previous totalDiscount (optimized calculation)
+            // the overdue loans are incorrectly in this new result with their current PV and need to be removed
+            Discounting.secureSub(Math.rmul(latestDiscount, Discounting.rpow(discountRate, Math.safeSub(nnow, lastNAVUpdate), Math.ONE)), errPV),
+            // current overdue loans not written off
+            Math.safeAdd(overdueLoans, overdue),
+            // current write-offs loans
+            currentWriteOffs(_poolStorage)
+        );
     }
 
-    function currentWriteOffAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) internal view returns (uint256) {
-        return GenericLogic.currentWriteOffAsset(_poolStorage, tokenId);
+    function currentWriteOffAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) public view returns (uint256) {
+        // Storage storage $ = _getStorage();
+        uint256 _currentWriteOffs = 0;
+        uint256 writeOffGroupIndex = currentValidWriteOffGroup(_poolStorage,uint256(tokenId));
+        _currentWriteOffs = Math.rmul(debt(_poolStorage,uint256(tokenId)), uint256(_poolStorage.writeOffGroups[writeOffGroupIndex].percentage));
+        return _currentWriteOffs;
     }
 
     function currentAV(
         DataTypes.Storage storage _poolStorage,
         bytes32 tokenId
-    ) internal view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
-        return GenericLogic.currentAV(_poolStorage, tokenId);
+    ) public view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
+        // Storage storage $ = _getStorage();
+        uint256 _currentWriteOffs = 0;
+        uint256 discountRate;
+        uint256 latestDiscountOfNavAssetsID;
+        uint256 lastNAVUpdate;
+        uint256 overdueLoansOfNavAssetsID;
+        {
+            discountRate = _poolStorage.discountRate;
+            latestDiscountOfNavAssetsID = _poolStorage.latestDiscountOfNavAssets[tokenId];
+            lastNAVUpdate = _poolStorage.lastNAVUpdate;
+            overdueLoansOfNavAssetsID = _poolStorage.overdueLoansOfNavAssets[tokenId];
+        }
+
+        if (isLoanWrittenOff(_poolStorage,uint256(tokenId))) {
+            uint256 writeOffGroupIndex = currentValidWriteOffGroup(_poolStorage,uint256(tokenId));
+            _currentWriteOffs = Math.rmul(debt(_poolStorage,uint256(tokenId)), uint256(_poolStorage.writeOffGroups[writeOffGroupIndex].percentage));
+        }
+
+        if (latestDiscountOfNavAssetsID == 0) {
+            // all loans are overdue or writtenOff
+            return (0, overdueLoansOfNavAssetsID, _currentWriteOffs);
+        }
+
+        uint256 errPV = 0;
+        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
+
+        // loan is overdue since lastNAVUpdate
+        uint256 mat = Discounting.uniqueDayTimestamp(maturityDate(_poolStorage,tokenId));
+        if (mat >= lastNAVUpdate && mat < nnow) {
+            uint256 b = futureValue(_poolStorage,tokenId);
+            errPV = Math.rmul(b, Discounting.rpow(discountRate, Math.safeSub(nnow, mat), Math.ONE));
+            overdue = b;
+        }
+
+        return (
+            Discounting.secureSub(
+                Math.rmul(latestDiscountOfNavAssetsID, Discounting.rpow(discountRate, Math.safeSub(nnow, lastNAVUpdate), Math.ONE)),
+                errPV
+            ),
+            Math.safeAdd(overdueLoansOfNavAssetsID, overdue),
+            _currentWriteOffs
+        );
     }
 
     /// @notice returns the sum of all write off loans
     /// @return sum of all write off loans
-    function currentWriteOffs(DataTypes.Storage storage _poolStorage) internal view returns (uint256 sum) {
-        return GenericLogic.currentWriteOffs(_poolStorage);
+    function currentWriteOffs(DataTypes.Storage storage _poolStorage) public view returns (uint256 sum) {
+        // Storage storage $ = _getStorage();
+        for (uint256 i = 0; i < _poolStorage.writeOffGroups.length; i++) {
+            // multiply writeOffGroupDebt with the writeOff rate
+
+            sum = Math.safeAdd(sum, Math.rmul(rateDebt(_poolStorage,WRITEOFF_RATE_GROUP_START + i), uint256(_poolStorage.writeOffGroups[i].percentage)));
+        }
+        return sum;
     }
 
     /// @notice calculates and returns the current NAV and updates the state
     /// @return nav_ current NAV
-    function calcUpdateNAV(DataTypes.Storage storage _poolStorage) internal returns (uint256 nav_) {
-        return GenericLogic.calcUpdateNAV(_poolStorage);
+    function calcUpdateNAV(DataTypes.Storage storage _poolStorage) public returns (uint256 nav_) {
+        (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentPVs(_poolStorage);
+        // Storage storage $ = _getStorage();
+
+        for (uint i = 0; i < _poolStorage.loanCount; ++i) {
+            bytes32 _nftID = _poolStorage.loanToNFT[i];
+
+            (uint256 td, uint256 ol, ) = currentAV(_poolStorage,_nftID);
+            _poolStorage.overdueLoansOfNavAssets[_nftID] = ol;
+            _poolStorage.latestDiscountOfNavAssets[_nftID] = td;
+        }
+
+        _poolStorage.overdueLoans = overdue;
+        _poolStorage.latestDiscount = totalDiscount;
+
+        _poolStorage.latestNAV = Math.safeAdd(Math.safeAdd(totalDiscount, overdue), writeOffs);
+        _poolStorage.lastNAVUpdate = Discounting.uniqueDayTimestamp(block.timestamp);
+        return _poolStorage.latestNAV;
     }
 
     /// @notice re-calculates the nav in a non-optimized way
     ///  the method is not updating the NAV to latest block.timestamp
     /// @return nav_ current NAV
-    function reCalcNAV(DataTypes.Storage storage _poolStorage) internal returns (uint256 nav_) {
-        return GenericLogic.reCalcNAV(_poolStorage);
+    function reCalcNAV(DataTypes.Storage storage _poolStorage) public returns (uint256 nav_) {
+        // reCalcTotalDiscount
+        /// @notice re-calculates the totalDiscount in a non-optimized way based on lastNAVUpdate
+        /// @return latestDiscount_ returns the total discount of the active loans
+        // Storage storage $ = _getStorage();
+        uint256 latestDiscount_ = 0;
+        for (uint256 loanID = 1; loanID < _poolStorage.loanCount; loanID++) {
+            bytes32 nftID_ = nftID(loanID);
+            uint256 maturityDate_ = maturityDate(_poolStorage,nftID_);
+
+            if (maturityDate_ < _poolStorage.lastNAVUpdate) {
+                continue;
+            }
+
+            uint256 discountIncrease_ = Discounting.calcDiscount(
+                _poolStorage.discountRate,
+                futureValue(_poolStorage,nftID_),
+                _poolStorage.lastNAVUpdate,
+                maturityDate_
+            );
+            latestDiscount_ = Math.safeAdd(latestDiscount_, discountIncrease_);
+            _poolStorage.latestDiscountOfNavAssets[nftID_] = discountIncrease_;
+        }
+
+        _poolStorage.latestNAV = Math.safeAdd(latestDiscount_, Math.safeSub(_poolStorage.latestNAV, _poolStorage.latestDiscount));
+        _poolStorage.latestDiscount = latestDiscount_;
+
+        return _poolStorage.latestNAV;
     }
 
     /// @notice updates the risk group of active loans (borrowed and unborrowed loans)
@@ -875,12 +855,11 @@ library PoolNAVLogic
     // @param _pie Total sum of all amounts accumulating under one interest rate, divided by that rate
     // @return The new accumulated rate, as well as the difference between the debt calculated with the old and new accumulated rates.
     function compounding(uint chi, uint ratePerSecond, uint lastUpdated, uint _pie) public view returns (uint, uint) {
-        // require(block.timestamp >= lastUpdated, 'tinlake-math/invalid-timestamp');
-        // require(chi != 0);
-        // // instead of a interestBearingAmount we use a accumulated interest rate index (chi)
-        // uint updatedChi = _chargeInterest(chi, ratePerSecond, lastUpdated, block.timestamp);
-        // return (updatedChi, Math.safeSub(Math.rmul(updatedChi, _pie), Math.rmul(chi, _pie)));
-        return GenericLogic.compounding(chi, ratePerSecond, lastUpdated, _pie);
+        require(block.timestamp >= lastUpdated, 'tinlake-math/invalid-timestamp');
+        require(chi != 0);
+        // instead of a interestBearingAmount we use a accumulated interest rate index (chi)
+        uint updatedChi = _chargeInterest(chi, ratePerSecond, lastUpdated, block.timestamp);
+        return (updatedChi, Math.safeSub(Math.rmul(updatedChi, _pie), Math.rmul(chi, _pie)));
     }
 
     // @notice This function charge interest on a interestBearingAmount
@@ -893,21 +872,20 @@ library PoolNAVLogic
         uint ratePerSecond,
         uint lastUpdated
     ) public view returns (uint) {
-        // if (block.timestamp >= lastUpdated) {
-        //     interestBearingAmount = _chargeInterest(interestBearingAmount, ratePerSecond, lastUpdated, block.timestamp);
-        // }
-        // return interestBearingAmount;
-        return GenericLogic.chargeInterest(interestBearingAmount,ratePerSecond,lastUpdated);
+        if (block.timestamp >= lastUpdated) {
+            interestBearingAmount = _chargeInterest(interestBearingAmount, ratePerSecond, lastUpdated, block.timestamp);
+        }
+        return interestBearingAmount;
     }
 
-    // function _chargeInterest(
-    //     uint interestBearingAmount,
-    //     uint ratePerSecond,
-    //     uint lastUpdated,
-    //     uint current
-    // ) internal pure returns (uint) {
-    //     return Math.rmul(Discounting.rpow(ratePerSecond, current - lastUpdated, Math.ONE), interestBearingAmount);
-    // }
+    function _chargeInterest(
+        uint interestBearingAmount,
+        uint ratePerSecond,
+        uint lastUpdated,
+        uint current
+    ) internal pure returns (uint) {
+        return Math.rmul(Discounting.rpow(ratePerSecond, current - lastUpdated, Math.ONE), interestBearingAmount);
+    }
 
     // convert pie to debt/savings amount
     function toAmount(uint chi, uint _pie) public pure returns (uint) {
@@ -926,66 +904,66 @@ library PoolNAVLogic
 
     /// @param amortizationUnitType AmortizationUnitType enum
     /// @return the corresponding length of the unit in seconds
-    // function _getAmortizationUnitLengthInSeconds(
-    //     UnpackLoanParamtersLib.AmortizationUnitType amortizationUnitType
-    // ) private pure returns (uint256) {
-    //     if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.MINUTES) {
-    //         return 1 minutes;
-    //     } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.HOURS) {
-    //         return 1 hours;
-    //     } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.DAYS) {
-    //         return 1 days;
-    //     } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.WEEKS) {
-    //         return 7 days;
-    //     } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.MONTHS) {
-    //         return 30 days;
-    //     } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.YEARS) {
-    //         return 365 days;
-    //     } else {
-    //         revert('Unknown amortization unit type.');
-    //     }
-    // }
+    function _getAmortizationUnitLengthInSeconds(
+        UnpackLoanParamtersLib.AmortizationUnitType amortizationUnitType
+    ) private pure returns (uint256) {
+        if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.MINUTES) {
+            return 1 minutes;
+        } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.HOURS) {
+            return 1 hours;
+        } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.DAYS) {
+            return 1 days;
+        } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.WEEKS) {
+            return 7 days;
+        } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.MONTHS) {
+            return 30 days;
+        } else if (amortizationUnitType == UnpackLoanParamtersLib.AmortizationUnitType.YEARS) {
+            return 365 days;
+        } else {
+            revert('Unknown amortization unit type.');
+        }
+    }
 
-    // /**
-    //  *   Get parameters by Agreement ID (commitment hash)
-    //  */
-    // function unpackParamsForAgreementID(
-    //     DataTypes.LoanEntry calldata loan
-    // ) private pure returns (UnpackLoanParamtersLib.InterestParams memory params) {
-    //     // The principal amount denominated in the aforementioned token.
-    //     uint256 principalAmount;
-    //     // The interest rate accrued per amortization unit.
-    //     uint256 interestRate;
-    //     // The amortization unit in which the repayments installments schedule is defined.
-    //     uint256 rawAmortizationUnitType;
-    //     // The debt's entire term's length, denominated in the aforementioned amortization units
-    //     uint256 termLengthInAmortizationUnits;
-    //     uint256 gracePeriodInDays;
+    /**
+     *   Get parameters by Agreement ID (commitment hash)
+     */
+    function unpackParamsForAgreementID(
+        DataTypes.LoanEntry calldata loan
+    ) public pure returns (UnpackLoanParamtersLib.InterestParams memory params) {
+        // The principal amount denominated in the aforementioned token.
+        uint256 principalAmount;
+        // The interest rate accrued per amortization unit.
+        uint256 interestRate;
+        // The amortization unit in which the repayments installments schedule is defined.
+        uint256 rawAmortizationUnitType;
+        // The debt's entire term's length, denominated in the aforementioned amortization units
+        uint256 termLengthInAmortizationUnits;
+        uint256 gracePeriodInDays;
 
-    //     (
-    //         principalAmount,
-    //         interestRate,
-    //         rawAmortizationUnitType,
-    //         termLengthInAmortizationUnits,
-    //         gracePeriodInDays
-    //     ) = UnpackLoanParamtersLib.unpackParametersFromBytes(loan.termsParam);
+        (
+            principalAmount,
+            interestRate,
+            rawAmortizationUnitType,
+            termLengthInAmortizationUnits,
+            gracePeriodInDays
+        ) = UnpackLoanParamtersLib.unpackParametersFromBytes(loan.termsParam);
 
-    //     UnpackLoanParamtersLib.AmortizationUnitType amortizationUnitType = UnpackLoanParamtersLib.AmortizationUnitType(
-    //         rawAmortizationUnitType
-    //     );
+        UnpackLoanParamtersLib.AmortizationUnitType amortizationUnitType = UnpackLoanParamtersLib.AmortizationUnitType(
+            rawAmortizationUnitType
+        );
 
-    //     // Calculate term length base on Amortization Unit and number
-    //     uint256 termLengthInSeconds = termLengthInAmortizationUnits *
-    //         _getAmortizationUnitLengthInSeconds(amortizationUnitType);
+        // Calculate term length base on Amortization Unit and number
+        uint256 termLengthInSeconds = termLengthInAmortizationUnits *
+            _getAmortizationUnitLengthInSeconds(amortizationUnitType);
 
-    //     return
-    //         UnpackLoanParamtersLib.InterestParams({
-    //             principalAmount: principalAmount,
-    //             interestRate: interestRate,
-    //             termStartUnixTimestamp: loan.issuanceBlockTimestamp,
-    //             termEndUnixTimestamp: termLengthInSeconds + loan.issuanceBlockTimestamp,
-    //             amortizationUnitType: amortizationUnitType,
-    //             termLengthInAmortizationUnits: termLengthInAmortizationUnits
-    //         });
-    // }
+        return
+            UnpackLoanParamtersLib.InterestParams({
+                principalAmount: principalAmount,
+                interestRate: interestRate,
+                termStartUnixTimestamp: loan.issuanceBlockTimestamp,
+                termEndUnixTimestamp: termLengthInSeconds + loan.issuanceBlockTimestamp,
+                amortizationUnitType: amortizationUnitType,
+                termLengthInAmortizationUnits: termLengthInAmortizationUnits
+            });
+    }
 }

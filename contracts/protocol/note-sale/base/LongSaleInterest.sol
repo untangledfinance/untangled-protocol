@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import '../../../libraries/UntangledMath.sol';
-
 /// @title LongSaleInterest
 /// @author Untangled Team
 /// @dev Define some constant for interest calculation
@@ -27,6 +25,4 @@ contract LongSaleInterest {
     uint256 public constant INTEREST_RATE_SCALING_FACTOR_PERCENT = 10 ** 4;
     /// @dev represents the scaling factor for the purchase price calculation
     uint256 public constant PURCHASE_PRICE_SCALING_FACTOR = 10 ** 4;
-
-    uint256[50] private __gap;
 }

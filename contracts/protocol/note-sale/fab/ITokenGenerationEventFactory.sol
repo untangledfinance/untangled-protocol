@@ -25,8 +25,7 @@ abstract contract ITokenGenerationEventFactory {
         // address pool,
         address token,
         address currency,
-        uint8 saleType,
-        bool longSale
+        uint8 saleType
     ) external virtual returns (address);
 
     uint256[46] private __gap;

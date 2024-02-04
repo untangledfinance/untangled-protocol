@@ -11,14 +11,12 @@ import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {INoteTokenFactory} from '../note-sale/fab/INoteTokenFactory.sol';
 import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.sol';
 import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
+import {IMintedNormalTGEV2} from '../../interfaces/IMintedNormalTGEV2.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
 import {POOL_ADMIN} from './types.sol';
 import {VALIDATOR_ROLE} from '../../tokens/ERC721/types.sol';
-import {MintedNormalTGE} from '../note-sale/MintedNormalTGE.sol';
 import {MintedIncreasingInterestTGE} from '../note-sale/MintedIncreasingInterestTGE.sol';
-import {IMintedTGE} from '../note-sale/IMintedTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
 import {ITokenGenerationEventFactory} from '../note-sale/fab/ITokenGenerationEventFactory.sol';
 import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
@@ -134,7 +132,6 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         address issuerTokenController,
         address pool,
         uint8 saleType,
-        bool longSale,
         string memory ticker
     ) internal whenNotPaused nonReentrant onlyPoolExisted(pool) doesSOTExist(pool) returns (address, address) {
         INoteTokenFactory noteTokenFactory = registry.getNoteTokenFactory();
@@ -154,8 +151,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             issuerTokenController,
             sotToken,
             underlyingCurrency,
-            saleType,
-            longSale
+            saleType
         );
         noteTokenFactory.changeMinterRole(sotToken, tgeAddress);
 
@@ -168,69 +164,44 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
     }
 
     /// @notice Sets up the token generation event (TGE) for the senior tranche (SOT) of a securitization pool with additional configuration parameters
-    /// @param increasingInterestParam Increasing interest parameters
-    /// @param tgeParam TGE parameters
-    /// @param saleParam Some parameters for new round token sale. Ex: openingTime, closeTime, totalCap...
-    function setUpTGEForSOT(
-        TGEParam memory tgeParam,
-        NewRoundSaleParam memory saleParam,
-        IncreasingInterestParam memory increasingInterestParam
-    ) public onlyIssuer(tgeParam.pool) {
+    /// @param interestRate Increasing interestRate
+    function setUpTGEForSOT(TGEParam memory tgeParam, uint256 interestRate) public onlyIssuer(tgeParam.pool) {
         (address sotToken, address tgeAddress) = _initialTGEForSOT(
             tgeParam.issuerTokenController,
             tgeParam.pool,
             tgeParam.saleType,
-            tgeParam.longSale,
             tgeParam.ticker
         );
-        MintedIncreasingInterestTGE tge = MintedIncreasingInterestTGE(tgeAddress);
-        uint8 saleType = tgeParam.saleType;
-        if (saleType == uint8(ITokenGenerationEventFactory.SaleType.MINTED_INCREASING_INTEREST_SOT)) {
-            tge.setInterestRange(
-                increasingInterestParam.initialInterest,
-                increasingInterestParam.finalInterest,
-                increasingInterestParam.timeInterval,
-                increasingInterestParam.amountChangeEachInterval
-            );
-        } else if (saleType == uint8(ITokenGenerationEventFactory.SaleType.NORMAL_SALE_SOT)) {
-            MintedNormalTGE(tgeAddress).setInterestRate(increasingInterestParam.finalInterest);
-        }
-        tge.startNewRoundSale(saleParam.openingTime, saleParam.closingTime, saleParam.rate, saleParam.cap);
+        IMintedNormalTGEV2 tge = IMintedNormalTGEV2(tgeAddress);
+        tge.setInterestRate(interestRate);
+        tge.setHasStarted(true);
         tge.setMinBidAmount(tgeParam.minBidAmount);
 
-        emit SetupSot(sotToken, tgeAddress, tgeParam.pool, tgeParam, saleParam, increasingInterestParam);
+        emit SetupSot(sotToken, tgeAddress, tgeParam.pool, tgeParam, interestRate);
     }
 
     /// @notice sets up the token generation event (TGE) for the junior tranche (JOT) of a securitization pool with additional configuration parameters
     /// @param tgeParam Parameters for TGE
     /// @param initialJOTAmount Minimum amount of JOT raised in currency before SOT can start
-    /// @param saleParam Some parameters for new round token sale. Ex: openingTime, closeTime, totalCap...
-    function setUpTGEForJOT(
-        TGEParam memory tgeParam,
-        NewRoundSaleParam memory saleParam,
-        uint256 initialJOTAmount
-    ) public onlyIssuer(tgeParam.pool) {
+    function setUpTGEForJOT(TGEParam memory tgeParam, uint256 initialJOTAmount) public onlyIssuer(tgeParam.pool) {
         (address jotToken, address tgeAddress) = _initialTGEForJOT(
             tgeParam.issuerTokenController,
             tgeParam.pool,
             tgeParam.saleType,
-            tgeParam.longSale,
             tgeParam.ticker
         );
-        MintedNormalTGE tge = MintedNormalTGE(tgeAddress);
-        tge.startNewRoundSale(saleParam.openingTime, saleParam.closingTime, saleParam.rate, saleParam.cap);
+        IMintedNormalTGEV2 tge = IMintedNormalTGEV2(tgeAddress);
         tge.setHasStarted(true);
         tge.setMinBidAmount(tgeParam.minBidAmount);
         tge.setInitialAmount(initialJOTAmount);
 
-        emit SetupJot(jotToken, tgeAddress, tgeParam.pool, tgeParam, saleParam, initialJOTAmount);
+        emit SetupJot(jotToken, tgeAddress, tgeParam.pool, tgeParam, initialJOTAmount);
     }
 
     function _initialTGEForJOT(
         address issuerTokenController,
         address pool,
         uint8 saleType,
-        bool longSale,
         string memory ticker
     ) public whenNotPaused nonReentrant onlyPoolExisted(pool) doesJOTExist(pool) returns (address, address) {
         INoteTokenFactory noteTokenFactory = registry.getNoteTokenFactory();
@@ -246,8 +217,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             issuerTokenController,
             jotToken,
             underlyingCurrency,
-            saleType,
-            longSale
+            saleType
         );
         noteTokenFactory.changeMinterRole(jotToken, tgeAddress);
 
@@ -266,7 +236,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         require(isExistingTGEs[tgeAddress], 'SMP: Note sale does not exist');
         require(hasAllowedUID(_msgSender()), 'Unauthorized. Must have correct UID');
 
-        ICrowdSale tge = ICrowdSale(tgeAddress);
+        IMintedNormalTGEV2 tge = IMintedNormalTGEV2(tgeAddress);
         address poolOfPot = potToPool[_msgSender()];
         uint256 tokenAmount = tge.buyTokens(
             _msgSender(),
@@ -278,11 +248,11 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
         address noteToken = tge.token();
         if (INoteToken(noteToken).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
-            if (MintedNormalTGE(tgeAddress).currencyRaised() >= MintedNormalTGE(tgeAddress).initialAmount()) {
+            if (IMintedNormalTGEV2(tgeAddress).currencyRaised() >= IMintedNormalTGEV2(tgeAddress).initialAmount()) {
                 // Currency Raised For JOT > initialJOTAmount => SOT sale start
                 address sotTGEAddress = ISecuritizationPoolStorage(pool).tgeAddress();
                 if (sotTGEAddress != address(0)) {
-                    ICrowdSale(sotTGEAddress).setHasStarted(true);
+                    IMintedNormalTGEV2(sotTGEAddress).setHasStarted(true);
                 }
             }
         }
@@ -311,11 +281,13 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
     function updateTgeInfo(TGEInfoParam[] calldata tgeInfos) public {
         for (uint i = 0; i < tgeInfos.length; i++) {
             require(
-                IAccessControlUpgradeable(ICrowdSale(tgeInfos[i].tgeAddress).pool()).hasRole(OWNER_ROLE, _msgSender()),
+                IAccessControlUpgradeable(IMintedNormalTGEV2(tgeInfos[i].tgeAddress).pool()).hasRole(
+                    OWNER_ROLE,
+                    _msgSender()
+                ),
                 'SecuritizationManager: Not the controller of the project'
             );
-            IMintedTGE(tgeInfos[i].tgeAddress).setTotalCap(tgeInfos[i].totalCap);
-            ICrowdSale(tgeInfos[i].tgeAddress).setMinBidAmount(tgeInfos[i].minBidAmount);
+            IMintedNormalTGEV2(tgeInfos[i].tgeAddress).setMinBidAmount(tgeInfos[i].minBidAmount);
         }
 
         emit UpdateTGEInfo(tgeInfos);

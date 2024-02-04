@@ -188,21 +188,9 @@ async function initSOTSale(signer, saleParameters) {
             pool: saleParameters.pool,
             minBidAmount: saleParameters.minBidAmount,
             saleType: saleParameters.saleType,
-            longSale: true,
             ticker: saleParameters.ticker,
         },
-        {
-            openingTime: saleParameters.openingTime,
-            closingTime: saleParameters.closingTime,
-            rate: saleParameters.rate,
-            cap: saleParameters.cap,
-        },
-        {
-            initialInterest: saleParameters.initialInterest,
-            finalInterest: saleParameters.finalInterest,
-            timeInterval: saleParameters.timeInterval,
-            amountChangeEachInterval: saleParameters.amountChangeEachInterval,
-        }
+        saleParameters.interestRate
     );
     const receiptSOTSale = await transactionSOTSale.wait();
     const [sotTokenAddress, sotTGEAddress] = receiptSOTSale.events.find((e) => e.event == 'SetupSot').args;
@@ -217,14 +205,7 @@ async function initJOTSale(signer, saleParameters) {
             pool: saleParameters.pool,
             minBidAmount: saleParameters.minBidAmount,
             saleType: saleParameters.saleType,
-            longSale: true,
             ticker: saleParameters.ticker,
-        },
-        {
-            openingTime: saleParameters.openingTime,
-            closingTime: saleParameters.closingTime,
-            rate: saleParameters.rate,
-            cap: saleParameters.cap,
         },
         saleParameters.initialJOTAmount
     );

@@ -18,7 +18,7 @@ interface INoteTokenLike {
 contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledBase, Factory {
     using ConfigHelper for Registry;
 
-    bytes4 constant TGE_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,address,address,address,bool)'));
+    bytes4 constant TGE_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,address,address,address)'));
 
     function __TokenGenerationEventFactory_init(Registry _registry, address _factoryAdmin) internal onlyInitializing {
         __UntangledBase__init(_msgSender());
@@ -49,47 +49,18 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
         address issuerTokenController,
         address token,
         address currency,
-        uint8 saleType,
-        bool longSale
+        uint8 saleType
     ) external override whenNotPaused nonReentrant returns (address) {
         registry.requireSecuritizationManager(_msgSender());
 
         address pool = INoteTokenLike(token).poolAddress();
 
-        if (saleType == uint8(SaleType.MINTED_INCREASING_INTEREST_SOT)) {
-            return
-                _newSale(
-                    TGEImplAddress[SaleType.MINTED_INCREASING_INTEREST_SOT],
-                    issuerTokenController,
-                    pool,
-                    token,
-                    currency,
-                    longSale
-                );
-        }
-
         if (saleType == uint8(SaleType.NORMAL_SALE_JOT)) {
-            return
-                _newSale(
-                    TGEImplAddress[SaleType.NORMAL_SALE_JOT],
-                    issuerTokenController,
-                    pool,
-                    token,
-                    currency,
-                    longSale
-                );
+            return _newSale(TGEImplAddress[SaleType.NORMAL_SALE_JOT], issuerTokenController, pool, token, currency);
         }
 
         if (saleType == uint8(SaleType.NORMAL_SALE_SOT)) {
-            return
-                _newSale(
-                    TGEImplAddress[SaleType.NORMAL_SALE_SOT],
-                    issuerTokenController,
-                    pool,
-                    token,
-                    currency,
-                    longSale
-                );
+            return _newSale(TGEImplAddress[SaleType.NORMAL_SALE_SOT], issuerTokenController, pool, token, currency);
         }
 
         revert('Unknown sale type');
@@ -100,17 +71,9 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
         address issuerTokenController,
         address pool,
         address token,
-        address currency,
-        bool longSale
+        address currency
     ) private returns (address) {
-        bytes memory _initialData = abi.encodeWithSelector(
-            TGE_INIT_FUNC_SELECTOR,
-            registry,
-            pool,
-            token,
-            currency,
-            longSale
-        );
+        bytes memory _initialData = abi.encodeWithSelector(TGE_INIT_FUNC_SELECTOR, registry, pool, token, currency);
 
         address tgeAddress = _deployInstance(tgeImpl, _initialData);
         UntangledBase tge = UntangledBase(tgeAddress);

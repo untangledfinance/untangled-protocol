@@ -36,12 +36,12 @@ const setUpTokenGenerationEventFactory = async (registry, factoryAdmin) => {
         factoryAdmin.address,
     ]);
 
-    const MintedIncreasingInterestTGE = await ethers.getContractFactory('MintedIncreasingInterestTGE');
-    const mintedIncreasingInterestTGEImpl = await MintedIncreasingInterestTGE.deploy();
-    const MintedNormalTGE = await ethers.getContractFactory('MintedNormalTGE');
+    // const MintedIncreasingInterestTGE = await ethers.getContractFactory('MintedIncreasingInterestTGE');
+    // const mintedIncreasingInterestTGEImpl = await MintedIncreasingInterestTGE.deploy();
+    const MintedNormalTGE = await ethers.getContractFactory('MintedNormalTGEV2');
     const mintedNormalTGEImpl = await MintedNormalTGE.deploy();
 
-    await tokenGenerationEventFactory.setTGEImplAddress(0, mintedIncreasingInterestTGEImpl.address);
+    await tokenGenerationEventFactory.setTGEImplAddress(0, mintedNormalTGEImpl.address);
 
     await tokenGenerationEventFactory.setTGEImplAddress(1, mintedNormalTGEImpl.address);
 
@@ -182,7 +182,6 @@ async function setup() {
         registry,
         loanAssetTokenContract,
         defaultLoanAssetTokenValidator,
-
         loanKernel,
         loanRepaymentRouter,
         securitizationManager,

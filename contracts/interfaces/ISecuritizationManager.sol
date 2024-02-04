@@ -21,15 +21,13 @@ interface ISecuritizationManager {
         address tgeAddress,
         address poolAddress,
         TGEParam tgeParam,
-        NewRoundSaleParam saleParam,
-        IncreasingInterestParam increasingInterestParam
+        uint256 interestRate
     );
     event SetupJot(
         address indexed jotAddress,
         address tgeAddress,
         address poolAddress,
         TGEParam tgeParam,
-        NewRoundSaleParam saleParam,
         uint256 initialJOTAmount
     );
 
@@ -58,7 +56,6 @@ interface ISecuritizationManager {
         address issuerTokenController;
         address pool;
         uint256 minBidAmount;
-        bool longSale;
         string ticker;
         uint8 saleType;
     }

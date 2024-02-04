@@ -120,6 +120,7 @@ describe('LoanKernel', () => {
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
+            const interestRate = 10000;
             const initialInterest = 10000;
             const finalInterest = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
@@ -127,7 +128,7 @@ describe('LoanKernel', () => {
             const prefixOfNoteTokenSaleName = 'Ticker_';
             const sotInfo = {
                 issuerTokenController: untangledAdminSigner.address,
-                saleType: SaleType.MINTED_INCREASING_INTEREST,
+                saleType: SaleType.NORMAL_SALE,
                 minBidAmount: parseEther('50'),
                 openingTime,
                 closingTime,
@@ -138,6 +139,7 @@ describe('LoanKernel', () => {
                 timeInterval,
                 amountChangeEachInterval,
                 ticker: prefixOfNoteTokenSaleName,
+                interestRate,
             };
 
             const initialJOTAmount = parseEther('1');
@@ -412,6 +414,5 @@ describe('LoanKernel', () => {
             const stablecoinBalanceOfPoolAfter = await stableCoin.balanceOf(securitizationPoolContract.address);
             expect(stablecoinBalanceOfPoolAfter).to.closeTo(parseEther('190.5'), parseEther('0.01'));
         });
-
     });
 });

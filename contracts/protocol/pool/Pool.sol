@@ -118,7 +118,7 @@ contract Pool is PoolStorage, UntangledBase{
         PoolAssetLogic.collectERC20Asset(_poolStorage,tokenAddresss);
     }
 
-    /// @notice withdraws ERC20 assets from the contract and transfers them to recipients\
+    /// @notice withdraws ERC20 assets from the contract and transfers them to recipients\ound
     function withdrawERC20Assets(
         address[] calldata tokenAddresses,
         address[] calldata recipients,

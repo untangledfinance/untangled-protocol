@@ -1,85 +1,72 @@
-// SPDX-License-Identifier: AGPL-3.0-only
-pragma solidity 0.8.19;
-
-import '../libraries/Configuration.sol';
-
-import {DataTypes} from '../libraries/DataTypes.sol';
+//SPDX-License-Identifier: Unlicense 
+import {DataTypes} from "../libraries/DataTypes.sol";
+pragma solidity 0.8.19; 
 interface IPool {
-    event CollectNFTAsset(uint256[] tokenIds, uint256 expectedAssetsValue);
-    // event UpdateOpeningBlockTimestamp(uint256 newTimestamp);
-    event SecuritizationPoolWithdraw(address originatorAddress, uint256 amount);
-    event CollectERC20Asset(address token);
-    event WithdrawERC20Asset(address[] tokenAddresses, address[] recipients, uint256[] amounts);
-    event InsertNFTAsset(address token, uint256 tokenId);
-    event ExportNFTAsset(address tokenAddress, address toPoolAddress, uint256[] tokenIds);
-    event WithdrawNFTAsset(address[] tokenAddresses, uint256[] tokenIds, address[] recipients);
-    event SetRiskScore(DataTypes.RiskScore[] riskscores);
-    event UpdateTGEAddress(address tge, address token, Configuration.NOTE_TOKEN_TYPE noteType);
-    event UpdateInterestRateSOT(uint32 _interestRateSOT);
-    event UpdateLockedDistributeBalance(
-        address indexed tokenAddress,
-        address indexed investor,
-        uint256 lockedDistributeBalance,
-        uint256 lockedRedeemBalances,
-        uint256 totalLockedRedeemBalances,
-        uint256 totalLockedDistributeBalance
-    );
-    event UpdateReserve(uint256 currencyAmount);
-    event UpdatePaidPrincipalAmountSOTByInvestor(address indexed user, uint256 currencyAmount);
-
-    /// @notice A view function that returns the length of the NFT (non-fungible token) assets array
-    function getNFTAssetsLength() external view returns (uint256);
-
-    /// @notice A view function that returns an array of token asset addresses
-    function getTokenAssetAddresses() external view returns (address[] memory);
-
-    /// @notice A view function that returns the length of the token asset addresses array
-    function getTokenAssetAddressesLength() external view returns (uint256);
-
-    /// @notice Riks scores length
-    /// @return the length of the risk scores array
-    function getRiskScoresLength() external view returns (uint256);
-
-    function riskScores(uint256 index) external view returns (DataTypes.RiskScore memory);
-
-    /// @notice sets up the risk scores for the contract for pool
-    function setupRiskScores(
-        uint32[] calldata _daysPastDues,
-        uint32[] calldata _ratesAndDefaults,
-        uint32[] calldata _periodsAndWriteOffs
-    ) external;
-
-    /// @notice exports NFT assets to another pool address
-    function exportAssets(address tokenAddress, address toPoolAddress, uint256[] calldata tokenIds) external;
-
-    /// @notice withdraws NFT assets from the contract and transfers them to recipients
-    function withdrawAssets(
-        address[] calldata tokenAddresses,
-        uint256[] calldata tokenIds,
-        address[] calldata recipients
-    ) external;
-
-    /// @notice collects NFT assets from a specified address
-    function collectAssets(uint256[] calldata tokenIds, DataTypes.LoanEntry[] calldata loanEntries) external returns (uint256);
-
-    /// @notice collects ERC20 assets from specified senders
-    function collectERC20Asset(address tokenAddresss) external;
-
-    /// @notice withdraws ERC20 assets from the contract and transfers them to recipients\
-    function withdrawERC20Assets(
-        address[] calldata tokenAddresses,
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) external;
-
-    function nftAssets(uint256 idx) external view returns (DataTypes.NFTAsset memory);
-
-    function tokenAssetAddresses(uint256 idx) external view returns (address);
-
-    /// @dev Trigger set up opening block timestamp
-    function setUpOpeningBlockTimestamp() external;
-
-    function pause() external;
-
-    function unpause() external;
+  function DEFAULT_ADMIN_ROLE (  ) external view returns ( bytes32 );
+  function OWNER_ROLE (  ) external view returns ( bytes32 );
+  function claimCashRemain ( address recipientWallet ) external;
+  function collectAssets ( uint256[] memory tokenIds, DataTypes.LoanEntry[] memory loanEntries ) external returns ( uint256 );
+  function collectERC20Asset ( address tokenAddresss ) external;
+  function currentNAV (  ) external view returns ( uint256 nav_ );
+  function currentNAVAsset ( bytes32 tokenId ) external view returns ( uint256 );
+  function debt ( uint256 loan ) external view returns ( uint256 loanDebt );
+  function debtCeiling (  ) external view returns ( uint256 );
+  function decreaseReserve ( uint256 currencyAmount ) external;
+  function disburse ( address usr, uint256 currencyAmount ) external;
+  function discountRate (  ) external view returns ( uint256 );
+  function exportAssets ( address tokenAddress, address toPoolAddress, uint256[] memory tokenIds ) external;
+  function futureValue ( bytes32 nft_ ) external view returns ( uint256 );
+  function getAsset ( bytes32 agreementId ) external view returns ( DataTypes.NFTDetails memory );
+  function getInitializedVersion (  ) external view returns ( uint256 );
+  function getNFTAssetsLength (  ) external view returns ( uint256 );
+  function getRiskScoresLength (  ) external view returns ( uint256 );
+  function getRoleAdmin ( bytes32 role ) external view returns ( bytes32 );
+  function getRoleMember ( bytes32 role, uint256 index ) external view returns ( address );
+  function getRoleMemberCount ( bytes32 role ) external view returns ( uint256 );
+  function getTokenAssetAddresses (  ) external view returns ( address[] memory );
+  function getTokenAssetAddressesLength (  ) external view returns ( uint256 );
+  function grantRole ( bytes32 role, address account ) external;
+  function hasFinishedRedemption (  ) external view returns ( bool );
+  function hasRole ( bytes32 role, address account ) external view returns ( bool );
+  function increaseReserve ( uint256 currencyAmount ) external;
+  function increaseTotalAssetRepaidCurrency ( uint256 amount ) external;
+  function initialize ( address _registryAddress ) external;
+  function injectTGEAddress ( address _tgeAddress, uint8 _noteToken ) external;
+  function interestRateSOT (  ) external view returns ( uint32 );
+  function isAdmin (  ) external view returns ( bool );
+  function isDebtCeilingValid (  ) external view returns ( bool );
+  function jotToken (  ) external view returns ( address );
+  function maturityDate ( bytes32 nft_ ) external view returns ( uint256 );
+  function minFirstLossCushion (  ) external view returns ( uint32 );
+  function nftAssets ( uint256 idx ) external view returns ( DataTypes.NFTAsset memory);
+  function paidPrincipalAmountSOT (  ) external view returns ( uint256 );
+  function paidPrincipalAmountSOTByInvestor ( address user ) external view returns ( uint256 );
+  function pause (  ) external;
+  function paused (  ) external view returns ( bool );
+  function registry (  ) external view returns ( address );
+  function renounceRole ( bytes32 role, address account ) external;
+  function repayLoan ( uint256 loan, uint256 amount ) external returns ( uint256 );
+  function reserve (  ) external view returns ( uint256 );
+  function revokeRole ( bytes32 role, address account ) external;
+  function risk ( bytes32 nft_ ) external view returns ( uint256 risk_ );
+  function riskScores ( uint256 index ) external view returns ( DataTypes.RiskScore memory );
+  function secondTGEAddress (  ) external view returns ( address );
+  function setDebtCeiling ( uint256 _debtCeiling ) external;
+  function setMinFirstLossCushion ( uint32 _minFirstLossCushion ) external;
+  function setPot ( address _pot ) external;
+  function setRoleAdmin ( bytes32 role, bytes32 adminRole ) external;
+  function setUpOpeningBlockTimestamp (  ) external;
+  function setupRiskScores ( uint32[] memory _daysPastDues, uint32[] memory _ratesAndDefaults, uint32[] memory _periodsAndWriteOffs ) external;
+  function sotToken (  ) external view returns ( address );
+  function startCycle (  ) external;
+  function supportsInterface ( bytes4 interfaceId ) external view returns ( bool );
+  function tgeAddress (  ) external view returns ( address );
+  function tokenAssetAddresses ( uint256 idx ) external view returns ( address );
+  function totalAssetRepaidCurrency (  ) external view returns ( uint256 );
+  function underlyingCurrency (  ) external view returns ( address );
+  function unpause (  ) external;
+  function updateAssetRiskScore ( bytes32 nftID_, uint256 risk_ ) external;
+  function withdraw ( address to, uint256 amount ) external;
+  function withdrawAssets ( address[] memory tokenAddresses, uint256[] memory tokenIds, address[] memory recipients ) external;
+  function withdrawERC20Assets ( address[] memory tokenAddresses, address[] memory recipients, uint256[] memory amounts ) external;
 }

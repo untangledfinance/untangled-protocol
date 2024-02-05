@@ -242,7 +242,9 @@ contract Pool is PoolStorage, UntangledBase{
 
     // function tgeAddress() external view returns (address);
 
-    // function secondTGEAddress() external view returns (address);
+    function secondTGEAddress() external view returns (address){
+        return _poolStorage.secondTGEAddress;
+    }
 
     function sotToken() external view returns (address){
         TGELogic.sotToken(_poolStorage);

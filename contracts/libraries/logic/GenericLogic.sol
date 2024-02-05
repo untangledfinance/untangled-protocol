@@ -7,16 +7,16 @@
 // Copyright (C) 2023 Untangled.Finance
 //
 // This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Affero General Public License as published by
+// it under the terms of the GNU Affero General internal License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU Affero General Public License for more details.
+// GNU Affero General internal License for more details.
 //
-// You should have received a copy of the GNU Affero General Public License
+// You should have received a copy of the GNU Affero General internal License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity 0.8.19;
@@ -56,7 +56,7 @@ library GenericLogic
     /// @notice getter function for the maturityDate
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
     /// @return maturityDate_ the maturityDate of the nft
-    function maturityDate(DataTypes.Storage storage _poolStorage,bytes32 nft_) public view  returns (uint256 maturityDate_) {
+    function maturityDate(DataTypes.Storage storage _poolStorage,bytes32 nft_) internal view  returns (uint256 maturityDate_) {
         // Storage storage $ = _getStorage();
         return uint256(_poolStorage.details[nft_].maturityDate);
     }
@@ -65,7 +65,7 @@ library GenericLogic
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
     /// @return risk_ the risk group of the nft
 
-    function risk(DataTypes.Storage storage _poolStorage,bytes32 nft_) public view returns (uint256 risk_) {
+    function risk(DataTypes.Storage storage _poolStorage,bytes32 nft_) internal view returns (uint256 risk_) {
         // Storage storage $ = _getStorage();
         return uint256(_poolStorage.details[nft_].risk);
     }
@@ -77,19 +77,19 @@ library GenericLogic
     /// @notice getter function for the future value
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
     /// @return fv_ future value of the loan
-    function futureValue(DataTypes.Storage storage _poolStorage, bytes32 nft_) public view  returns (uint256 fv_) {
+    function futureValue(DataTypes.Storage storage _poolStorage, bytes32 nft_) internal view  returns (uint256 fv_) {
         // Storage storage $ = _getStorage();
         return uint256(_poolStorage.details[nft_].futureValue);
     }
 
-    // function discountRate() public view  returns (uint256) {
+    // function discountRate() internal view  returns (uint256) {
     //     return uint256(_getStorage().discountRate);
     // }
 
     /// @notice getter function for the recovery rate PD
     /// @param riskID id of a risk group
     /// @return recoveryRatePD_ recovery rate PD of the risk group
-    function recoveryRatePD(DataTypes.RiskScore[] storage riskScores,uint256 riskID, uint256 termLength) public view returns (uint256 recoveryRatePD_) {
+    function recoveryRatePD(DataTypes.RiskScore[] storage riskScores,uint256 riskID, uint256 termLength) internal view returns (uint256 recoveryRatePD_) {
         DataTypes.RiskScore memory riskParam = getRiskScoreByIdx(riskScores,riskID);
         return
             Math.ONE -
@@ -100,13 +100,13 @@ library GenericLogic
     /// @notice getter function for the borrowed amount
     /// @param loan id of a loan
     /// @return borrowed_ borrowed amount of the loan
-    function borrowed(DataTypes.Storage storage _poolStorage,uint256 loan) public view returns (uint256 borrowed_) {
+    function borrowed(DataTypes.Storage storage _poolStorage,uint256 loan) internal view returns (uint256 borrowed_) {
         return uint256(_poolStorage.loanDetails[loan].borrowed);
     }
 
     /** UTILITY FUNCTION */
     // TODO have to use modifier in main contract
-    function getRiskScoreByIdx(DataTypes.RiskScore[] storage riskScores,uint256 idx) public view returns (DataTypes.RiskScore memory) {
+    function getRiskScoreByIdx(DataTypes.RiskScore[] storage riskScores,uint256 idx) internal view returns (DataTypes.RiskScore memory) {
         // ISecuritizationPool securitizationPool = ISecuritizationPool(address(this));
         // require(address(securitizationPool) != address(0), 'Pool was not deployed');
         if (idx == 0 || riskScores.length == 0) {
@@ -143,18 +143,18 @@ library GenericLogic
 
     /// @notice returns if a loan is written off
     /// @param loan the id of the loan
-    function isLoanWrittenOff(DataTypes.Storage storage _poolStorage,uint256 loan) public view returns (bool) {
+    function isLoanWrittenOff(DataTypes.Storage storage _poolStorage,uint256 loan) internal view returns (bool) {
         return _poolStorage.loanRates[loan] >= WRITEOFF_RATE_GROUP_START;
     }
 
     /// @notice calculates and returns the current NAV
     /// @return nav_ current NAV
-    function currentNAV(DataTypes.Storage storage _poolStorage) public view returns (uint256 nav_) {
+    function currentNAV(DataTypes.Storage storage _poolStorage) internal view returns (uint256 nav_) {
         (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentPVs(_poolStorage);
         return Math.safeAdd(totalDiscount, Math.safeAdd(overdue, writeOffs));
     }
 
-    function currentNAVAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) public view returns (uint256) {
+    function currentNAVAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) internal view returns (uint256) {
         (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentAV(_poolStorage,tokenId);
         return Math.safeAdd(totalDiscount, Math.safeAdd(overdue, writeOffs));
     }
@@ -163,7 +163,7 @@ library GenericLogic
     /// @return totalDiscount the present value of the loans
     /// @return overdue the present value of the overdue loans
     /// @return writeOffs the present value of the written off loans
-    function currentPVs(DataTypes.Storage storage _poolStorage) public view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
+    function currentPVs(DataTypes.Storage storage _poolStorage) internal view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
         // Storage storage $ = _getStorage();
         uint256 latestDiscount;
         uint256 overdueLoans;
@@ -205,7 +205,7 @@ library GenericLogic
         );
     }
 
-    function currentWriteOffAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) public view returns (uint256) {
+    function currentWriteOffAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) internal view returns (uint256) {
         // Storage storage $ = _getStorage();
         uint256 _currentWriteOffs = 0;
         uint256 writeOffGroupIndex = currentValidWriteOffGroup(_poolStorage,uint256(tokenId));
@@ -216,7 +216,7 @@ library GenericLogic
     function currentAV(
         DataTypes.Storage storage _poolStorage,
         bytes32 tokenId
-    ) public view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
+    ) internal view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
         // Storage storage $ = _getStorage();
         uint256 _currentWriteOffs = 0;
         uint256 discountRate;
@@ -263,7 +263,7 @@ library GenericLogic
 
     /// @notice returns the sum of all write off loans
     /// @return sum of all write off loans
-    function currentWriteOffs(DataTypes.Storage storage _poolStorage) public view returns (uint256 sum) {
+    function currentWriteOffs(DataTypes.Storage storage _poolStorage) internal view returns (uint256 sum) {
         // Storage storage $ = _getStorage();
         for (uint256 i = 0; i < _poolStorage.writeOffGroups.length; i++) {
             // multiply writeOffGroupDebt with the writeOff rate
@@ -275,7 +275,7 @@ library GenericLogic
 
     /// @notice calculates and returns the current NAV and updates the state
     /// @return nav_ current NAV
-    function calcUpdateNAV(DataTypes.Storage storage _poolStorage) public returns (uint256 nav_) {
+    function calcUpdateNAV(DataTypes.Storage storage _poolStorage) internal returns (uint256 nav_) {
         (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentPVs(_poolStorage);
         // Storage storage $ = _getStorage();
 
@@ -298,7 +298,7 @@ library GenericLogic
     /// @notice re-calculates the nav in a non-optimized way
     ///  the method is not updating the NAV to latest block.timestamp
     /// @return nav_ current NAV
-    function reCalcNAV(DataTypes.Storage storage _poolStorage) public returns (uint256 nav_) {
+    function reCalcNAV(DataTypes.Storage storage _poolStorage) internal returns (uint256 nav_) {
         // reCalcTotalDiscount
         /// @notice re-calculates the totalDiscount in a non-optimized way based on lastNAVUpdate
         /// @return latestDiscount_ returns the total discount of the active loans
@@ -332,14 +332,14 @@ library GenericLogic
     /// @notice returns the nftID for the underlying collateral nft
     /// @param loan the loan id
     /// @return nftID_ the nftID of the loan
-    function nftID(uint256 loan) public pure returns (bytes32 nftID_) {
+    function nftID(uint256 loan) internal pure returns (bytes32 nftID_) {
         return bytes32(loan);
     }
 
     /// @notice returns the current valid write off group of a loan
     /// @param loan the loan id
     /// @return writeOffGroup_ the current valid write off group of a loan
-    function currentValidWriteOffGroup(DataTypes.Storage storage _poolStorage,uint256 loan) public view returns (uint256 writeOffGroup_) {
+    function currentValidWriteOffGroup(DataTypes.Storage storage _poolStorage,uint256 loan) internal view returns (uint256 writeOffGroup_) {
         bytes32 nftID_ = nftID(loan);
         uint256 maturityDate_ = maturityDate(_poolStorage,nftID_);
         uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
@@ -368,7 +368,7 @@ library GenericLogic
         return lastValidWriteOff;
     }
 
-    function debt(DataTypes.Storage storage _poolStorage,uint256 loan) public view  returns (uint256 loanDebt) {
+    function debt(DataTypes.Storage storage _poolStorage,uint256 loan) internal view  returns (uint256 loanDebt) {
         // Storage storage $ = _getStorage();
         uint256 rate_ = _poolStorage.loanRates[loan];
         uint256 chi_ = _poolStorage.rates[rate_].chi;
@@ -389,7 +389,7 @@ library GenericLogic
         }
     }
 
-    function rateDebt(DataTypes.Storage storage _poolStorage,uint256 rate) public view returns (uint256 totalDebt) {
+    function rateDebt(DataTypes.Storage storage _poolStorage,uint256 rate) internal view returns (uint256 totalDebt) {
         // Storage storage $ = _getStorage();
         uint256 chi_ = _poolStorage.rates[rate].chi;
         uint256 penaltyChi_ = _poolStorage.rates[rate].penaltyChi;
@@ -442,7 +442,7 @@ library GenericLogic
         drip(_poolStorage,_poolStorage.loanRates[loan]);
     }
 
-    function drip(DataTypes.Storage storage _poolStorage,uint256 rate) public {
+    function drip(DataTypes.Storage storage _poolStorage,uint256 rate) internal {
         // Storage storage $ = _getStorage();
         if (block.timestamp >= _poolStorage.rates[rate].lastUpdated) {
             (uint256 chi, ) = compounding(
@@ -479,7 +479,7 @@ library GenericLogic
     // @param lastUpdated When the interest rate was last updated
     // @param _pie Total sum of all amounts accumulating under one interest rate, divided by that rate
     // @return The new accumulated rate, as well as the difference between the debt calculated with the old and new accumulated rates.
-    function compounding(uint chi, uint ratePerSecond, uint lastUpdated, uint _pie) public view returns (uint, uint) {
+    function compounding(uint chi, uint ratePerSecond, uint lastUpdated, uint _pie) internal view returns (uint, uint) {
         require(block.timestamp >= lastUpdated, 'tinlake-math/invalid-timestamp');
         require(chi != 0);
         // instead of a interestBearingAmount we use a accumulated interest rate index (chi)
@@ -496,7 +496,7 @@ library GenericLogic
         uint interestBearingAmount,
         uint ratePerSecond,
         uint lastUpdated
-    ) public view returns (uint) {
+    ) internal view returns (uint) {
         if (block.timestamp >= lastUpdated) {
             interestBearingAmount = _chargeInterest(interestBearingAmount, ratePerSecond, lastUpdated, block.timestamp);
         }
@@ -513,16 +513,16 @@ library GenericLogic
     }
 
     // convert pie to debt/savings amount
-    function toAmount(uint chi, uint _pie) public pure returns (uint) {
+    function toAmount(uint chi, uint _pie) internal pure returns (uint) {
         return Math.rmul(_pie, chi);
     }
 
     // convert debt/savings amount to pie
-    function toPie(uint chi, uint amount) public pure returns (uint) {
+    function toPie(uint chi, uint amount) internal pure returns (uint) {
         return Math.rdivup(amount, chi);
     }
 
-    function getAsset(DataTypes.Storage storage _poolStorage,bytes32 agreementId) public view  returns (DataTypes.NFTDetails memory) {
+    function getAsset(DataTypes.Storage storage _poolStorage,bytes32 agreementId) internal view  returns (DataTypes.NFTDetails memory) {
         // Storage storage $ = _getStorage();
         return _poolStorage.details[agreementId];
     }
@@ -554,7 +554,7 @@ library GenericLogic
      */
     function unpackParamsForAgreementID(
         DataTypes.LoanEntry calldata loan
-    ) public pure returns (UnpackLoanParamtersLib.InterestParams memory params) {
+    ) internal pure returns (UnpackLoanParamtersLib.InterestParams memory params) {
         // The principal amount denominated in the aforementioned token.
         uint256 principalAmount;
         // The interest rate accrued per amortization unit.

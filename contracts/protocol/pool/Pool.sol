@@ -133,15 +133,18 @@ contract Pool is PoolStorage, UntangledBase{
         require(_msgSender() == tgeAddress(), 'SecuritizationPool: Only tge address');
         PoolAssetLogic.setUpOpeningBlockTimestamp(_poolStorage);
     }  
-    function addLoan(uint256 loan, DataTypes.LoanEntry calldata loanEntry) external returns (uint256){
+
+    /*==================== NAV ====================*/
+    function addLoan(uint256 loan, DataTypes.LoanEntry calldata loanEntry) private returns (uint256){
         return PoolNAVLogic.addLoan(_poolStorage,loan,loanEntry);
     }
 
     function repayLoan(uint256 loan, uint256 amount) external returns (uint256){
+        require(address(registry.getLoanRepaymentRouter()) == msg.sender, 'not authorized');
         return PoolNAVLogic.repayLoan(_poolStorage,loan,amount);
     }
 
-    function file(bytes32 name, uint256 value) external{
+    function file(bytes32 name, uint256 value) private{
         PoolNAVLogic.file(_poolStorage,name,value);
     }
 
@@ -152,7 +155,7 @@ contract Pool is PoolStorage, UntangledBase{
         uint256 overdueDays_,
         uint256 penaltyRate_,
         uint256 riskIndex
-    ) external{
+    ) private{
         PoolNAVLogic.file(_poolStorage,name,rate_,writeOffPercentage_,overdueDays_,penaltyRate_,riskIndex);
     }
 
@@ -187,6 +190,7 @@ contract Pool is PoolStorage, UntangledBase{
     }
 
     function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) external{
+        registry.requirePoolAdmin(_msgSender());
         PoolNAVLogic.updateAssetRiskScore(_poolStorage,nftID_,risk_);
     }
 
@@ -195,30 +199,43 @@ contract Pool is PoolStorage, UntangledBase{
         return _poolStorage.details[agreementId];
     }
     /*==================== TGE ====================*/
-    function setPot(address _pot) external{
+    function setPot(address _pot) external whenNotPaused nonReentrant notClosingStage {
+        registry.requirePoolAdminOrOwner(address(this), _msgSender());
         TGELogic.setPot(_poolStorage,_pot);
     }
 
     /// @notice sets debt ceiling value
-    function setDebtCeiling(uint256 _debtCeiling) external{
+    function setDebtCeiling(uint256 _debtCeiling) external whenNotPaused notClosingStage{
+        registry.requirePoolAdminOrOwner(address(this), _msgSender());
         TGELogic.setDebtCeiling(_poolStorage,_debtCeiling);
     }
 
     /// @notice sets mint first loss value
-    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external{
+    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external whenNotPaused notClosingStage{
+        registry.requirePoolAdminOrOwner(address(this), _msgSender());
         TGELogic.setMinFirstLossCushion(_poolStorage,_minFirstLossCushion);
     }
 
     // function pot() external view returns (address);
 
     /// @dev trigger update reserve when buy note token action happens
-    function increaseReserve(uint256 currencyAmount) external{
+    function increaseReserve(uint256 currencyAmount) external whenNotPaused{
+        require(
+            _msgSender() == address(registry.getSecuritizationManager()) ||
+                _msgSender() == address(registry.getNoteTokenVault()),
+            'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
+        );
         address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
         TGELogic.increaseReserve(_poolStorage,poolServiceAddress,currencyAmount);
     }
 
     /// @dev trigger update reserve
-    function decreaseReserve(uint256 currencyAmount) external{
+    function decreaseReserve(uint256 currencyAmount) external whenNotPaused{
+        require(
+            _msgSender() == address(registry.getSecuritizationManager()) ||
+                _msgSender() == address(registry.getNoteTokenVault()),
+            'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
+        );
         address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
         TGELogic.decreaseReserve(_poolStorage,poolServiceAddress,currencyAmount);
     }
@@ -274,19 +291,25 @@ contract Pool is PoolStorage, UntangledBase{
         address _tgeAddress,
         // address _tokenAddress,
         Configuration.NOTE_TOKEN_TYPE _noteToken
-    ) external{
+    ) external whenNotPaused onlyIssuingTokenStage {
+        registry.requireSecuritizationManager(_msgSender());
         TGELogic.injectTGEAddress(_poolStorage,_tgeAddress,_noteToken);
     }
 
     /// @dev trigger update asset value repaid
-    function increaseTotalAssetRepaidCurrency(uint256 amount) external{
+    function increaseTotalAssetRepaidCurrency(uint256 amount) external whenNotPaused{
+        registry.requireLoanRepaymentRouter(_msgSender());
         TGELogic.increaseTotalAssetRepaidCurrency(_poolStorage,amount);
     }
 
     /// @dev Disburses a specified amount of currency to the given user.
     /// @param usr The address of the user to receive the currency.
     /// @param currencyAmount The amount of currency to disburse.
-    function disburse(address usr, uint256 currencyAmount) external{
+    function disburse(address usr, uint256 currencyAmount) external whenNotPaused{
+        require(
+            _msgSender() == address(registry.getNoteTokenVault()),
+            'SecuritizationPool: Caller must be NoteTokenVault'
+        );
         TGELogic.disburse(_poolStorage,usr,currencyAmount);
     }
 
@@ -300,18 +323,21 @@ contract Pool is PoolStorage, UntangledBase{
         TGELogic.isDebtCeilingValid(_poolStorage);
     }
 
-    function claimCashRemain(address recipientWallet) external{
+    function claimCashRemain(address recipientWallet) external whenNotPaused onlyRole(OWNER_ROLE) {
+        require(hasFinishedRedemption(), 'SecuritizationPool: Redemption has not finished');
         TGELogic.claimCashRemain(_poolStorage,recipientWallet);
     }
 
     // function openingBlockTimestamp() external view returns (uint64);
 
-    function startCycle() external{
+    function startCycle() external whenNotPaused nonReentrant onlyIssuingTokenStage{
         TGELogic.startCycle(_poolStorage);
     }
 
     /// @notice allows the originator to withdraw from reserve
-    function withdraw(address to, uint256 amount) external{
+    function withdraw(address to, uint256 amount) external whenNotPaused onlyRole(ORIGINATOR_ROLE){
+        registry.requireLoanKernel(_msgSender());
+        require(!registry.getNoteTokenVault().redeemDisabled(address(this)), 'SecuritizationPool: withdraw paused');
         address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
         TGELogic.withdraw(_poolStorage,poolServiceAddress,to,amount);
     }

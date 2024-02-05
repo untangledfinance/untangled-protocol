@@ -10,7 +10,7 @@ import {Factory2} from '../../base/Factory2.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {INoteTokenFactory} from '../note-sale/fab/INoteTokenFactory.sol';
 import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.sol';
-import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
+import {IPool} from '../../interfaces/IPool.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
@@ -21,9 +21,10 @@ import {MintedIncreasingInterestTGE} from '../note-sale/MintedIncreasingInterest
 import {IMintedTGE} from '../note-sale/IMintedTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
 import {ITokenGenerationEventFactory} from '../note-sale/fab/ITokenGenerationEventFactory.sol';
-import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
-import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
-import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
+import {DataTypes} from "../../libraries/DataTypes.sol";
+// import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
+// import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
+// import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 
 abstract contract SecuritizationManagerBase is ISecuritizationManager {
     Registry public override registry;
@@ -75,12 +76,12 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
     }
 
     modifier doesSOTExist(address pool) {
-        require(ISecuritizationTGE(pool).sotToken() == address(0), 'SecuritizationManager: Already exists SOT token');
+        require(IPool(pool).sotToken() == address(0), 'SecuritizationManager: Already exists SOT token');
         _;
     }
 
     modifier doesJOTExist(address pool) {
-        require(ISecuritizationTGE(pool).jotToken() == address(0), 'SecuritizationManager: Already exists JOT token');
+        require(IPool(pool).jotToken() == address(0), 'SecuritizationManager: Already exists JOT token');
         _;
     }
 
@@ -107,7 +108,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         bytes memory _initialData = abi.encodeWithSelector(POOL_INIT_FUNC_SELECTOR, registry, params);
 
         address poolAddress = _deployInstance(poolImplAddress, _initialData, salt);
-        SecuritizationAccessControl poolInstance = SecuritizationAccessControl(poolAddress);
+        IPool poolInstance = IPool(poolAddress);
 
         isExistingPools[poolAddress] = true;
         pools.push(poolAddress);
@@ -116,7 +117,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         poolInstance.renounceRole(OWNER_ROLE, address(this));
 
         emit NewPoolCreated(poolAddress);
-        emit NewPoolDeployed(poolAddress, poolOwner, abi.decode(params, (ISecuritizationPoolStorage.NewPoolParams)));
+        emit NewPoolDeployed(poolAddress, poolOwner, abi.decode(params, (DataTypes.NewPoolParams)));
 
         return poolAddress;
     }
@@ -141,7 +142,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         require(address(noteTokenFactory) != address(0), 'Note Token Factory was not registered');
         require(address(registry.getTokenGenerationEventFactory()) != address(0), 'TGE Factory was not registered');
 
-        address underlyingCurrency = ISecuritizationTGE(pool).underlyingCurrency();
+        address underlyingCurrency = IPool(pool).underlyingCurrency();
         address sotToken = noteTokenFactory.createToken(
             pool,
             Configuration.NOTE_TOKEN_TYPE.SENIOR,
@@ -159,7 +160,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         );
         noteTokenFactory.changeMinterRole(sotToken, tgeAddress);
 
-        ISecuritizationTGE(pool).injectTGEAddress(tgeAddress, Configuration.NOTE_TOKEN_TYPE.SENIOR);
+        IPool(pool).injectTGEAddress(tgeAddress, uint8(Configuration.NOTE_TOKEN_TYPE.SENIOR));
 
         isExistingTGEs[tgeAddress] = true;
 
@@ -234,7 +235,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         string memory ticker
     ) public whenNotPaused nonReentrant onlyPoolExisted(pool) doesJOTExist(pool) returns (address, address) {
         INoteTokenFactory noteTokenFactory = registry.getNoteTokenFactory();
-        address underlyingCurrency = ISecuritizationTGE(pool).underlyingCurrency();
+        address underlyingCurrency = IPool(pool).underlyingCurrency();
         address jotToken = noteTokenFactory.createToken(
             address(pool),
             Configuration.NOTE_TOKEN_TYPE.JUNIOR,
@@ -251,7 +252,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         );
         noteTokenFactory.changeMinterRole(jotToken, tgeAddress);
 
-        ISecuritizationTGE(pool).injectTGEAddress(tgeAddress, Configuration.NOTE_TOKEN_TYPE.JUNIOR);
+        IPool(pool).injectTGEAddress(tgeAddress, uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR));
 
         isExistingTGEs[tgeAddress] = true;
 
@@ -280,18 +281,18 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         if (INoteToken(noteToken).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
             if (MintedNormalTGE(tgeAddress).currencyRaised() >= MintedNormalTGE(tgeAddress).initialAmount()) {
                 // Currency Raised For JOT > initialJOTAmount => SOT sale start
-                address sotTGEAddress = ISecuritizationPoolStorage(pool).tgeAddress();
+                address sotTGEAddress = IPool(pool).tgeAddress();
                 if (sotTGEAddress != address(0)) {
                     ICrowdSale(sotTGEAddress).setHasStarted(true);
                 }
             }
         }
 
-        ISecuritizationTGE(pool).increaseReserve(currencyAmount);
+        IPool(pool).increaseReserve(currencyAmount);
 
         if (poolOfPot != address(0)) {
-            ISecuritizationPool(poolOfPot).collectERC20Asset(noteToken);
-            ISecuritizationTGE(poolOfPot).decreaseReserve(currencyAmount);
+            IPool(poolOfPot).collectERC20Asset(noteToken);
+            IPool(poolOfPot).decreaseReserve(currencyAmount);
         }
 
         emit TokensPurchased(_msgSender(), tgeAddress, currencyAmount, tokenAmount);

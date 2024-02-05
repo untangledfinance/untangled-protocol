@@ -39,6 +39,7 @@ interface IPool {
   function maturityDate ( bytes32 nft_ ) external view returns ( uint256 );
   function minFirstLossCushion (  ) external view returns ( uint32 );
   function nftAssets ( uint256 idx ) external view returns ( DataTypes.NFTAsset memory);
+  function onERC721Received(address, address, uint256 tokenId, bytes memory) external returns (bytes4);
   function paidPrincipalAmountSOT (  ) external view returns ( uint256 );
   function paidPrincipalAmountSOTByInvestor ( address user ) external view returns ( uint256 );
   function pause (  ) external;

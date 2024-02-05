@@ -19,12 +19,8 @@ import {Configuration} from '../../libraries/Configuration.sol';
  */
 contract Pool is PoolStorage, UntangledBase{
     using ConfigHelper for Registry;
-    // using AddressUpgradeable for address;
-    // using ERC165CheckerUpgradeable for address;
-    // event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
-
     Registry public registry;
-    // }
+    event InsertNFTAsset(address token, uint256 tokenId);
     modifier onlyIssuingTokenStage() {
         DataTypes.CycleState _state = state();
         require(_state != DataTypes.CycleState.OPEN && _state != DataTypes.CycleState.CLOSED, 'Not in issuing token stage');
@@ -133,6 +129,17 @@ contract Pool is PoolStorage, UntangledBase{
         require(_msgSender() == tgeAddress(), 'SecuritizationPool: Only tge address');
         PoolAssetLogic.setUpOpeningBlockTimestamp(_poolStorage);
     }  
+    function onERC721Received(address, address, uint256 tokenId, bytes memory) external returns (bytes4) {
+        address token = _msgSender();
+        require(
+            token == address(registry.getLoanAssetToken()),
+            'SecuritizationPool: Must be token issued by Untangled'
+        );
+        DataTypes.NFTAsset[] storage _nftAssets = _poolStorage.nftAssets;
+        _nftAssets.push(DataTypes.NFTAsset({tokenAddress: token, tokenId: tokenId}));
+        emit InsertNFTAsset(token, tokenId);
+        return this.onERC721Received.selector;
+    }
 
     /*==================== NAV ====================*/
     function addLoan(uint256 loan, DataTypes.LoanEntry calldata loanEntry) private returns (uint256){

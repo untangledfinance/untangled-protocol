@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {OWNER_ROLE} from './types.sol';
+import {OWNER_ROLE,ORIGINATOR_ROLE} from './types.sol';
 import {PoolStorage} from './PoolStorage.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
 import {UntangledBase} from "../../base/UntangledBase.sol";
@@ -324,7 +324,7 @@ contract Pool is PoolStorage, UntangledBase{
     }
 
     function claimCashRemain(address recipientWallet) external whenNotPaused onlyRole(OWNER_ROLE) {
-        require(hasFinishedRedemption(), 'SecuritizationPool: Redemption has not finished');
+        require(TGELogic.hasFinishedRedemption(_poolStorage), 'SecuritizationPool: Redemption has not finished');
         TGELogic.claimCashRemain(_poolStorage,recipientWallet);
     }
 

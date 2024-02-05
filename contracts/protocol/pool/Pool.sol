@@ -247,11 +247,11 @@ contract Pool is PoolStorage, UntangledBase{
     }
 
     function sotToken() external view returns (address){
-        TGELogic.sotToken(_poolStorage);
+        return TGELogic.sotToken(_poolStorage);
     }
 
     function jotToken() external view returns (address){
-        TGELogic.jotToken(_poolStorage);
+        return TGELogic.jotToken(_poolStorage);
     }
 
     function underlyingCurrency() external view returns (address){
@@ -317,12 +317,12 @@ contract Pool is PoolStorage, UntangledBase{
 
     /// @notice checks if the redemption process has finished
     function hasFinishedRedemption() external view returns (bool){
-        TGELogic.hasFinishedRedemption(_poolStorage);
+        return TGELogic.hasFinishedRedemption(_poolStorage);
     }
 
     ///@notice check current debt ceiling is valid
     function isDebtCeilingValid() external view returns (bool){
-        TGELogic.isDebtCeilingValid(_poolStorage);
+        return TGELogic.isDebtCeilingValid(_poolStorage);
     }
 
     function claimCashRemain(address recipientWallet) external whenNotPaused onlyRole(OWNER_ROLE) {

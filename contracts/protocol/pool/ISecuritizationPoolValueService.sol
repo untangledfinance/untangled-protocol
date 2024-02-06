@@ -18,4 +18,8 @@ interface ISecuritizationPoolValueService {
     function getJuniorRatio(address poolAddress) external view returns (uint256);
 
     function getPoolValue(address poolAddress) external view returns (uint256);
+
+    function getSeniorDebt(address poolAddress) external view returns (uint256);
+
+    function getBeginningSeniorDebt(address poolAddress) external view returns (uint256);
 }

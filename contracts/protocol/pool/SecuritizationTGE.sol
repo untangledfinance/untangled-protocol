@@ -103,6 +103,10 @@ contract SecuritizationTGE is
         return _getStorage().totalAssetRepaidCurrency;
     }
 
+    function beginningSeniorDebt() public view override returns (uint256) {
+        return _getStorage().beginningSeniorDebt;
+    }
+
     modifier finishRedemptionValidator() {
         require(hasFinishedRedemption(), 'SecuritizationPool: Redemption has not finished');
         _;
@@ -164,18 +168,6 @@ contract SecuritizationTGE is
         return $.debtCeiling >= totalDebt;
     }
 
-    // Increase by value
-    function increaseTotalAssetRepaidCurrency(uint256 amount) external virtual override whenNotPaused {
-        registry().requireLoanRepaymentRouter(_msgSender());
-
-        Storage storage $ = _getStorage();
-
-        $.reserve = $.reserve + amount;
-        $.totalAssetRepaidCurrency = $.totalAssetRepaidCurrency + amount;
-
-        emit IncreaseReserve(amount, $.reserve);
-    }
-
     function hasFinishedRedemption() public view override returns (bool) {
         address stoken = sotToken();
         if (stoken != address(0)) {
@@ -235,6 +227,39 @@ contract SecuritizationTGE is
         emit UpdateDebtCeiling(_debtCeiling);
     }
 
+    function _setBeginningSeniorDebt() private {
+        ISecuritizationPoolValueService poolService = registry().getSecuritizationPoolValueService();
+        Storage storage $ = _getStorage();
+
+        uint256 currentSeniorDebt = poolService.getSeniorDebt(address(this));
+        if (currentSeniorDebt == 0) {
+            $.beginningSeniorDebt = poolService.getBeginningSeniorDebt(address(this));
+        } else {
+            $.beginningSeniorDebt = currentSeniorDebt;
+        }
+    }
+
+    function _increaseReserve(uint256 currencyAmount, bool checkMFS) private {
+        Storage storage $ = _getStorage();
+        $.reserve = $.reserve + currencyAmount;
+
+        if (checkMFS) {
+            require(checkMinFirstLost(), 'MinFirstLoss is not satisfied');
+        }
+
+        emit IncreaseReserve(currencyAmount, $.reserve);
+    }
+
+    // Increase by value
+    function increaseTotalAssetRepaidCurrency(uint256 amount) external virtual override whenNotPaused {
+        registry().requireLoanRepaymentRouter(_msgSender());
+
+        _increaseReserve(amount, false);
+        Storage storage $ = _getStorage();
+        $.totalAssetRepaidCurrency = $.totalAssetRepaidCurrency + amount;
+        _setBeginningSeniorDebt();
+    }
+
     function increaseReserve(uint256 currencyAmount) external override whenNotPaused {
         require(
             _msgSender() == address(registry().getSecuritizationManager()) ||
@@ -242,12 +267,8 @@ contract SecuritizationTGE is
             'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
 
-        Storage storage $ = _getStorage();
-
-        $.reserve = $.reserve + currencyAmount;
-        require(checkMinFirstLost(), 'MinFirstLoss is not satisfied');
-
-        emit IncreaseReserve(currencyAmount, $.reserve);
+        _increaseReserve(currencyAmount, true);
+        _setBeginningSeniorDebt();
     }
 
     function decreaseReserve(uint256 currencyAmount) external override whenNotPaused {
@@ -258,6 +279,7 @@ contract SecuritizationTGE is
         );
 
         _decreaseReserve(currencyAmount);
+        _setBeginningSeniorDebt();
     }
 
     function _decreaseReserve(uint256 currencyAmount) private {
@@ -316,6 +338,7 @@ contract SecuritizationTGE is
             IERC20Upgradeable(underlyingCurrency()).transferFrom(pot(), to, amount),
             'SecuritizationPool: Transfer failed'
         );
+        _setBeginningSeniorDebt();
         emit Withdraw(to, amount);
     }
 
@@ -348,7 +371,7 @@ contract SecuritizationTGE is
         override(SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](29);
+        bytes4[] memory _functionSignatures = new bytes4[](30);
 
         _functionSignatures[1] = this.setPot.selector;
         _functionSignatures[2] = this.increaseReserve.selector;
@@ -377,6 +400,7 @@ contract SecuritizationTGE is
         _functionSignatures[26] = this.debtCeiling.selector;
         _functionSignatures[27] = this.disburse.selector;
         _functionSignatures[28] = this.setMinFirstLossCushion.selector;
+        _functionSignatures[29] = this.beginningSeniorDebt.selector;
 
         return _functionSignatures;
     }

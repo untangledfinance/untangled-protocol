@@ -21,7 +21,9 @@ import {MintedIncreasingInterestTGE} from '../note-sale/MintedIncreasingInterest
 import {IMintedTGE} from '../note-sale/IMintedTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
 import {ITokenGenerationEventFactory} from '../note-sale/fab/ITokenGenerationEventFactory.sol';
-import {DataTypes} from "../../libraries/DataTypes.sol";
+import {DataTypes} from '../../libraries/DataTypes.sol';
+
+import 'hardhat/console.sol';
 // import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
 // import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 // import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
@@ -108,13 +110,14 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         bytes memory _initialData = abi.encodeWithSelector(POOL_INIT_FUNC_SELECTOR, registry, params);
 
         address poolAddress = _deployInstance(poolImplAddress, _initialData, salt);
+
         IPool poolInstance = IPool(poolAddress);
 
         isExistingPools[poolAddress] = true;
         pools.push(poolAddress);
 
-        poolInstance.grantRole(OWNER_ROLE, poolOwner);
-        poolInstance.renounceRole(OWNER_ROLE, address(this));
+        poolInstance.grantRole(DEFAULT_ADMIN_ROLE, poolOwner);
+        poolInstance.renounceRole(DEFAULT_ADMIN_ROLE, address(this));
 
         emit NewPoolCreated(poolAddress);
         emit NewPoolDeployed(poolAddress, poolOwner, abi.decode(params, (DataTypes.NewPoolParams)));

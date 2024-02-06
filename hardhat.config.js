@@ -7,6 +7,7 @@ require('@openzeppelin/hardhat-upgrades');
 require('@nomicfoundation/hardhat-chai-matchers');
 require('hardhat-gas-reporter');
 require('hardhat-abi-exporter');
+require('hardhat-if-gen');
 
 require('dotenv').config();
 require('./tasks');

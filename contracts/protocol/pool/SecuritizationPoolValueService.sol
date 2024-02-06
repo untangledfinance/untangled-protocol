@@ -168,7 +168,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
 
     // @notice get beginning of senior debt, get interest of this debt over number of interval
     function getSeniorDebt(address poolAddress) public view returns (uint256) {
-        uint256 beginningSeniorDebt = ISecuritizationTGE(poolAddress).beginningSeniorDebt();
+        uint256 beginningSeniorDebt = getBeginningSeniorDebt(poolAddress);
 
         return _getSeniorDebt(poolAddress, beginningSeniorDebt);
     }
@@ -178,7 +178,9 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         require(address(securitizationPool) != address(0), 'Pool was not deployed');
         uint256 seniorInterestRate = ISecuritizationTGE(poolAddress).interestRateSOT();
         uint256 openingTime = securitizationPool.openingBlockTimestamp();
-        uint256 compoundingPeriods = block.timestamp - openingTime;
+        uint256 reserveChangeUpdateTime = ISecuritizationTGE(poolAddress).reserveUpdateTime();
+        uint256 compoundingPeriods = block.timestamp -
+            (reserveChangeUpdateTime != 0 ? reserveChangeUpdateTime : openingTime);
         uint256 oneYearInSeconds = YEAR_LENGTH_IN_SECONDS;
 
         uint256 seniorDebt = beginningSeniorDebt +
@@ -204,7 +206,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
 
         uint256 seniorAsset;
         uint256 currentSeniorAssetTotalSupply = getCurrentSeniorAssetTotalSupply(poolAddress);
-        uint256 beginningSeniorDebt = ISecuritizationTGE(poolAddress).beginningSeniorDebt();
+        uint256 beginningSeniorDebt = getBeginningSeniorDebt(poolAddress);
         uint256 seniorDebt = _getSeniorDebt(poolAddress, beginningSeniorDebt);
 
         uint256 seniorBalance = currentSeniorAssetTotalSupply - beginningSeniorDebt;
@@ -264,7 +266,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         }
 
         uint256 currentSeniorAssetTotalSupply = getCurrentSeniorAssetTotalSupply(poolAddress);
-        uint256 beginningSeniorDebt = ISecuritizationTGE(poolAddress).beginningSeniorDebt();
+        uint256 beginningSeniorDebt = getBeginningSeniorDebt(poolAddress);
         uint256 seniorDebt = _getSeniorDebt(poolAddress, beginningSeniorDebt);
         uint256 seniorBalance = currentSeniorAssetTotalSupply - beginningSeniorDebt;
 

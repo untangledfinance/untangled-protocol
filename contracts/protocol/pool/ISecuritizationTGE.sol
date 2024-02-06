@@ -53,7 +53,7 @@ interface ISecuritizationTGE {
 
     function minFirstLossCushion() external view returns (uint32);
 
-    function beginningSeniorDebt() external view returns (uint256);
+    function reserveUpdateTime() external view returns (uint64);
 
     function totalAssetRepaidCurrency() external view returns (uint256); // Total $ (cUSD) paid for Asset repayment - repayInBatch
 

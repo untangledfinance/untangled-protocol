@@ -326,8 +326,10 @@ describe('SecuritizationPool', () => {
                 },
             ];
 
-            let currentBeginningSeniorDebt = await securitizationPoolContract.beginningSeniorDebt();
-            expect(currentBeginningSeniorDebt.toString()).equal('0');
+            let currentSeniorDebt = await securitizationPoolValueService.getSeniorDebt(
+                securitizationPoolContract.address
+            );
+            expect(currentSeniorDebt.toString()).equal('0');
 
             tokenIds = await untangledProtocol.uploadLoans(
                 untangledAdminSigner,
@@ -337,8 +339,9 @@ describe('SecuritizationPool', () => {
                 loans
             );
 
-            currentBeginningSeniorDebt = await securitizationPoolContract.beginningSeniorDebt();
-            expect(currentBeginningSeniorDebt.toString()).equal('14387');
+            // We dont startCycle yet
+            currentSeniorDebt = await securitizationPoolValueService.getSeniorDebt(securitizationPoolContract.address);
+            expect(currentSeniorDebt.toString()).equal('14387');
 
             const ownerOfAgreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
             expect(ownerOfAgreement).equal(securitizationPoolContract.address);

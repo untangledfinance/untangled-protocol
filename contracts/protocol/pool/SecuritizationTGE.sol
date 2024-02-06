@@ -20,6 +20,7 @@ import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
 import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
+import {INoteToken} from '../../interfaces/INoteToken.sol';
 
 import {ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
 
@@ -103,8 +104,8 @@ contract SecuritizationTGE is
         return _getStorage().totalAssetRepaidCurrency;
     }
 
-    function beginningSeniorDebt() public view override returns (uint256) {
-        return _getStorage().beginningSeniorDebt;
+    function reserveUpdateTime() public view override returns (uint64) {
+        return _getStorage().reserveUpdateTime;
     }
 
     modifier finishRedemptionValidator() {
@@ -227,15 +228,14 @@ contract SecuritizationTGE is
         emit UpdateDebtCeiling(_debtCeiling);
     }
 
-    function _setBeginningSeniorDebt() private {
+    function _setReserveUpdateTime() private {
         ISecuritizationPoolValueService poolService = registry().getSecuritizationPoolValueService();
         Storage storage $ = _getStorage();
 
-        uint256 currentSeniorDebt = poolService.getSeniorDebt(address(this));
-        if (currentSeniorDebt == 0) {
-            $.beginningSeniorDebt = poolService.getBeginningSeniorDebt(address(this));
-        } else {
-            $.beginningSeniorDebt = currentSeniorDebt;
+        uint256 expectedAssetsValue = poolService.getExpectedAssetsValue(address(this));
+
+        if (expectedAssetsValue > 0) {
+            $.reserveUpdateTime = uint64(block.timestamp);
         }
     }
 
@@ -257,7 +257,7 @@ contract SecuritizationTGE is
         _increaseReserve(amount, false);
         Storage storage $ = _getStorage();
         $.totalAssetRepaidCurrency = $.totalAssetRepaidCurrency + amount;
-        _setBeginningSeniorDebt();
+        _setReserveUpdateTime();
     }
 
     function increaseReserve(uint256 currencyAmount) external override whenNotPaused {
@@ -268,7 +268,7 @@ contract SecuritizationTGE is
         );
 
         _increaseReserve(currencyAmount, true);
-        _setBeginningSeniorDebt();
+        _setReserveUpdateTime();
     }
 
     function decreaseReserve(uint256 currencyAmount) external override whenNotPaused {
@@ -279,7 +279,7 @@ contract SecuritizationTGE is
         );
 
         _decreaseReserve(currencyAmount);
-        _setBeginningSeniorDebt();
+        _setReserveUpdateTime();
     }
 
     function _decreaseReserve(uint256 currencyAmount) private {
@@ -338,7 +338,7 @@ contract SecuritizationTGE is
             IERC20Upgradeable(underlyingCurrency()).transferFrom(pot(), to, amount),
             'SecuritizationPool: Transfer failed'
         );
-        _setBeginningSeniorDebt();
+        _setReserveUpdateTime();
         emit Withdraw(to, amount);
     }
 
@@ -400,7 +400,7 @@ contract SecuritizationTGE is
         _functionSignatures[26] = this.debtCeiling.selector;
         _functionSignatures[27] = this.disburse.selector;
         _functionSignatures[28] = this.setMinFirstLossCushion.selector;
-        _functionSignatures[29] = this.beginningSeniorDebt.selector;
+        _functionSignatures[29] = this.reserveUpdateTime.selector;
 
         return _functionSignatures;
     }

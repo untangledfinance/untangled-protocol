@@ -214,7 +214,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
 
         uint256 seniorAsset;
         uint256 currentSeniorAssetTotalSupply = getCurrentSeniorAssetTotalSupply(poolAddress);
-        uint256 beginningSeniorDebt = getBeginningSeniorDebt(poolAddress);
+        uint256 beginningSeniorDebt = (currentSeniorAssetTotalSupply * navpoolValue) / poolValue;
         uint256 seniorDebt = _getSeniorDebt(poolAddress, beginningSeniorDebt);
 
         uint256 seniorBalance = currentSeniorAssetTotalSupply - beginningSeniorDebt;
@@ -274,7 +274,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         }
 
         uint256 currentSeniorAssetTotalSupply = getCurrentSeniorAssetTotalSupply(poolAddress);
-        uint256 beginningSeniorDebt = getBeginningSeniorDebt(poolAddress);
+        uint256 beginningSeniorDebt = (currentSeniorAssetTotalSupply * navpoolValue) / poolValue;
         uint256 seniorDebt = _getSeniorDebt(poolAddress, beginningSeniorDebt);
         uint256 seniorBalance = currentSeniorAssetTotalSupply - beginningSeniorDebt;
 

@@ -173,12 +173,20 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         return _getSeniorDebt(poolAddress, beginningSeniorDebt);
     }
 
+    function _getPoolReserveUpdateTime(address pool) private view returns (uint256 returnValue) {
+        (bool success, bytes memory returnBytes) = pool.staticcall(abi.encodeWithSignature('reserveUpdateTime()'));
+        if (!success) {
+            return 0;
+        }
+        return abi.decode(returnBytes, (uint256));
+    }
+
     function _getSeniorDebt(address poolAddress, uint256 beginningSeniorDebt) internal view returns (uint256) {
         ISecuritizationPoolStorage securitizationPool = ISecuritizationPoolStorage(poolAddress);
         require(address(securitizationPool) != address(0), 'Pool was not deployed');
         uint256 seniorInterestRate = ISecuritizationTGE(poolAddress).interestRateSOT();
         uint256 openingTime = securitizationPool.openingBlockTimestamp();
-        uint256 reserveChangeUpdateTime = ISecuritizationTGE(poolAddress).reserveUpdateTime();
+        uint256 reserveChangeUpdateTime = _getPoolReserveUpdateTime(poolAddress);
         uint256 compoundingPeriods = block.timestamp -
             (reserveChangeUpdateTime != 0 ? reserveChangeUpdateTime : openingTime);
         uint256 oneYearInSeconds = YEAR_LENGTH_IN_SECONDS;

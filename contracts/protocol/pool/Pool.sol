@@ -24,7 +24,7 @@ contract Pool is PoolStorage, UntangledBase {
     Registry public registry;
     event InsertNFTAsset(address token, uint256 tokenId);
     modifier onlyIssuingTokenStage() {
-        DataTypes.CycleState _state = state();
+        DataTypes.CycleState _state = _poolStorage.state;
         require(
             _state != DataTypes.CycleState.OPEN && _state != DataTypes.CycleState.CLOSED,
             'Not in issuing token stage'
@@ -63,11 +63,11 @@ contract Pool is PoolStorage, UntangledBase {
 
         registry.getLoanAssetToken().setApprovalForAll(address(registry.getLoanKernel()), true);
     }
-    function state() internal view returns (DataTypes.CycleState) {
+    function state() external view returns (DataTypes.CycleState) {
         return _poolStorage.state;
     }
     function isClosedState() internal view returns (bool) {
-        return state() == DataTypes.CycleState.CLOSED;
+        return _poolStorage.state == DataTypes.CycleState.CLOSED;
     }
     function tgeAddress() public view returns (address) {
         return _poolStorage.tgeAddress;

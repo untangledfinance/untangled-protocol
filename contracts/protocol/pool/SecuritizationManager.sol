@@ -119,6 +119,9 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         poolInstance.grantRole(DEFAULT_ADMIN_ROLE, poolOwner);
         poolInstance.renounceRole(DEFAULT_ADMIN_ROLE, address(this));
 
+        poolInstance.grantRole(OWNER_ROLE, poolOwner);
+        poolInstance.renounceRole(OWNER_ROLE, address(this));
+
         emit NewPoolCreated(poolAddress);
         emit NewPoolDeployed(poolAddress, poolOwner, abi.decode(params, (DataTypes.NewPoolParams)));
 

@@ -81,7 +81,6 @@ describe('SecuritizationPool', () => {
 
             const salt = utils.keccak256(Date.now());
 
-            console.log('00001');
 
             // Create new pool
             let securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(
@@ -93,7 +92,6 @@ describe('SecuritizationPool', () => {
                 salt
             );
 
-            console.log('00002');
 
             // expect address, create2
             const { bytecode } = await artifacts.readArtifact('TransparentUpgradeableProxy');
@@ -114,12 +112,10 @@ describe('SecuritizationPool', () => {
                 )
             );
 
-            console.log('00003');
 
             const create2 = utils.getCreate2Address(securitizationManager.address, salt, initCodeHash);
             expect(create2).to.be.eq(securitizationPoolAddress);
 
-            console.log('00004');
 
             securitizationPoolContract = await getPoolByAddress(securitizationPoolAddress);
             await securitizationPoolContract
@@ -129,18 +125,15 @@ describe('SecuritizationPool', () => {
                 .connect(poolCreatorSigner)
                 .grantRole(ORIGINATOR_ROLE, untangledAdminSigner.address);
 
-            console.log('00004555');
 
             securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(poolCreatorSigner);
 
-            console.log('00005');
 
             secondSecuritizationPool = await getPoolByAddress(securitizationPoolAddress);
             await secondSecuritizationPool
                 .connect(poolCreatorSigner)
                 .grantRole(ORIGINATOR_ROLE, originatorSigner.address);
 
-            console.log('00006');
 
             const oneDayInSecs = 1 * 24 * 3600;
             const halfOfADay = oneDayInSecs / 2;
@@ -403,7 +396,34 @@ describe('SecuritizationPool', () => {
 
     describe('Upgradeables', async () => {
         it('Should upgrade to new Implementation successfully', async () => {
-            const SecuritizationPoolV2 = await ethers.getContractFactory('SecuritizationPoolV2');
+            let SecuritizationPoolV2;
+            {
+                const PoolNAVLogic = await ethers.getContractFactory('PoolNAVLogic');
+                const poolNAVLogic = await PoolNAVLogic.deploy();
+                await poolNAVLogic.deployed();
+                const PoolAssetLogic = await ethers.getContractFactory('PoolAssetLogic', {
+                    libraries: {
+                        PoolNAVLogic: poolNAVLogic.address,
+                    },
+                });
+                const poolAssetLogic = await PoolAssetLogic.deploy();
+                await poolAssetLogic.deployed();
+                const TGELogic = await ethers.getContractFactory('TGELogic');
+                const tgeLogic = await TGELogic.deploy();
+                await tgeLogic.deployed();
+                SecuritizationPoolV2 = await ethers.getContractFactory('SecuritizationPoolV2', {
+                    libraries: {
+                        PoolAssetLogic: poolAssetLogic.address,
+                        PoolNAVLogic: poolNAVLogic.address,
+                        TGELogic: tgeLogic.address,
+                    },
+                });
+                // const securitizationPoolImpl = await SecuritizationPool.deploy();
+                // await securitizationPoolImpl.deployed();
+                // await registry.setSecuritizationPool(securitizationPoolImpl.address);
+            }
+            
+            // const SecuritizationPoolV2 = await ethers.getContractFactory('SecuritizationPoolV2');
             const spV2Impl = await SecuritizationPoolV2.deploy();
 
             const spImpl = await factoryAdmin.getProxyImplementation(securitizationPoolContract.address);

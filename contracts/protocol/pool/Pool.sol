@@ -266,6 +266,7 @@ contract Pool is PoolStorage, UntangledBase {
                 _msgSender() == address(registry.getNoteTokenVault()),
             'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
+        // console.log(address(registry.getSecuritizationPoolValueService()));
         address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
         TGELogic.increaseReserve(_poolStorage, poolServiceAddress, currencyAmount);
     }
@@ -371,17 +372,23 @@ contract Pool is PoolStorage, UntangledBase {
         TGELogic.claimCashRemain(_poolStorage, recipientWallet);
     }
 
-    // function openingBlockTimestamp() external view returns (uint64);
+    function openingBlockTimestamp() external view returns (uint64){
+        return _poolStorage.openingBlockTimestamp;
+    }
 
     function startCycle() external whenNotPaused nonReentrant onlyIssuingTokenStage {
         TGELogic.startCycle(_poolStorage);
     }
 
     /// @notice allows the originator to withdraw from reserve
-    function withdraw(address to, uint256 amount) external whenNotPaused onlyRole(ORIGINATOR_ROLE) {
+    function withdraw(address to, uint256 amount) external whenNotPaused {
         registry.requireLoanKernel(_msgSender());
+        require(hasRole(ORIGINATOR_ROLE, to), 'SecuritizationPool: Only Originator can drawdown');
         require(!registry.getNoteTokenVault().redeemDisabled(address(this)), 'SecuritizationPool: withdraw paused');
         address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
         TGELogic.withdraw(_poolStorage, poolServiceAddress, to, amount);
+    }
+    function validatorRequired() external view returns (bool){
+        return _poolStorage.validatorRequired;
     }
 }

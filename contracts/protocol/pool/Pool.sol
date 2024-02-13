@@ -174,6 +174,9 @@ contract Pool is PoolStorage, UntangledBase {
     }
 
     /*==================== NAV ====================*/
+    function writeOff(uint256 loan) public {
+        PoolNAVLogic.writeOff(_poolStorage,loan);
+    }
     function addLoan(uint256 loan, DataTypes.LoanEntry calldata loanEntry) private returns (uint256) {
         return PoolNAVLogic.addLoan(_poolStorage, loan, loanEntry);
     }

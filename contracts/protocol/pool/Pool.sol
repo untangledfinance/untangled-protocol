@@ -244,6 +244,7 @@ contract Pool is PoolStorage, UntangledBase {
     function setPot(address _pot) external whenNotPaused nonReentrant notClosingStage {
         registry.requirePoolAdminOrOwner(address(this), _msgSender());
         TGELogic.setPot(_poolStorage, _pot);
+        registry.getSecuritizationManager().registerPot(_pot);
     }
 
     /// @notice sets debt ceiling value

@@ -7,12 +7,7 @@ const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { parseEther, formatEther } = ethers.utils;
 const UntangledProtocol = require('./shared/untangled-protocol');
 
-const {
-    unlimitedAllowance,
-    genSalt,
-    getPoolByAddress,
-    getPoolAbi,
-} = require('./utils.js');
+const { unlimitedAllowance, genSalt, getPoolByAddress, getPoolAbi } = require('./utils.js');
 const { setup } = require('./setup.js');
 const { SaleType } = require('./shared/constants.js');
 
@@ -87,7 +82,14 @@ describe('SecuritizationPool', () => {
             const salt = utils.keccak256(Date.now());
 
             // Create new pool
-            let securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(poolCreatorSigner, 10, 99, "cUSD", true, salt);
+            let securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(
+                poolCreatorSigner,
+                10,
+                99,
+                'cUSD',
+                true,
+                salt
+            );
 
             // expect address, create2
             const { bytecode } = await artifacts.readArtifact('TransparentUpgradeableProxy');
@@ -164,8 +166,7 @@ describe('SecuritizationPool', () => {
             };
 
             await expect(
-                untangledProtocol
-                    .setupRiskScore(poolCreatorSigner, securitizationPoolContract, [riskScore, riskScore])
+                untangledProtocol.setupRiskScore(poolCreatorSigner, securitizationPoolContract, [riskScore, riskScore])
             ).to.be.revertedWith(`SecuritizationPool: Risk scores must be sorted`);
         });
     });
@@ -195,8 +196,8 @@ describe('SecuritizationPool', () => {
                 finalInterest,
                 timeInterval,
                 amountChangeEachInterval,
-                ticker: prefixOfNoteTokenSaleName
-            })
+                ticker: prefixOfNoteTokenSaleName,
+            });
             expect(sotTGEAddress).to.be.properAddress;
 
             mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', sotTGEAddress);
@@ -263,7 +264,7 @@ describe('SecuritizationPool', () => {
         });
         it('Should buy tokens successfully', async () => {
             await untangledProtocol.buyToken(lenderSigner, jotMintedIncreasingInterestTGE.address, parseEther('100'));
-            await untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'))
+            await untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'));
 
             const stablecoinBalanceOfPayerAfter = await stableCoin.balanceOf(lenderSigner.address);
             expect(formatEther(stablecoinBalanceOfPayerAfter)).equal('800.0');
@@ -314,16 +315,21 @@ describe('SecuritizationPool', () => {
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
                     riskScore: '1',
-                    salt: genSalt()
+                    salt: genSalt(),
                 },
                 {
                     principalAmount,
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
                     riskScore: '1',
-                    salt: genSalt()
-                }
-            ]
+                    salt: genSalt(),
+                },
+            ];
+
+            let currentSeniorDebt = await securitizationPoolValueService.getSeniorDebt(
+                securitizationPoolContract.address
+            );
+            expect(currentSeniorDebt.toString()).equal('0');
 
             tokenIds = await untangledProtocol.uploadLoans(
                 untangledAdminSigner,
@@ -332,6 +338,10 @@ describe('SecuritizationPool', () => {
                 ASSET_PURPOSE.LOAN,
                 loans
             );
+
+            // We dont startCycle yet
+            currentSeniorDebt = await securitizationPoolValueService.getSeniorDebt(securitizationPoolContract.address);
+            expect(currentSeniorDebt.toString()).equal('14387');
 
             const ownerOfAgreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
             expect(ownerOfAgreement).equal(securitizationPoolContract.address);
@@ -356,9 +366,9 @@ describe('SecuritizationPool', () => {
                     principalAmount,
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
-                    riskScore: '1'
-                }
-            ]
+                    riskScore: '1',
+                },
+            ];
 
             const pledgeTokenIds = await untangledProtocol.uploadLoans(
                 untangledAdminSigner,
@@ -507,11 +517,9 @@ describe('SecuritizationPool', () => {
                 parseEther('199.9999'),
                 parseEther('0.001')
             );
-            await expect(
-                securitizationPoolContract
-                    .connect(poolCreatorSigner)
-                    .startCycle()
-            ).to.be.revertedWith(`FinalizableCrowdsale: not closed`);
+            await expect(securitizationPoolContract.connect(poolCreatorSigner).startCycle()).to.be.revertedWith(
+                `FinalizableCrowdsale: not closed`
+            );
 
             await time.increaseTo(dayjs(new Date()).add(8, 'days').unix());
 
@@ -519,9 +527,13 @@ describe('SecuritizationPool', () => {
                 `FinalizableCrowdsale: Only pool contract can finalize`
             );
 
-            await securitizationPoolContract
-                .connect(poolCreatorSigner)
-                .startCycle();
+            await securitizationPoolContract.connect(poolCreatorSigner).startCycle();
+
+            await securitizationPoolContract.connect(poolCreatorSigner).setDebtCeiling(parseEther('1000'));
+            await untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'));
+            const seniorAsset = await securitizationPoolValueService.getSeniorAsset(securitizationPoolContract.address);
+
+            console.log('seniorAsset', seniorAsset);
         });
     });
 

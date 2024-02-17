@@ -5,7 +5,6 @@ import {ContextUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/Cont
 import {ERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165Upgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
-import {ERC20BurnableUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol';
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
@@ -17,8 +16,6 @@ import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 import {IMintedTGE} from '../note-sale/IMintedTGE.sol';
 import {IFinalizableCrowdsale} from '../note-sale/crowdsale/IFinalizableCrowdsale.sol';
 import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
-import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
 import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
 
 import {ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
@@ -103,6 +100,10 @@ contract SecuritizationTGE is
         return _getStorage().totalAssetRepaidCurrency;
     }
 
+    function reserveUpdateTime() public view override returns (uint64) {
+        return _getStorage().reserveUpdateTime;
+    }
+
     modifier finishRedemptionValidator() {
         require(hasFinishedRedemption(), 'SecuritizationPool: Redemption has not finished');
         _;
@@ -164,18 +165,6 @@ contract SecuritizationTGE is
         return $.debtCeiling >= totalDebt;
     }
 
-    // Increase by value
-    function increaseTotalAssetRepaidCurrency(uint256 amount) external virtual override whenNotPaused {
-        registry().requireLoanRepaymentRouter(_msgSender());
-
-        Storage storage $ = _getStorage();
-
-        $.reserve = $.reserve + amount;
-        $.totalAssetRepaidCurrency = $.totalAssetRepaidCurrency + amount;
-
-        emit IncreaseReserve(amount, $.reserve);
-    }
-
     function hasFinishedRedemption() public view override returns (bool) {
         address stoken = sotToken();
         if (stoken != address(0)) {
@@ -235,6 +224,38 @@ contract SecuritizationTGE is
         emit UpdateDebtCeiling(_debtCeiling);
     }
 
+    function _setReserveUpdateTime() private {
+        ISecuritizationPoolValueService poolService = registry().getSecuritizationPoolValueService();
+        Storage storage $ = _getStorage();
+
+        uint256 expectedAssetsValue = poolService.getExpectedAssetsValue(address(this));
+
+        if (expectedAssetsValue > 0) {
+            $.reserveUpdateTime = uint64(block.timestamp);
+        }
+    }
+
+    function _increaseReserve(uint256 currencyAmount, bool checkMFS) private {
+        Storage storage $ = _getStorage();
+        $.reserve = $.reserve + currencyAmount;
+
+        if (checkMFS) {
+            require(checkMinFirstLost(), 'MinFirstLoss is not satisfied');
+        }
+
+        emit IncreaseReserve(currencyAmount, $.reserve);
+    }
+
+    // Increase by value
+    function increaseTotalAssetRepaidCurrency(uint256 amount) external virtual override whenNotPaused {
+        registry().requireLoanRepaymentRouter(_msgSender());
+
+        _increaseReserve(amount, false);
+        Storage storage $ = _getStorage();
+        $.totalAssetRepaidCurrency = $.totalAssetRepaidCurrency + amount;
+        _setReserveUpdateTime();
+    }
+
     function increaseReserve(uint256 currencyAmount) external override whenNotPaused {
         require(
             _msgSender() == address(registry().getSecuritizationManager()) ||
@@ -242,12 +263,8 @@ contract SecuritizationTGE is
             'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
 
-        Storage storage $ = _getStorage();
-
-        $.reserve = $.reserve + currencyAmount;
-        require(checkMinFirstLost(), 'MinFirstLoss is not satisfied');
-
-        emit IncreaseReserve(currencyAmount, $.reserve);
+        _increaseReserve(currencyAmount, true);
+        _setReserveUpdateTime();
     }
 
     function decreaseReserve(uint256 currencyAmount) external override whenNotPaused {
@@ -258,6 +275,7 @@ contract SecuritizationTGE is
         );
 
         _decreaseReserve(currencyAmount);
+        _setReserveUpdateTime();
     }
 
     function _decreaseReserve(uint256 currencyAmount) private {
@@ -316,6 +334,7 @@ contract SecuritizationTGE is
             IERC20Upgradeable(underlyingCurrency()).transferFrom(pot(), to, amount),
             'SecuritizationPool: Transfer failed'
         );
+        _setReserveUpdateTime();
         emit Withdraw(to, amount);
     }
 
@@ -348,7 +367,7 @@ contract SecuritizationTGE is
         override(SecuritizationAccessControl, SecuritizationPoolStorage)
         returns (bytes4[] memory)
     {
-        bytes4[] memory _functionSignatures = new bytes4[](29);
+        bytes4[] memory _functionSignatures = new bytes4[](30);
 
         _functionSignatures[1] = this.setPot.selector;
         _functionSignatures[2] = this.increaseReserve.selector;
@@ -377,6 +396,7 @@ contract SecuritizationTGE is
         _functionSignatures[26] = this.debtCeiling.selector;
         _functionSignatures[27] = this.disburse.selector;
         _functionSignatures[28] = this.setMinFirstLossCushion.selector;
+        _functionSignatures[29] = this.reserveUpdateTime.selector;
 
         return _functionSignatures;
     }

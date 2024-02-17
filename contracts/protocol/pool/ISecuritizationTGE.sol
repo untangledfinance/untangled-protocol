@@ -53,6 +53,8 @@ interface ISecuritizationTGE {
 
     function minFirstLossCushion() external view returns (uint32);
 
+    function reserveUpdateTime() external view returns (uint64);
+
     function totalAssetRepaidCurrency() external view returns (uint256); // Total $ (cUSD) paid for Asset repayment - repayInBatch
 
     /// @notice injects the address of the Token Generation Event (TGE) and the associated token address

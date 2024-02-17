@@ -133,7 +133,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
     }
 
     // @notice this function return value 90 in example
-    function getBeginningSeniorAsset(address poolAddress) public view returns (uint256) {
+    function getCurrentSeniorAssetTotalSupply(address poolAddress) public view returns (uint256) {
         require(poolAddress != address(0), 'Invalid pool address');
         ISecuritizationTGE securitizationPool = ISecuritizationTGE(poolAddress);
         address sotToken = securitizationPool.sotToken();
@@ -161,17 +161,24 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         uint256 poolValue = balancePool + navpoolValue;
         if (poolValue == 0) return (0, 0);
 
-        uint256 beginningSeniorAsset = getBeginningSeniorAsset(poolAddress);
+        uint256 currentSeniorAssetTotalSupply = getCurrentSeniorAssetTotalSupply(poolAddress);
 
-        return ((beginningSeniorAsset * navpoolValue) / poolValue, beginningSeniorAsset);
+        return ((currentSeniorAssetTotalSupply * navpoolValue) / poolValue, currentSeniorAssetTotalSupply);
     }
 
     // @notice get beginning of senior debt, get interest of this debt over number of interval
     function getSeniorDebt(address poolAddress) public view returns (uint256) {
         uint256 beginningSeniorDebt = getBeginningSeniorDebt(poolAddress);
-        if (beginningSeniorDebt == 0) return 0;
 
         return _getSeniorDebt(poolAddress, beginningSeniorDebt);
+    }
+
+    function _getPoolReserveUpdateTime(address pool) private view returns (uint256 returnValue) {
+        (bool success, bytes memory returnBytes) = pool.staticcall(abi.encodeWithSignature('reserveUpdateTime()'));
+        if (!success) {
+            return 0;
+        }
+        return abi.decode(returnBytes, (uint256));
     }
 
     function _getSeniorDebt(address poolAddress, uint256 beginningSeniorDebt) internal view returns (uint256) {
@@ -179,12 +186,14 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         require(address(securitizationPool) != address(0), 'Pool was not deployed');
         uint256 seniorInterestRate = ISecuritizationTGE(poolAddress).interestRateSOT();
         uint256 openingTime = securitizationPool.openingBlockTimestamp();
-        uint256 compoundingPeriods = block.timestamp - openingTime;
+        uint256 reserveChangeUpdateTime = _getPoolReserveUpdateTime(poolAddress);
+        uint256 compoundingPeriods = block.timestamp -
+            (reserveChangeUpdateTime != 0 ? reserveChangeUpdateTime : openingTime);
         uint256 oneYearInSeconds = YEAR_LENGTH_IN_SECONDS;
 
-        uint256 seniorDebt = beginningSeniorDebt +
-            (beginningSeniorDebt * seniorInterestRate * compoundingPeriods) /
-            (ONE_HUNDRED_PERCENT * oneYearInSeconds);
+        uint256 seniorDebt = beginningSeniorDebt *
+            (((oneYearInSeconds + seniorInterestRate) / oneYearInSeconds) ** compoundingPeriods);
+
         return seniorDebt;
     }
 
@@ -204,11 +213,12 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         }
 
         uint256 seniorAsset;
-        uint256 beginningSeniorAsset = getBeginningSeniorAsset(poolAddress);
-        uint256 beginningSeniorDebt = (beginningSeniorAsset * navpoolValue) / poolValue;
+        uint256 currentSeniorAssetTotalSupply = getCurrentSeniorAssetTotalSupply(poolAddress);
+        uint256 beginningSeniorDebt = (currentSeniorAssetTotalSupply * navpoolValue) / poolValue;
         uint256 seniorDebt = _getSeniorDebt(poolAddress, beginningSeniorDebt);
 
-        uint256 seniorBalance = beginningSeniorAsset - beginningSeniorDebt;
+        uint256 seniorBalance = currentSeniorAssetTotalSupply - beginningSeniorDebt;
+
         uint256 expectedSeniorAsset = seniorDebt + seniorBalance;
 
         if (poolValue > expectedSeniorAsset) {
@@ -264,10 +274,10 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
             return 0;
         }
 
-        uint256 beginningSeniorAsset = getBeginningSeniorAsset(poolAddress);
-
-        uint256 seniorBalance = (beginningSeniorAsset * navpoolValue) / poolValue;
-        uint256 seniorDebt = _getSeniorDebt(poolAddress, seniorBalance);
+        uint256 currentSeniorAssetTotalSupply = getCurrentSeniorAssetTotalSupply(poolAddress);
+        uint256 beginningSeniorDebt = (currentSeniorAssetTotalSupply * navpoolValue) / poolValue;
+        uint256 seniorDebt = _getSeniorDebt(poolAddress, beginningSeniorDebt);
+        uint256 seniorBalance = currentSeniorAssetTotalSupply - beginningSeniorDebt;
 
         return seniorDebt + seniorBalance;
     }

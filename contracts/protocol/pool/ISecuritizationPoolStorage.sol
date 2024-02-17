@@ -104,6 +104,7 @@ interface ISecuritizationPoolStorage {
         uint256 paidPrincipalAmountSOT;
         uint32 interestRateSOT; // Annually, support 4 decimals num
         uint256 totalAssetRepaidCurrency;
+        uint64 reserveUpdateTime;
         mapping(address => uint256) paidPrincipalAmountSOTByInvestor;
         uint256 debtCeiling;
         CycleState state;

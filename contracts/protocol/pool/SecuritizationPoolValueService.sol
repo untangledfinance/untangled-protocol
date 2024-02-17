@@ -191,9 +191,9 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
             (reserveChangeUpdateTime != 0 ? reserveChangeUpdateTime : openingTime);
         uint256 oneYearInSeconds = YEAR_LENGTH_IN_SECONDS;
 
-        uint256 seniorDebt = beginningSeniorDebt +
-            (beginningSeniorDebt * seniorInterestRate * compoundingPeriods) /
-            (ONE_HUNDRED_PERCENT * oneYearInSeconds);
+        uint256 seniorDebt = beginningSeniorDebt *
+            (((oneYearInSeconds + seniorInterestRate) / oneYearInSeconds) ** compoundingPeriods);
+
         return seniorDebt;
     }
 
@@ -218,6 +218,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         uint256 seniorDebt = _getSeniorDebt(poolAddress, beginningSeniorDebt);
 
         uint256 seniorBalance = currentSeniorAssetTotalSupply - beginningSeniorDebt;
+
         uint256 expectedSeniorAsset = seniorDebt + seniorBalance;
 
         if (poolValue > expectedSeniorAsset) {

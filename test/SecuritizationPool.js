@@ -528,6 +528,12 @@ describe('SecuritizationPool', () => {
             );
 
             await securitizationPoolContract.connect(poolCreatorSigner).startCycle();
+
+            await securitizationPoolContract.connect(poolCreatorSigner).setDebtCeiling(parseEther('1000'));
+            await untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'));
+            const seniorAsset = await securitizationPoolValueService.getSeniorAsset(securitizationPoolContract.address);
+
+            console.log('seniorAsset', seniorAsset);
         });
     });
 

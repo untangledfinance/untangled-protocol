@@ -58,10 +58,6 @@ contract Registry is UntangledBase {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.SECURITIZATION_POOL_VALUE_SERVICE), newAddress);
     }
 
-    function setLoanRepaymentRouter(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.LOAN_REPAYMENT_ROUTER), newAddress);
-    }
-
     function setLoanKernel(address newAddress) public onlyAdmin whenNotPaused {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.LOAN_KERNEL), newAddress);
     }

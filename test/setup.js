@@ -174,8 +174,8 @@ async function setup() {
 
     const LoanKernel = await ethers.getContractFactory('LoanKernel');
     loanKernel = await upgrades.deployProxy(LoanKernel, [registry.address]);
-    const LoanRepaymentRouter = await ethers.getContractFactory('LoanRepaymentRouter');
-    loanRepaymentRouter = await upgrades.deployProxy(LoanRepaymentRouter, [registry.address]);
+    // const LoanRepaymentRouter = await ethers.getContractFactory('LoanRepaymentRouter');
+    loanRepaymentRouter = loanKernel;
     const DistributionAssessor = await ethers.getContractFactory('DistributionAssessor');
     distributionAssessor = await upgrades.deployProxy(DistributionAssessor, [registry.address]);
 
@@ -184,7 +184,7 @@ async function setup() {
 
     await registry.setSecuritizationManager(securitizationManager.address);
     await registry.setLoanKernel(loanKernel.address);
-    await registry.setLoanRepaymentRouter(loanRepaymentRouter.address);
+    // await registry.setLoanRepaymentRouter(loanRepaymentRouter.address);
     await registry.setSecuritizationPoolValueService(securitizationPoolValueService.address);
     await registry.setDistributionAssessor(distributionAssessor.address);
     await registry.setNoteTokenVault(noteTokenVault.address);

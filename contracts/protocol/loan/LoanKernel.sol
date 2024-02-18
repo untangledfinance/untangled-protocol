@@ -2,16 +2,17 @@
 pragma solidity 0.8.19;
 
 import {ERC165CheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol';
-
 import '../../interfaces/ILoanKernel.sol';
 import '../../base/UntangledBase.sol';
 import '../../libraries/ConfigHelper.sol';
 import '../../libraries/UntangledMath.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
 import {IPool} from '../../interfaces/IPool.sol';
+import '../../libraries/TransferHelper.sol';
+
 /// @title LoanKernel
 /// @author Untangled Team
-/// @notice Upload loan and conclude loan
+/// @notice Upload loan, Repay Loan and conclude loan
 contract LoanKernel is ILoanKernel, UntangledBase {
     using ConfigHelper for Registry;
     using ERC165CheckerUpgradeable for address;
@@ -184,10 +185,77 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return registry.getLoanAssetToken().ownerOf(uint256(agreementId)) != address(0);
     }
 
+    /// @dev performs various checks to validate the repayment request, including ensuring that the token address is not null,
+    /// the amount is greater than zero, and the debt agreement exists
+    function _assertRepaymentRequest(bytes32 _agreementId, address _tokenAddress) private view returns (bool) {
+        require(_tokenAddress != address(0), 'Token address must different with NULL.');
+
+        // Ensure agreement exists.
+        if (registry.getLoanAssetToken().ownerOf(uint256(_agreementId)) == address(0)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /// @dev executes the loan repayment by notifying the terms contract about the repayment,
+    /// transferring the repayment amount to the creditor, and handling additional logic related to securitization pools
+    /// and completed repayments
+    function _doRepay(
+        bytes32 _agreementId,
+        address _payer,
+        uint256 _amount,
+        address _tokenAddress
+    ) private returns (bool) {
+        address beneficiary = registry.getLoanAssetToken().ownerOf(uint256(_agreementId));
+
+        IPool poolInstance = IPool(beneficiary);
+        IPool poolNAV = IPool(beneficiary);
+        uint256 repayAmount = poolNAV.repayLoan(uint256(_agreementId), _amount);
+        uint256 outstandingAmount = poolNAV.debt(uint256(_agreementId));
+        IPool poolTGE = IPool(beneficiary);
+
+        require(poolTGE.underlyingCurrency() == _tokenAddress, 'LoanRepaymentRouter: currency mismatch');
+
+        if (registry.getSecuritizationManager().isExistingPools(beneficiary)) beneficiary = poolInstance.pot();
+
+        TransferHelper.safeTransferFrom(_tokenAddress, _payer, beneficiary, repayAmount);
+
+        poolTGE.increaseTotalAssetRepaidCurrency(repayAmount);
+
+        if (outstandingAmount == 0) {
+            // Burn LAT token when repay completely
+            _concludeLoan(beneficiary, _agreementId);
+        }
+
+        // Log event for repayment
+        emit AssetRepay(_agreementId, _payer, beneficiary, _amount, _tokenAddress);
+        return true;
+    }
+
     /// @inheritdoc ILoanKernel
+    function repayInBatch(
+        bytes32[] calldata agreementIds,
+        uint256[] calldata amounts,
+        address tokenAddress
+    ) external override whenNotPaused nonReentrant returns (bool) {
+        uint256 agreementIdsLength = agreementIds.length;
+        for (uint256 i = 0; i < agreementIdsLength; i++) {
+            require(
+                _assertRepaymentRequest(agreementIds[i], tokenAddress),
+                'LoanRepaymentRouter: Invalid repayment request'
+            );
+            require(
+                _doRepay(agreementIds[i], _msgSender(), amounts[i], tokenAddress),
+                'LoanRepaymentRouter: Repayment has failed'
+            );
+        }
+        emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
+        return true;
+    }
+
     /// @dev A loan, stop lending/loan terms or allow the loan loss
-    function concludeLoan(address creditor, bytes32 agreementId) public override whenNotPaused {
-        require(_msgSender() == address(registry.getLoanRepaymentRouter()), 'LoanKernel: Only LoanRepaymentRouter');
+    function _concludeLoan(address creditor, bytes32 agreementId) internal {
         require(creditor != address(0), 'Invalid creditor account.');
         require(agreementId != bytes32(0), 'Invalid agreement id.');
 
@@ -237,7 +305,9 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         // Mint to pool
         for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
             registry.getLoanAssetToken().safeMint(poolAddress, fillDebtOrderParam.latInfo[i]);
-            DataTypes.LoanEntry[] memory loans = new DataTypes.LoanEntry[](fillDebtOrderParam.latInfo[i].tokenIds.length);
+            DataTypes.LoanEntry[] memory loans = new DataTypes.LoanEntry[](
+                fillDebtOrderParam.latInfo[i].tokenIds.length
+            );
 
             for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
                 require(
@@ -260,10 +330,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                 x = UntangledMath.uncheckedInc(x);
             }
 
-            expectedAssetsValue += IPool(poolAddress).collectAssets(
-                fillDebtOrderParam.latInfo[i].tokenIds,
-                loans
-            );
+            expectedAssetsValue += IPool(poolAddress).collectAssets(fillDebtOrderParam.latInfo[i].tokenIds, loans);
         }
 
         // Start collect asset checkpoint and withdraw
@@ -302,6 +369,4 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         }
         return agreementIds;
     }
-
-    uint256[50] private __gap;
 }

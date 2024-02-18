@@ -60,10 +60,6 @@ library ConfigHelper {
         return ILoanAssetToken(getAddress(registry, Configuration.CONTRACT_TYPE.LOAN_ASSET_TOKEN));
     }
 
-    function getLoanRepaymentRouter(Registry registry) internal view returns (ILoanRepaymentRouter) {
-        return ILoanRepaymentRouter(getAddress(registry, Configuration.CONTRACT_TYPE.LOAN_REPAYMENT_ROUTER));
-    }
-
     function getLoanKernel(Registry registry) internal view returns (ILoanKernel) {
         return ILoanKernel(getAddress(registry, Configuration.CONTRACT_TYPE.LOAN_KERNEL));
     }
@@ -106,10 +102,6 @@ library ConfigHelper {
 
     function requireSecuritizationManager(Registry registry, address account) internal view {
         require(account == address(getSecuritizationManager(registry)), 'Registry: Only SecuritizationManager');
-    }
-
-    function requireLoanRepaymentRouter(Registry registry, address account) internal view {
-        require(account == address(getLoanRepaymentRouter(registry)), 'Registry: Only LoanRepaymentRouter');
     }
 
     function requireLoanKernel(Registry registry, address account) internal view {

@@ -174,14 +174,14 @@ contract Pool is PoolStorage, UntangledBase {
 
     /*==================== NAV ====================*/
     function writeOff(uint256 loan) public {
-        PoolNAVLogic.writeOff(_poolStorage,loan);
+        PoolNAVLogic.writeOff(_poolStorage, loan);
     }
     function addLoan(uint256 loan, DataTypes.LoanEntry calldata loanEntry) private returns (uint256) {
         return PoolNAVLogic.addLoan(_poolStorage, loan, loanEntry);
     }
 
     function repayLoan(uint256 loan, uint256 amount) external returns (uint256) {
-        require(address(registry.getLoanRepaymentRouter()) == msg.sender, 'not authorized');
+        require(address(registry.getLoanKernel()) == msg.sender, 'not authorized');
         return PoolNAVLogic.repayLoan(_poolStorage, loan, amount);
     }
 
@@ -344,7 +344,7 @@ contract Pool is PoolStorage, UntangledBase {
 
     /// @dev trigger update asset value repaid
     function increaseTotalAssetRepaidCurrency(uint256 amount) external whenNotPaused {
-        registry.requireLoanRepaymentRouter(_msgSender());
+        registry.requireLoanKernel(_msgSender());
         TGELogic.increaseTotalAssetRepaidCurrency(_poolStorage, amount);
     }
 
@@ -374,7 +374,7 @@ contract Pool is PoolStorage, UntangledBase {
         TGELogic.claimCashRemain(_poolStorage, recipientWallet);
     }
 
-    function openingBlockTimestamp() external view returns (uint64){
+    function openingBlockTimestamp() external view returns (uint64) {
         return _poolStorage.openingBlockTimestamp;
     }
 
@@ -386,7 +386,7 @@ contract Pool is PoolStorage, UntangledBase {
         address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
         TGELogic.withdraw(_poolStorage, poolServiceAddress, to, amount);
     }
-    function validatorRequired() external view returns (bool){
+    function validatorRequired() external view returns (bool) {
         return _poolStorage.validatorRequired;
     }
 }

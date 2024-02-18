@@ -112,7 +112,4 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
             if (tokens[i].paused()) tokens[i].unpause();
         }
     }
-
-    uint256[46] private __gap0;
-    uint256[50] private __gap;
 }

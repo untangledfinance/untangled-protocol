@@ -8,16 +8,7 @@ import {Factory} from '../../../base/Factory.sol';
 import {Registry} from '../../../storage/Registry.sol';
 import {UntangledMath} from '../../../libraries/UntangledMath.sol';
 import {Registry} from '../../../storage/Registry.sol';
-
-interface INoteTokenLike {
-    function poolAddress() external view returns (address);
-}
-
-interface IPausable {
-    function paused() external view returns (bool);
-    function pause() external;
-    function unpause() external;
-}
+import {INoteToken} from '../../../interfaces/INoteToken.sol';
 
 contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledBase, Factory {
     using ConfigHelper for Registry;
@@ -57,7 +48,7 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
     ) external override whenNotPaused nonReentrant returns (address) {
         registry.requireSecuritizationManager(_msgSender());
 
-        address pool = INoteTokenLike(token).poolAddress();
+        address pool = INoteToken(token).poolAddress();
 
         if (saleType == uint8(SaleType.NORMAL_SALE_JOT)) {
             return _newSale(TGEImplAddress[SaleType.NORMAL_SALE_JOT], issuerTokenController, pool, token, currency);
@@ -95,7 +86,7 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
 
     function pauseUnpauseTge(address tgeAdress) external whenNotPaused onlyRole(DEFAULT_ADMIN_ROLE) {
         require(isExistingTge[tgeAdress], 'TokenGenerationEventFactory: tge does not exist');
-        IPausable tge = IPausable(tgeAdress);
+        INoteToken tge = INoteToken(tgeAdress);
         if (tge.paused()) {
             tge.unpause();
         } else {
@@ -106,7 +97,7 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
     function pauseUnpauseAllTges() external whenNotPaused nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 tgeAddressesLength = tgeAddresses.length;
         for (uint256 i = 0; i < tgeAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            IPausable tge = IPausable(tgeAddresses[i]);
+            INoteToken tge = INoteToken(tgeAddresses[i]);
             if (tge.paused()) {
                 tge.unpause();
             } else {
@@ -114,6 +105,4 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
             }
         }
     }
-
-    uint256[50] private __gap;
 }

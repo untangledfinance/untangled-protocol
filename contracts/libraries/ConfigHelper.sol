@@ -16,9 +16,7 @@ import {ILoanKernel} from '../interfaces/ILoanKernel.sol';
 import {ILoanAssetToken} from '../interfaces/ILoanAssetToken.sol';
 import {IDistributionAssessor} from '../interfaces/IDistributionAssessor.sol';
 import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPoolValueService.sol';
-
-import {MintedIncreasingInterestTGE} from '../protocol/note-sale/MintedIncreasingInterestTGE.sol';
-import {MintedNormalTGE} from '../protocol/note-sale/MintedNormalTGE.sol';
+import {IMintedNormalTGE} from '../interfaces/IMintedNormalTGE.sol';
 import {IGo} from '../interfaces/IGo.sol';
 
 import {POOL_ADMIN, OWNER_ROLE} from './types.sol';

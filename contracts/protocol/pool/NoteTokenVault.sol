@@ -11,8 +11,8 @@ import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/
 
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {INoteTokenVault} from '../../interfaces/INoteTokenVault.sol';
-import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
+import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {BACKEND_ADMIN, SIGNER_ROLE} from './types.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import '../../storage/Registry.sol';
@@ -180,10 +180,10 @@ contract NoteTokenVault is
 
         if (_isJotToken(noteTokenAddress, jotTokenAddress)) {
             poolTotalJOTRedeem[pool] -= totalNoteRedeemed;
-            ICrowdSale(IPool(pool).secondTGEAddress()).onRedeem(totalCurrencyAmount);
+            IMintedNormalTGE(IPool(pool).secondTGEAddress()).onRedeem(totalCurrencyAmount);
         } else {
             poolTotalSOTRedeem[pool] -= totalNoteRedeemed;
-            ICrowdSale(IPool(pool).tgeAddress()).onRedeem(totalCurrencyAmount);
+            IMintedNormalTGE(IPool(pool).tgeAddress()).onRedeem(totalCurrencyAmount);
         }
 
         emit DisburseOrder(pool, noteTokenAddress, toAddresses, currencyAmounts, redeemedNoteAmounts);

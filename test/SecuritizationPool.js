@@ -81,7 +81,6 @@ describe('SecuritizationPool', () => {
 
             const salt = utils.keccak256(Date.now());
 
-
             // Create new pool
             let securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(
                 poolCreatorSigner,
@@ -91,7 +90,6 @@ describe('SecuritizationPool', () => {
                 true,
                 salt
             );
-
 
             // expect address, create2
             const { bytecode } = await artifacts.readArtifact('TransparentUpgradeableProxy');
@@ -112,10 +110,8 @@ describe('SecuritizationPool', () => {
                 )
             );
 
-
             const create2 = utils.getCreate2Address(securitizationManager.address, salt, initCodeHash);
             expect(create2).to.be.eq(securitizationPoolAddress);
-
 
             securitizationPoolContract = await getPoolByAddress(securitizationPoolAddress);
             await securitizationPoolContract
@@ -125,15 +121,12 @@ describe('SecuritizationPool', () => {
                 .connect(poolCreatorSigner)
                 .grantRole(ORIGINATOR_ROLE, untangledAdminSigner.address);
 
-
             securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(poolCreatorSigner);
-
 
             secondSecuritizationPool = await getPoolByAddress(securitizationPoolAddress);
             await secondSecuritizationPool
                 .connect(poolCreatorSigner)
                 .grantRole(ORIGINATOR_ROLE, originatorSigner.address);
-
 
             const oneDayInSecs = 1 * 24 * 3600;
             const halfOfADay = oneDayInSecs / 2;
@@ -422,7 +415,7 @@ describe('SecuritizationPool', () => {
                 // await securitizationPoolImpl.deployed();
                 // await registry.setSecuritizationPool(securitizationPoolImpl.address);
             }
-            
+
             // const SecuritizationPoolV2 = await ethers.getContractFactory('SecuritizationPoolV2');
             const spV2Impl = await SecuritizationPoolV2.deploy();
 

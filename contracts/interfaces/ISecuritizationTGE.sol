@@ -13,7 +13,6 @@ interface ISecuritizationTGE {
     event UpdateMintFirstLoss(uint32 _mintFirstLoss);
     event Withdraw(address originatorAddress, uint256 amount);
     event ClaimCashRemain(address pot, address recipientWallet, uint256 balance);
-    event StartCycle(uint32 interestRateSOT);
 
     /// @notice sets the pot address for the contract
     function setPot(address _pot) external;
@@ -80,8 +79,6 @@ interface ISecuritizationTGE {
     function claimCashRemain(address recipientWallet) external;
 
     // function openingBlockTimestamp() external view returns (uint64);
-
-    function startCycle() external;
 
     /// @notice allows the originator to withdraw from reserve
     function withdraw(address to, uint256 amount) external;

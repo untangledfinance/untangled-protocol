@@ -59,7 +59,6 @@ interface IPool {
   function setUpOpeningBlockTimestamp (  ) external;
   function setupRiskScores ( uint32[] memory _daysPastDues, uint32[] memory _ratesAndDefaults, uint32[] memory _periodsAndWriteOffs ) external;
   function sotToken (  ) external view returns ( address );
-  function startCycle (  ) external;
   function supportsInterface ( bytes4 interfaceId ) external view returns ( bool );
   function tgeAddress (  ) external view returns ( address );
   function tokenAssetAddresses ( uint256 idx ) external view returns ( address );

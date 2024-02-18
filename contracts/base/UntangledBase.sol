@@ -6,7 +6,6 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
-
 import '../libraries/Configuration.sol';
 
 /**
@@ -22,9 +21,14 @@ abstract contract UntangledBase is
     AccessControlEnumerableUpgradeable
 {
     bytes32 public constant OWNER_ROLE = keccak256('OWNER_ROLE');
+    bytes32 public constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
+    bytes32 public constant POOL_ADMIN_ROLE = keccak256('POOL_CREATOR');
+    bytes32 public constant BACKEND_ADMIN = keccak256('BACKEND_ADMIN');
+    bytes32 public constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
+    bytes32 public constant SUPER_ADMIN = keccak256('SUPER_ADMIN');
 
     function isAdmin() public view virtual returns (bool) {
-        return hasRole(OWNER_ROLE, _msgSender());
+        return hasRole(OWNER_ROLE, _msgSender()) || hasRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
     modifier onlyAdmin() {
@@ -46,17 +50,18 @@ abstract contract UntangledBase is
         _setupRole(OWNER_ROLE, owner);
 
         _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
+        _setRoleAdmin(ORIGINATOR_ROLE, OWNER_ROLE);
     }
 
     function getInitializedVersion() public view virtual returns (uint256) {
         return _getInitializedVersion();
     }
 
-    function pause() public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() public virtual onlyAdmin {
         _pause();
     }
 
-    function unpause() public virtual onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() public virtual onlyAdmin {
         _unpause();
     }
 

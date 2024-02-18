@@ -12,7 +12,6 @@ import {PoolAssetLogic} from '../../libraries/logic/PoolAssetLogic.sol';
 import {TGELogic} from '../../libraries/logic/TGELogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-import 'hardhat/console.sol';
 /**
  * @title Untangled's SecuritizationPool contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
@@ -270,7 +269,6 @@ contract Pool is PoolStorage, UntangledBase {
                 _msgSender() == address(registry.getNoteTokenVault()),
             'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
-        // console.log(address(registry.getSecuritizationPoolValueService()));
         address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
         TGELogic.increaseReserve(_poolStorage, poolServiceAddress, currencyAmount);
     }
@@ -378,10 +376,6 @@ contract Pool is PoolStorage, UntangledBase {
 
     function openingBlockTimestamp() external view returns (uint64){
         return _poolStorage.openingBlockTimestamp;
-    }
-
-    function startCycle() external whenNotPaused nonReentrant onlyIssuingTokenStage {
-        TGELogic.startCycle(_poolStorage);
     }
 
     /// @notice allows the originator to withdraw from reserve

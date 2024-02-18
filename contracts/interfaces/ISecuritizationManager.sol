@@ -7,11 +7,7 @@ import './ISecuritizationPool.sol';
 import {DataTypes} from '../libraries/DataTypes.sol';
 interface ISecuritizationManager {
     event NewPoolCreated(address indexed instanceAddress);
-    event NewPoolDeployed(
-        address indexed instanceAddress,
-        address poolOwner,
-        DataTypes.NewPoolParams newPoolParams
-    );
+    event NewPoolDeployed(address indexed instanceAddress, address poolOwner, DataTypes.NewPoolParams newPoolParams);
     event UpdatePotToPool(address indexed pot, address indexed pool);
     event SotDeployed(address indexed sotAddress, address tgeAddress, address poolAddress);
     event JotDeployed(address indexed jotAddress, address tgeAddress, address poolAddress);
@@ -21,15 +17,15 @@ interface ISecuritizationManager {
         address tgeAddress,
         address poolAddress,
         TGEParam tgeParam,
-        NewRoundSaleParam saleParam,
-        IncreasingInterestParam increasingInterestParam
+        uint256 cap,
+        uint256 interestRate
     );
     event SetupJot(
         address indexed jotAddress,
         address tgeAddress,
         address poolAddress,
         TGEParam tgeParam,
-        NewRoundSaleParam saleParam,
+        uint256 cap,
         uint256 initialJOTAmount
     );
 
@@ -48,26 +44,12 @@ interface ISecuritizationManager {
     event ValidatorRegistered(address validator);
     event ValidatorUnRegistered(address validator);
 
-    struct NewRoundSaleParam {
-        uint256 openingTime;
-        uint256 closingTime;
-        uint256 rate;
-        uint256 cap;
-    }
     struct TGEParam {
         address issuerTokenController;
         address pool;
         uint256 minBidAmount;
-        bool longSale;
         string ticker;
         uint8 saleType;
-    }
-
-    struct IncreasingInterestParam {
-        uint32 initialInterest;
-        uint32 finalInterest;
-        uint32 timeInterval;
-        uint32 amountChangeEachInterval;
     }
 
     struct TGEInfoParam {

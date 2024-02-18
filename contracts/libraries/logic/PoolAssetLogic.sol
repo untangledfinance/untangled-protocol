@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 
 // import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
 import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
-import {ICrowdSale} from '../../interfaces/ICrowdSale.sol';
+import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 // import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
 // import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
@@ -14,7 +14,7 @@ import {UntangledMath} from '../../libraries/UntangledMath.sol';
 // import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
 // import {ISecuritizationAccessControl} from "../../interfaces/ISecuritizationAccessControl.sol";
 // import {RiskScore, LoanEntry} from './base/types.sol';
-// import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
+// import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';fcollectAssets
 // import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
@@ -24,8 +24,7 @@ import './PoolNAVLogic.sol';
  * @notice Provides pool's asset related functions
  * @author Untangled Team
  */
-library PoolAssetLogic
-{
+library PoolAssetLogic {
     // using ConfigHelper for Registry;
     // using AddressUpgradeable for address;
 
@@ -54,13 +53,17 @@ library PoolAssetLogic
     event WithdrawERC20Asset(address[] tokenAddresses, address[] recipients, uint256[] amounts);
     event SetRiskScore(DataTypes.RiskScore[] riskscores);
     /** UTILITY FUNCTION */
-    function _removeNFTAsset(DataTypes.NFTAsset[] storage _nftAssets,address tokenAddress, uint256 tokenId) private returns (bool) {
+    function _removeNFTAsset(
+        DataTypes.NFTAsset[] storage _nftAssets,
+        address tokenAddress,
+        uint256 tokenId
+    ) private returns (bool) {
         // NFTAsset[] storage _nftAssets = _getStorage().nftAssets;
         uint256 nftAssetsLength = _nftAssets.length;
         for (uint256 i = 0; i < nftAssetsLength; i = UntangledMath.uncheckedInc(i)) {
             if (_nftAssets[i].tokenAddress == tokenAddress && _nftAssets[i].tokenId == tokenId) {
                 // Remove i element from nftAssets
-                _removeNFTAssetIndex(_nftAssets,i);
+                _removeNFTAssetIndex(_nftAssets, i);
                 return true;
             }
         }
@@ -68,7 +71,7 @@ library PoolAssetLogic
         return false;
     }
 
-    function _removeNFTAssetIndex(DataTypes.NFTAsset[] storage _nftAssets,uint256 indexToRemove) private {
+    function _removeNFTAssetIndex(DataTypes.NFTAsset[] storage _nftAssets, uint256 indexToRemove) private {
         _nftAssets[indexToRemove] = _nftAssets[_nftAssets.length - 1];
 
         // NFTAsset storage nft = _nftAssets[_nftAssets.length - 1];
@@ -76,7 +79,11 @@ library PoolAssetLogic
         _nftAssets.pop();
     }
 
-    function _pushTokenAssetAddress(mapping (address => bool) storage existsTokenAssetAddress,address[] storage tokenAssetAddresses,address tokenAddress) private {
+    function _pushTokenAssetAddress(
+        mapping(address => bool) storage existsTokenAssetAddress,
+        address[] storage tokenAssetAddresses,
+        address tokenAddress
+    ) private {
         if (!existsTokenAssetAddress[tokenAddress]) tokenAssetAddresses.push(tokenAddress);
         existsTokenAssetAddress[tokenAddress] = true;
     }
@@ -100,8 +107,7 @@ library PoolAssetLogic
         uint32[] calldata _daysPastDues,
         uint32[] calldata _ratesAndDefaults,
         uint32[] calldata _periodsAndWriteOffs
-    ) external  {
-
+    ) external {
         uint256 _daysPastDuesLength = _daysPastDues.length;
         require(
             _daysPastDuesLength * 6 == _ratesAndDefaults.length &&
@@ -155,7 +161,7 @@ library PoolAssetLogic
         }
 
         // Set discount rate
-        PoolNAVLogic.file(_poolStorage,'discountRate', _poolStorage.riskScores[0].discountRate);
+        PoolNAVLogic.file(_poolStorage, 'discountRate', _poolStorage.riskScores[0].discountRate);
 
         emit SetRiskScore(_poolStorage.riskScores);
     }
@@ -196,7 +202,10 @@ library PoolAssetLogic
         );
 
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
-            require(_removeNFTAsset(_nftAssets, tokenAddresses[i], tokenIds[i]), 'SecuritizationPool: Asset does not exist');
+            require(
+                _removeNFTAsset(_nftAssets, tokenAddresses[i], tokenIds[i]),
+                'SecuritizationPool: Asset does not exist'
+            );
         }
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
             IUntangledERC721(tokenAddresses[i]).safeTransferFrom(address(this), recipients[i], tokenIds[i]);
@@ -215,9 +224,7 @@ library PoolAssetLogic
         uint256 tokenIdsLength = tokenIds.length;
         uint256 expectedAssetsValue = 0;
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
-            expectedAssetsValue =
-                expectedAssetsValue +
-                PoolNAVLogic.addLoan(_poolStorage,tokenIds[i], loanEntries[i]);
+            expectedAssetsValue = expectedAssetsValue + PoolNAVLogic.addLoan(_poolStorage, tokenIds[i], loanEntries[i]);
         }
 
         // Storage storage $ = _getStorage();
@@ -228,7 +235,7 @@ library PoolAssetLogic
         }
         if (_poolStorage.openingBlockTimestamp == 0) {
             // If openingBlockTimestamp is not set
-            _setOpeningBlockTimestamp(_poolStorage,uint64(block.timestamp));
+            _setOpeningBlockTimestamp(_poolStorage, uint64(block.timestamp));
         }
 
         emit CollectNFTAsset(tokenIds, expectedAssetsValue);
@@ -236,14 +243,14 @@ library PoolAssetLogic
     }
 
     // TODO have to use modifier in main contract
-    function collectERC20Asset(DataTypes.Storage storage _poolStorgae,address tokenAddress) external {
+    function collectERC20Asset(DataTypes.Storage storage _poolStorgae, address tokenAddress) external {
         // registry().requireSecuritizationManager(_msgSender());
 
-        _pushTokenAssetAddress(_poolStorgae.existsTokenAssetAddress,_poolStorgae.tokenAssetAddresses,tokenAddress);
+        _pushTokenAssetAddress(_poolStorgae.existsTokenAssetAddress, _poolStorgae.tokenAssetAddresses, tokenAddress);
 
         if (_poolStorgae.openingBlockTimestamp == 0) {
             // If openingBlockTimestamp is not set
-            _setOpeningBlockTimestamp(_poolStorgae ,uint64(block.timestamp));
+            _setOpeningBlockTimestamp(_poolStorgae, uint64(block.timestamp));
         }
 
         emit CollectERC20Asset(tokenAddress);
@@ -286,21 +293,21 @@ library PoolAssetLogic
 
     /// @dev Set the opening block timestamp
     function _setUpOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage) private {
-        address tgeAddress = _poolStorage.tgeAddress; 
+        address tgeAddress = _poolStorage.tgeAddress;
         if (tgeAddress == address(0)) return;
-        uint64 _firstNoteTokenMintedTimestamp = ICrowdSale(tgeAddress).firstNoteTokenMintedTimestamp();
+        uint64 _firstNoteTokenMintedTimestamp = uint64(IMintedNormalTGE(tgeAddress).firstNoteTokenMintedTimestamp());
         uint64 _firstAssetTimestamp = _poolStorage.firstAssetTimestamp;
         if (_firstNoteTokenMintedTimestamp > 0 && _firstAssetTimestamp > 0) {
             // Pick the later
             if (_firstAssetTimestamp > _firstNoteTokenMintedTimestamp) {
-                _setOpeningBlockTimestamp(_poolStorage,_firstAssetTimestamp);
+                _setOpeningBlockTimestamp(_poolStorage, _firstAssetTimestamp);
             } else {
-                _setOpeningBlockTimestamp(_poolStorage,_firstNoteTokenMintedTimestamp);
+                _setOpeningBlockTimestamp(_poolStorage, _firstNoteTokenMintedTimestamp);
             }
         }
     }
 
-    function _setOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage,uint64 _openingBlockTimestamp) internal {
+    function _setOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage, uint64 _openingBlockTimestamp) internal {
         _poolStorage.openingBlockTimestamp = _openingBlockTimestamp;
         emit UpdateOpeningBlockTimestamp(_openingBlockTimestamp);
     }

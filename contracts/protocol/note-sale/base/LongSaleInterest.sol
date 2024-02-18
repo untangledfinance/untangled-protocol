@@ -27,6 +27,4 @@ contract LongSaleInterest {
     uint256 public constant INTEREST_RATE_SCALING_FACTOR_PERCENT = 10 ** 4;
     /// @dev represents the scaling factor for the purchase price calculation
     uint256 public constant PURCHASE_PRICE_SCALING_FACTOR = 10 ** 4;
-
-    uint256[50] private __gap;
 }

@@ -6,7 +6,6 @@ import '../../../interfaces/INoteToken.sol';
 
 abstract contract ITokenGenerationEventFactory {
     enum SaleType {
-        MINTED_INCREASING_INTEREST_SOT,
         NORMAL_SALE_JOT,
         NORMAL_SALE_SOT
     }

@@ -1,21 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-// import {PausableUpgradeable} from '../../base/PauseableUpgradeable.sol';
 import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
-// import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-// import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
-// import {Registry} from '../../storage/Registry.sol';
-// import {POOL_ADMIN, ORIGINATOR_ROLE, RATE_SCALING_FACTOR} from './types.sol';
-// import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
-// import {ISecuritizationPoolNAV} from '../../protocol/pool/ISecuritizationPoolNAV.sol';
-// import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
-// import {ISecuritizationAccessControl} from "../../interfaces/ISecuritizationAccessControl.sol";
-// import {RiskScore, LoanEntry} from './base/types.sol';
-// import {SecuritizationPoolStorage} from './SecuritizationPoolStorage.sol';
-// import {ISecuritizationPoolExtension, SecuritizationPoolExtension} from './SecuritizationPoolExtension.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
 import './PoolNAVLogic.sol';
@@ -25,26 +13,7 @@ import './PoolNAVLogic.sol';
  * @author Untangled Team
  */
 library PoolAssetLogic {
-    // using ConfigHelper for Registry;
-    // using AddressUpgradeable for address;
 
-    // function supportsInterface(
-    //     bytes4 interfaceId
-    // )
-    //     public
-    //     view
-    //     virtual
-    //     override(ERC165Upgradeable, SecuritizationAccessControl, SecuritizationPoolStorage)
-    //     returns (bool)
-    // {
-    //     return
-    //         super.supportsInterface(interfaceId) ||
-    //         interfaceId == type(IERC721ReceiverUpgradeable).interfaceId ||
-    //         interfaceId == type(ISecuritizationPool).interfaceId ||
-    //         interfaceId == type(ISecuritizationPoolExtension).interfaceId ||
-    //         interfaceId == type(ISecuritizationAccessControl).interfaceId ||
-    //         interfaceId == type(ISecuritizationPoolStorage).interfaceId;
-    // }
     event ExportNFTAsset(address tokenAddress, address toPoolAddress, uint256[] tokenIds);
     event WithdrawNFTAsset(address[] tokenAddresses, uint256[] tokenIds, address[] recipients);
     event UpdateOpeningBlockTimestamp(uint256 newTimestamp);
@@ -58,7 +27,6 @@ library PoolAssetLogic {
         address tokenAddress,
         uint256 tokenId
     ) private returns (bool) {
-        // NFTAsset[] storage _nftAssets = _getStorage().nftAssets;
         uint256 nftAssetsLength = _nftAssets.length;
         for (uint256 i = 0; i < nftAssetsLength; i = UntangledMath.uncheckedInc(i)) {
             if (_nftAssets[i].tokenAddress == tokenAddress && _nftAssets[i].tokenId == tokenId) {
@@ -74,8 +42,6 @@ library PoolAssetLogic {
     function _removeNFTAssetIndex(DataTypes.NFTAsset[] storage _nftAssets, uint256 indexToRemove) private {
         _nftAssets[indexToRemove] = _nftAssets[_nftAssets.length - 1];
 
-        // NFTAsset storage nft = _nftAssets[_nftAssets.length - 1];
-
         _nftAssets.pop();
     }
 
@@ -88,18 +54,6 @@ library PoolAssetLogic {
         existsTokenAssetAddress[tokenAddress] = true;
     }
 
-    // function onERC721Received(address, address, uint256 tokenId, bytes memory) external returns (bytes4) {
-    //     address token = _msgSender();
-    //     require(
-    //         token == address(registry().getLoanAssetToken()),
-    //         'SecuritizationPool: Must be token issued by Untangled'
-    //     );
-    //     NFTAsset[] storage _nftAssets = _getStorage().nftAssets;
-    //     _nftAssets.push(NFTAsset({tokenAddress: token, tokenId: tokenId}));
-    //     emit InsertNFTAsset(token, tokenId);
-
-    //     return this.onERC721Received.selector;
-    // }
 
     // TODO have to use modifier in main contract
     function setupRiskScores(
@@ -173,7 +127,6 @@ library PoolAssetLogic {
         address toPoolAddress,
         uint256[] calldata tokenIds
     ) external {
-        // registry().requirePoolAdminOrOwner(address(this), _msgSender());
 
         uint256 tokenIdsLength = tokenIds.length;
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
@@ -227,8 +180,6 @@ library PoolAssetLogic {
             expectedAssetsValue = expectedAssetsValue + PoolNAVLogic.addLoan(_poolStorage, tokenIds[i], loanEntries[i]);
         }
 
-        // Storage storage $ = _getStorage();
-
         if (_poolStorage.firstAssetTimestamp == 0) {
             _poolStorage.firstAssetTimestamp = uint64(block.timestamp);
             _setUpOpeningBlockTimestamp(_poolStorage);
@@ -244,7 +195,6 @@ library PoolAssetLogic {
 
     // TODO have to use modifier in main contract
     function collectERC20Asset(DataTypes.Storage storage _poolStorgae, address tokenAddress) external {
-        // registry().requireSecuritizationManager(_msgSender());
 
         _pushTokenAssetAddress(_poolStorgae.existsTokenAssetAddress, _poolStorgae.tokenAssetAddresses, tokenAddress);
 
@@ -262,7 +212,6 @@ library PoolAssetLogic {
         address[] calldata recipients,
         uint256[] calldata amounts
     ) external {
-        // registry().requirePoolAdminOrOwner(address(this), _msgSender());
 
         uint256 tokenAddressesLength = tokenAddresses.length;
         require(tokenAddressesLength == recipients.length, 'tokenAddresses length and tokenIds length are not equal');
@@ -272,22 +221,14 @@ library PoolAssetLogic {
         for (uint256 i = 0; i < tokenAddressesLength; i = UntangledMath.uncheckedInc(i)) {
             require(existsTokenAssetAddress[tokenAddresses[i]], 'SecuritizationPool: note token asset does not exist');
             TransferHelper.safeTransfer(tokenAddresses[i], recipients[i], amounts[i]);
-            // require(
-            //     IERC20Upgradeable(tokenAddresses[i]).transfer(recipients[i], amounts[i]),
-            //     'SecuritizationPool: Transfer failed'
-            // );
         }
 
         emit WithdrawERC20Asset(tokenAddresses, recipients, amounts);
     }
 
-    // function firstAssetTimestamp() public view returns (uint64) {
-    //     return _getStorage().firstAssetTimestamp;
-    // }
 
     // TODO have to use modifier in main contract
     function setUpOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage) public {
-        // require(_msgSender() == tgeAddress(), 'SecuritizationPool: Only tge address');
         _setUpOpeningBlockTimestamp(_poolStorage);
     }
 
@@ -311,26 +252,4 @@ library PoolAssetLogic {
         _poolStorage.openingBlockTimestamp = _openingBlockTimestamp;
         emit UpdateOpeningBlockTimestamp(_openingBlockTimestamp);
     }
-
-    // function riskScores(uint256 idx) public view virtual override returns (RiskScore memory) {
-    //     return _getStorage().riskScores[idx];
-    // }
-
-    // function nftAssets(uint256 idx) public view virtual override returns (NFTAsset memory) {
-    //     return _getStorage().nftAssets[idx];
-    // }
-
-    // function tokenAssetAddresses(uint256 idx) public view virtual override returns (address) {
-    //     return _getStorage().tokenAssetAddresses[idx];
-    // }
-
-    // function pause() public virtual override {
-    //     registry().requirePoolAdminOrOwner(address(this), _msgSender());
-    //     _pause();
-    // }
-
-    // function unpause() public virtual override {
-    //     registry().requirePoolAdminOrOwner(address(this), _msgSender());
-    //     _unpause();
-    // }
 }

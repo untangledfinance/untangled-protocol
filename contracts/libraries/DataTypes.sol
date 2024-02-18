@@ -4,30 +4,53 @@ pragma solidity 0.8.19;
 // import '../storage/Registry.sol';
 import './Configuration.sol';
 import './UnpackLoanParamtersLib.sol';
+
+bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');
+bytes32 constant POOL_ADMIN = keccak256('POOL_CREATOR');
+bytes32 constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
+
+bytes32 constant BACKEND_ADMIN = keccak256('BACKEND_ADMIN');
+bytes32 constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
+
+// In PoolNAV we use this
+bytes32 constant POOL = keccak256('POOL');
+
+uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
+
+uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
+
+uint256 constant ONE = 10 ** 27;
+uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
+
+bytes32 constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
+bytes32 constant VALIDATOR_ADMIN_ROLE = keccak256('VALIDATOR_ADMIN_ROLE');
+
+bytes32 constant MINTER_ROLE = keccak256('MINTER_ROLE');
+
 library DataTypes {
     struct RiskScore {
-    uint32 daysPastDue;
-    uint32 advanceRate;
-    uint32 penaltyRate;
-    uint32 interestRate;
-    uint32 probabilityOfDefault;
-    uint32 lossGivenDefault;
-    uint32 writeOffAfterGracePeriod;
-    uint32 gracePeriod;
-    uint32 collectionPeriod;
-    uint32 writeOffAfterCollectionPeriod;
-    uint32 discountRate;
+        uint32 daysPastDue;
+        uint32 advanceRate;
+        uint32 penaltyRate;
+        uint32 interestRate;
+        uint32 probabilityOfDefault;
+        uint32 lossGivenDefault;
+        uint32 writeOffAfterGracePeriod;
+        uint32 gracePeriod;
+        uint32 collectionPeriod;
+        uint32 writeOffAfterCollectionPeriod;
+        uint32 discountRate;
     }
 
     struct LoanEntry {
-    address debtor;
-    address principalTokenAddress;
-    bytes32 termsParam; // actually inside this param was already included P token address
-    uint256 salt;
-    uint256 issuanceBlockTimestamp;
-    uint256 expirationTimestamp;
-    uint8 riskScore;
-    Configuration.ASSET_PURPOSE assetPurpose;
+        address debtor;
+        address principalTokenAddress;
+        bytes32 termsParam; // actually inside this param was already included P token address
+        uint256 salt;
+        uint256 issuanceBlockTimestamp;
+        uint256 expirationTimestamp;
+        uint8 riskScore;
+        Configuration.ASSET_PURPOSE assetPurpose;
     }
     struct NFTAsset {
         address tokenAddress;
@@ -172,5 +195,11 @@ library DataTypes {
         mapping(bytes32 => uint256) latestDiscountOfNavAssets;
         mapping(bytes32 => uint256) overdueLoansOfNavAssets;
         mapping(uint256 => bytes32) loanToNFT;
+    }
+    struct LoanAssetInfo {
+        uint256[] tokenIds;
+        uint256[] nonces;
+        address validator;
+        bytes validateSignature;
     }
 }

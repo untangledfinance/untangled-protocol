@@ -2,8 +2,7 @@
 pragma solidity 0.8.19;
 
 import '../storage/Registry.sol';
-import './ISecuritizationPool.sol';
-// import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import './IPool.sol';
 import {DataTypes} from '../libraries/DataTypes.sol';
 interface ISecuritizationManager {
     event NewPoolCreated(address indexed instanceAddress);

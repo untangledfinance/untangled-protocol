@@ -5,9 +5,10 @@ import '../../base/UntangledBase.sol';
 import '@openzeppelin/contracts/interfaces/IERC20.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
-import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
+// import {IPool} from '../../interfaces/IPool.sol';
+// import {IPool} from '../../interfaces/IPool.sol';
+// import {IPool} from '../../interfaces/IPool.sol';
+import {IPool} from '../../interfaces/IPool.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import '../../interfaces/INoteToken.sol';
 
@@ -144,7 +145,7 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
         INoteToken noteToken = INoteToken(token);
         if (noteToken.noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.SENIOR) && noteToken.totalSupply() == 0) {
             firstNoteTokenMintedTimestamp = block.timestamp;
-            ISecuritizationPool(pool).setUpOpeningBlockTimestamp();
+            IPool(pool).setUpOpeningBlockTimestamp();
         }
         noteToken.mint(beneficiary, tokenAmount);
     }
@@ -249,14 +250,14 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
         _currencyRaised += currencyAmount;
         _currencyRaisedByInvestor[beneficiary] += currencyAmount;
 
-        ISecuritizationTGE securitizationPool = ISecuritizationTGE(pool);
+        IPool securitizationPool = IPool(pool);
         require(securitizationPool.isDebtCeilingValid(), 'MintedNormalTGE: Exceeds Debt Ceiling');
         tokenRaised += tokenAmount;
 
         _claimPayment(payee, currencyAmount);
         _deliverTokens(beneficiary, tokenAmount);
 
-        _forwardFunds(ISecuritizationPoolStorage(pool).pot(), currencyAmount);
+        _forwardFunds(IPool(pool).pot(), currencyAmount);
 
         emit TokensPurchased(_msgSender(), beneficiary, currencyAmount, tokenAmount);
 

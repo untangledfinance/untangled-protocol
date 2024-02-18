@@ -13,8 +13,7 @@ import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.so
 import {IPool} from '../../interfaces/IPool.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-import {POOL_ADMIN} from './types.sol';
-import {VALIDATOR_ROLE} from '../../tokens/ERC721/types.sol';
+import {POOL_ADMIN,VALIDATOR_ROLE} from '../../libraries/DataTypes.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
 import {ITokenGenerationEventFactory} from '../note-sale/fab/ITokenGenerationEventFactory.sol';
@@ -35,7 +34,7 @@ abstract contract SecuritizationManagerBase is ISecuritizationManager {
 
     mapping(address => bool) public override isExistingTGEs;
 
-    uint256[44] private __gap;
+    uint256[45] private __gap;
 }
 
 /// @title SecuritizationManager
@@ -322,5 +321,4 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         emit ValidatorUnRegistered(validator);
     }
 
-    uint256[49] private __gap;
 }

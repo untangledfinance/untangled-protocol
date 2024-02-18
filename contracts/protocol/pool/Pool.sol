@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {OWNER_ROLE, ORIGINATOR_ROLE} from './types.sol';
+import {OWNER_ROLE, ORIGINATOR_ROLE} from '../../libraries/DataTypes.sol';
 import {PoolStorage} from './PoolStorage.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
 import {UntangledBase} from '../../base/UntangledBase.sol';

@@ -7,7 +7,7 @@ import '../../../base/Factory.sol';
 import '../../../interfaces/INoteTokenFactory.sol';
 import '../../../libraries/ConfigHelper.sol';
 import '../../../libraries/UntangledMath.sol';
-import {MINTER_ROLE} from '../../../tokens/ERC20/types.sol';
+import {MINTER_ROLE} from '../../../libraries/DataTypes.sol';
 
 contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
     using ConfigHelper for Registry;

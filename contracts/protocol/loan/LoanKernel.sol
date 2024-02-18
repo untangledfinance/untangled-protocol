@@ -7,11 +7,8 @@ import '../../interfaces/ILoanKernel.sol';
 import '../../base/UntangledBase.sol';
 import '../../libraries/ConfigHelper.sol';
 import '../../libraries/UntangledMath.sol';
-import '../../tokens/ERC721/types.sol';
-import {LoanEntry} from '../../protocol/pool/base/types.sol';
-import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
-
+import {DataTypes} from '../../libraries/DataTypes.sol';
+import {IPool} from '../../interfaces/IPool.sol';
 /// @title LoanKernel
 /// @author Untangled Team
 /// @notice Upload loan and conclude loan
@@ -240,7 +237,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         // Mint to pool
         for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
             registry.getLoanAssetToken().safeMint(poolAddress, fillDebtOrderParam.latInfo[i]);
-            LoanEntry[] memory loans = new LoanEntry[](fillDebtOrderParam.latInfo[i].tokenIds.length);
+            DataTypes.LoanEntry[] memory loans = new DataTypes.LoanEntry[](fillDebtOrderParam.latInfo[i].tokenIds.length);
 
             for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
                 require(
@@ -248,7 +245,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                     'LoanKernel: Invalid LAT Token Id'
                 );
 
-                LoanEntry memory newLoan = LoanEntry({
+                DataTypes.LoanEntry memory newLoan = DataTypes.LoanEntry({
                     debtor: debtOrder.issuance.debtors[x],
                     principalTokenAddress: debtOrder.principalTokenAddress,
                     termsParam: fillDebtOrderParam.termsContractParameters[x],
@@ -263,14 +260,14 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                 x = UntangledMath.uncheckedInc(x);
             }
 
-            expectedAssetsValue += ISecuritizationPool(poolAddress).collectAssets(
+            expectedAssetsValue += IPool(poolAddress).collectAssets(
                 fillDebtOrderParam.latInfo[i].tokenIds,
                 loans
             );
         }
 
         // Start collect asset checkpoint and withdraw
-        ISecuritizationTGE(poolAddress).withdraw(_msgSender(), expectedAssetsValue);
+        IPool(poolAddress).withdraw(_msgSender(), expectedAssetsValue);
     }
 
     function _getDebtOrderHash(

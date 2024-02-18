@@ -13,34 +13,13 @@ library TGELogic {
     uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
     event UpdateTGEAddress(address tge, Configuration.NOTE_TOKEN_TYPE noteType);
-    event UpdatePaidPrincipalAmountSOTByInvestor(address indexed user, uint256 currencyAmount);
     event IncreaseReserve(uint256 increasingAmount, uint256 currencyAmount);
     event DecreaseReserve(uint256 decreasingAmount, uint256 currencyAmount);
-    event UpdateInterestRateSOT(uint32 _interestRateSOT);
     event UpdateDebtCeiling(uint256 _debtCeiling);
     event UpdateMintFirstLoss(uint32 _mintFirstLoss);
     event Withdraw(address originatorAddress, uint256 amount);
     event ClaimCashRemain(address pot, address recipientWallet, uint256 balance);
 
-    // function installExtension(
-    //     bytes memory params
-    // ) public virtual (SecuritizationAccessControl, SecuritizationPoolStorage) onlyCallInTargetPool {
-    //     __ReentrancyGuard_init_unchained();
-    //     __SecuritizationAccessControl_init_unchained(_msgSender());
-    //     __SecuritizationTGE_init_unchained(abi.decode(params, (NewPoolParams)));
-    // }
-
-    // function __SecuritizationTGE_init_unchained(NewPoolParams memory params) internal {
-    //     Storage storage $ = _getStorage();
-    //     $.pot = address(this);
-    //     $.state = CycleState.INITIATED;
-
-    //     require(params.currency != address(0), 'SecuritizationPool: Invalid currency');
-    //     $.underlyingCurrency = params.currency;
-
-    //     _setMinFirstLossCushion(params.minFirstLossCushion);
-    //     _setDebtCeiling(params.debtCeiling);
-    // }
 
     // alias
     function sotToken(DataTypes.Storage storage _poolStorage) public view returns (address) {
@@ -91,23 +70,17 @@ library TGELogic {
         return _poolStorage.totalAssetRepaidCurrency;
     }
 
-    // modifier finishRedemptionValidator() {
-    //     require(hasFinishedRedemption(), 'SecuritizationPool: Redemption has not finished');
-    //     _;
-    // }
 
     function injectTGEAddress(
         DataTypes.Storage storage _poolStorage,
         address _tgeAddress,
         Configuration.NOTE_TOKEN_TYPE _noteType
     ) external {
-        // registry().requireSecuritizationManager(_msgSender());
 
         require(_tgeAddress != address(0), 'SecuritizationPool: Address zero');
         address _tokenAddress = IMintedNormalTGE(_tgeAddress).token();
         require(_tokenAddress != address(0), 'SecuritizationPool: Address zero');
 
-        // Storage storage $ = _getStorage();
 
         if (_noteType == Configuration.NOTE_TOKEN_TYPE.SENIOR) {
             _poolStorage.tgeAddress = _tgeAddress;
@@ -123,15 +96,6 @@ library TGELogic {
     }
 
     function disburse(DataTypes.Storage storage _poolStorage, address usr, uint256 currencyAmount) external {
-        // Storage storage $ = _getStorage();
-        // require(
-        //     _msgSender() == address(registry().getNoteTokenVault()),
-        //     'SecuritizationPool: Caller must be NoteTokenVault'
-        // );
-        // require(
-        //     IERC20Upgradeable($.underlyingCurrency).transferFrom($.pot, usr, currencyAmount),
-        //     'SecuritizationPool: currency-transfer-failed'
-        // );
         TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, usr, currencyAmount);
     }
 
@@ -144,7 +108,7 @@ library TGELogic {
     }
 
     function isDebtCeilingValid(DataTypes.Storage storage _poolStorage) public view returns (bool) {
-        // Storage storage $ = _getStorage();
+        
         uint256 totalDebt = 0;
         if (_poolStorage.tgeAddress != address(0)) {
             totalDebt += IMintedNormalTGE(_poolStorage.tgeAddress).currencyRaised();
@@ -157,9 +121,6 @@ library TGELogic {
 
     // Increase by value
     function increaseTotalAssetRepaidCurrency(DataTypes.Storage storage _poolStorage, uint256 amount) external {
-        // registry().requireLoanRepaymentRouter(_msgSender());
-
-        // Storage storage $ = _getStorage();
 
         _poolStorage.reserve = _poolStorage.reserve + amount;
         _poolStorage.totalAssetRepaidCurrency = _poolStorage.totalAssetRepaidCurrency + amount;
@@ -182,9 +143,6 @@ library TGELogic {
     }
 
     function setPot(DataTypes.Storage storage _poolStorage, address _pot) external {
-        // registry().requirePoolAdminOrOwner(address(this), _msgSender());
-
-        // Storage storage $ = _getStorage();
 
         require(_poolStorage.pot != _pot, 'SecuritizationPool: Same address with current pot');
         _poolStorage.pot = _pot;
@@ -195,11 +153,9 @@ library TGELogic {
                 'SecuritizationPool: Pot not approved'
             );
         }
-        // registry().getSecuritizationManager().registerPot(_pot);
     }
 
     function setMinFirstLossCushion(DataTypes.Storage storage _poolStorage, uint32 _minFirstLossCushion) external {
-        // registry().requirePoolAdminOrOwner(address(this), _msgSender());
         _setMinFirstLossCushion(_poolStorage, _minFirstLossCushion);
     }
 
@@ -209,19 +165,17 @@ library TGELogic {
             'SecuritizationPool: minFirstLossCushion is greater than 100'
         );
 
-        // Storage storage $ = _getStorage();
+        
         _poolStorage.minFirstLossCushion = _minFirstLossCushion;
         emit UpdateMintFirstLoss(_minFirstLossCushion);
     }
 
     function setDebtCeiling(DataTypes.Storage storage _poolStorage, uint256 _debtCeiling) external {
-        // registry().requirePoolAdminOrOwner(address(this), _msgSender());
-
         _setDebtCeiling(_poolStorage, _debtCeiling);
     }
 
     function _setDebtCeiling(DataTypes.Storage storage _poolStorage, uint256 _debtCeiling) internal {
-        // Storage storage $ = _getStorage();
+        
         _poolStorage.debtCeiling = _debtCeiling;
         emit UpdateDebtCeiling(_debtCeiling);
     }
@@ -231,13 +185,6 @@ library TGELogic {
         address poolServiceAddress,
         uint256 currencyAmount
     ) external {
-        // require(
-        //     _msgSender() == address(registry().getSecuritizationManager()) ||
-        //         _msgSender() == address(registry().getNoteTokenVault()),
-        //     'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
-        // );
-
-        // Storage storage $ = _getStorage();
 
         _poolStorage.reserve = _poolStorage.reserve + currencyAmount;
         require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
@@ -250,12 +197,6 @@ library TGELogic {
         address poolServiceAddress,
         uint256 currencyAmount
     ) external {
-        // require(
-        //     _msgSender() == address(registry().getSecuritizationManager()) ||
-        //         _msgSender() == address(registry().getNoteTokenVault()),
-        //     'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
-        // );
-
         _decreaseReserve(_poolStorage, poolServiceAddress, currencyAmount);
     }
 
@@ -264,7 +205,7 @@ library TGELogic {
         address poolServiceAddress,
         uint256 currencyAmount
     ) private {
-        // Storage storage $ = _getStorage();
+        
         _poolStorage.reserve = _poolStorage.reserve - currencyAmount;
         require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
 
@@ -273,7 +214,7 @@ library TGELogic {
 
     // After closed pool and redeem all not -> get remain cash to recipient wallet
     function claimCashRemain(DataTypes.Storage storage _poolStorage, address recipientWallet) external {
-        // Storage storage $ = _getStorage();
+        
 
         IERC20Upgradeable currency = IERC20Upgradeable(_poolStorage.underlyingCurrency);
         uint256 balance = currency.balanceOf(_poolStorage.pot);
@@ -291,17 +232,11 @@ library TGELogic {
         address to,
         uint256 amount
     ) public {
-        // registry().requireLoanKernel(_msgSender());
-        // require(hasRole(ORIGINATOR_ROLE, to), 'SecuritizationPool: Only Originator can drawdown');
-        // require(!registry().getNoteTokenVault().redeemDisabled(address(this)), 'SecuritizationPool: withdraw paused');
-        // Storage storage $ = _getStorage();
+        
         require(_poolStorage.reserve >= amount, 'SecuritizationPool: not enough reserve');
 
         _decreaseReserve(_poolStorage, poolServiceAddress, amount);
-        // require(
-        //     IERC20Upgradeable(underlyingCurrency()).transferFrom(pot(), to, amount),
-        //     'SecuritizationPool: Transfer failed'
-        // );
+
         TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, to, amount);
         emit Withdraw(to, amount);
     }

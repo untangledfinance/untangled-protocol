@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import '../tokens/ERC721/types.sol';
+import '../libraries/DataTypes.sol';
 
 interface ILoanKernel {
     /****************** */
@@ -54,7 +54,7 @@ interface ILoanKernel {
         address[] orderAddresses; // 0-pool, 1-principal token address, 2-repayment router,...
         uint256[] orderValues; //  0-creditorFee, 1-asset purpose,..., [x] principalAmounts, [x] expirationTimestampInSecs, [x] - salts, [x] - riskScores
         bytes32[] termsContractParameters; // Term contract parameters from different farmers, encoded as hash strings
-        LoanAssetInfo[] latInfo;
+        DataTypes.LoanAssetInfo[] latInfo;
     }
 
     /*********** */

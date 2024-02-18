@@ -6,11 +6,11 @@ import {EIP712Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/crypt
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import {SignatureCheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol';
 import {ERC165CheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol';
-import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
+import {IPool} from '../../interfaces/IPool.sol';
 import {IERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {IERC5008} from './IERC5008.sol';
-import {VALIDATOR_ROLE, LoanAssetInfo} from './types.sol';
+import {VALIDATOR_ROLE, DataTypes} from '../../libraries/DataTypes.sol';
 
 abstract contract LATValidator is IERC5008, EIP712Upgradeable {
     using SignatureCheckerUpgradeable for address;
@@ -22,8 +22,8 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
 
     mapping(uint256 => uint256) internal _nonces;
 
-    modifier validateCreditor(address creditor, LoanAssetInfo calldata info) {
-        if (ISecuritizationPoolStorage(creditor).validatorRequired()) {
+    modifier validateCreditor(address creditor, DataTypes.LoanAssetInfo calldata info) {
+        if (IPool(creditor).validatorRequired()) {
             _checkNonceValid(info);
 
             require(_checkValidator(info), 'LATValidator: invalid validator signature');
@@ -32,17 +32,17 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
         _;
     }
 
-    modifier requireValidator(LoanAssetInfo calldata info) {
+    modifier requireValidator(DataTypes.LoanAssetInfo calldata info) {
         require(_checkValidator(info), 'LATValidator: invalid validator signature');
         _;
     }
 
-    modifier requireNonceValid(LoanAssetInfo calldata info) {
+    modifier requireNonceValid(DataTypes.LoanAssetInfo calldata info) {
         _checkNonceValid(info);
         _;
     }
 
-    function _checkNonceValid(LoanAssetInfo calldata info) internal {
+    function _checkNonceValid(DataTypes.LoanAssetInfo calldata info) internal {
         for (uint256 i = 0; i < info.tokenIds.length; i = UntangledMath.uncheckedInc(i)) {
             require(_nonces[info.tokenIds[i]] == info.nonces[i], 'LATValidator: invalid nonce');
             unchecked {
@@ -66,7 +66,7 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
         return _nonces[tokenId];
     }
 
-    function _checkValidator(LoanAssetInfo calldata latInfo) internal view returns (bool) {
+    function _checkValidator(DataTypes.LoanAssetInfo calldata latInfo) internal view returns (bool) {
         bytes32 digest = _hashTypedDataV4(
             keccak256(
                 abi.encode(

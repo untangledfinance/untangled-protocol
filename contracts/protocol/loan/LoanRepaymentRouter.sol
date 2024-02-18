@@ -7,10 +7,11 @@ import {ILoanRepaymentRouter} from '../../interfaces/ILoanRepaymentRouter.sol';
 import {ILoanAssetToken} from '../../interfaces/ILoanAssetToken.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
-import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
-import {ISecuritizationPoolNAV} from '../../interfaces/ISecuritizationPoolNAV.sol';
+import {IPool} from '../../interfaces/IPool.sol';
+// import {IPool} from '../../interfaces/IPool.sol';
+// import {IPool} from '../../interfaces/IPool.sol';
+// import {IPool} from '../../interfaces/IPool.sol';
+// import {IPool} from '../../interfaces/IPool.sol';
 import {UntangledBase} from '../../base/UntangledBase.sol';
 
 /// @title LoanRepaymentRouter
@@ -50,11 +51,11 @@ contract LoanRepaymentRouter is UntangledBase, ILoanRepaymentRouter {
     ) private returns (bool) {
         address beneficiary = registry.getLoanAssetToken().ownerOf(uint256(_agreementId));
 
-        ISecuritizationPoolStorage poolInstance = ISecuritizationPoolStorage(beneficiary);
-        ISecuritizationPoolNAV poolNAV = ISecuritizationPoolNAV(beneficiary);
+        IPool poolInstance = IPool(beneficiary);
+        IPool poolNAV = IPool(beneficiary);
         uint256 repayAmount = poolNAV.repayLoan(uint256(_agreementId), _amount);
         uint256 outstandingAmount = poolNAV.debt(uint256(_agreementId));
-        ISecuritizationTGE poolTGE = ISecuritizationTGE(beneficiary);
+        IPool poolTGE = IPool(beneficiary);
 
         require(poolTGE.underlyingCurrency() == _tokenAddress, 'LoanRepaymentRouter: currency mismatch');
 

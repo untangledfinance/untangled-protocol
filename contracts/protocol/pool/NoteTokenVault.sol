@@ -13,7 +13,7 @@ import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {INoteTokenVault} from '../../interfaces/INoteTokenVault.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
-import {BACKEND_ADMIN, SIGNER_ROLE} from './types.sol';
+import {BACKEND_ADMIN, SIGNER_ROLE} from '../../libraries/DataTypes.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import '../../storage/Registry.sol';
 import '../../libraries/ConfigHelper.sol';
@@ -279,5 +279,4 @@ contract NoteTokenVault is
         return noteToken == sotToken;
     }
 
-    uint256[49] private __gap;
 }

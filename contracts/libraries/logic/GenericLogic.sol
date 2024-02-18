@@ -39,25 +39,15 @@ library GenericLogic
     uint256 constant ONE = 10 ** 27;
     uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
 
-    event IncreaseDebt(bytes32 indexed loan, uint256 currencyAmount);
-    event DecreaseDebt(bytes32 indexed loan, uint256 currencyAmount);
     event SetRate(bytes32 indexed loan, uint256 rate);
     event ChangeRate(bytes32 indexed loan, uint256 newRate);
-    event File(bytes32 indexed what, uint256 rate, uint256 value);
-
-    // events
-    event SetLoanMaturity(bytes32 indexed loan, uint256 maturityDate_);
-    event WriteOff(bytes32 indexed loan, uint256 indexed writeOffGroupsIndex, bool override_);
-    event AddLoan(bytes32 indexed loan, uint256 principalAmount, DataTypes.NFTDetails nftdetails);
-    event Repay(bytes32 indexed loan, uint256 currencyAmount);
-    // event UpdateAssetRiskScore(bytes32 loan, uint256 risk);
 
     /** GETTER */
     /// @notice getter function for the maturityDate
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
     /// @return maturityDate_ the maturityDate of the nft
     function maturityDate(DataTypes.Storage storage _poolStorage,bytes32 nft_) internal view  returns (uint256 maturityDate_) {
-        // Storage storage $ = _getStorage();
+        
         return uint256(_poolStorage.details[nft_].maturityDate);
     }
 
@@ -66,7 +56,7 @@ library GenericLogic
     /// @return risk_ the risk group of the nft
 
     function risk(DataTypes.Storage storage _poolStorage,bytes32 nft_) internal view returns (uint256 risk_) {
-        // Storage storage $ = _getStorage();
+        
         return uint256(_poolStorage.details[nft_].risk);
     }
 
@@ -78,7 +68,7 @@ library GenericLogic
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
     /// @return fv_ future value of the loan
     function futureValue(DataTypes.Storage storage _poolStorage, bytes32 nft_) internal view  returns (uint256 fv_) {
-        // Storage storage $ = _getStorage();
+        
         return uint256(_poolStorage.details[nft_].futureValue);
     }
 
@@ -107,8 +97,6 @@ library GenericLogic
     /** UTILITY FUNCTION */
     // TODO have to use modifier in main contract
     function getRiskScoreByIdx(DataTypes.RiskScore[] storage riskScores,uint256 idx) internal view returns (DataTypes.RiskScore memory) {
-        // ISecuritizationPool securitizationPool = ISecuritizationPool(address(this));
-        // require(address(securitizationPool) != address(0), 'Pool was not deployed');
         if (idx == 0 || riskScores.length == 0) {
             // Default risk score
             return
@@ -164,7 +152,7 @@ library GenericLogic
     /// @return overdue the present value of the overdue loans
     /// @return writeOffs the present value of the written off loans
     function currentPVs(DataTypes.Storage storage _poolStorage) internal view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
-        // Storage storage $ = _getStorage();
+        
         uint256 latestDiscount;
         uint256 overdueLoans;
         uint256 discountRate;
@@ -206,7 +194,6 @@ library GenericLogic
     }
 
     function currentWriteOffAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) internal view returns (uint256) {
-        // Storage storage $ = _getStorage();
         uint256 _currentWriteOffs = 0;
         uint256 writeOffGroupIndex = currentValidWriteOffGroup(_poolStorage,uint256(tokenId));
         _currentWriteOffs = Math.rmul(debt(_poolStorage,uint256(tokenId)), uint256(_poolStorage.writeOffGroups[writeOffGroupIndex].percentage));
@@ -217,7 +204,6 @@ library GenericLogic
         DataTypes.Storage storage _poolStorage,
         bytes32 tokenId
     ) internal view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
-        // Storage storage $ = _getStorage();
         uint256 _currentWriteOffs = 0;
         uint256 discountRate;
         uint256 latestDiscountOfNavAssetsID;
@@ -264,7 +250,6 @@ library GenericLogic
     /// @notice returns the sum of all write off loans
     /// @return sum of all write off loans
     function currentWriteOffs(DataTypes.Storage storage _poolStorage) internal view returns (uint256 sum) {
-        // Storage storage $ = _getStorage();
         for (uint256 i = 0; i < _poolStorage.writeOffGroups.length; i++) {
             // multiply writeOffGroupDebt with the writeOff rate
 
@@ -277,7 +262,6 @@ library GenericLogic
     /// @return nav_ current NAV
     function calcUpdateNAV(DataTypes.Storage storage _poolStorage) internal returns (uint256 nav_) {
         (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentPVs(_poolStorage);
-        // Storage storage $ = _getStorage();
 
         for (uint i = 0; i < _poolStorage.loanCount; ++i) {
             bytes32 _nftID = _poolStorage.loanToNFT[i];
@@ -302,7 +286,6 @@ library GenericLogic
         // reCalcTotalDiscount
         /// @notice re-calculates the totalDiscount in a non-optimized way based on lastNAVUpdate
         /// @return latestDiscount_ returns the total discount of the active loans
-        // Storage storage $ = _getStorage();
         uint256 latestDiscount_ = 0;
         for (uint256 loanID = 1; loanID < _poolStorage.loanCount; loanID++) {
             bytes32 nftID_ = nftID(loanID);
@@ -350,7 +333,6 @@ library GenericLogic
 
         uint128 lastValidWriteOff = type(uint128).max;
         uint128 highestOverdueDays = 0;
-        // Storage storage $ = _getStorage();
         // it is not guaranteed that writeOff groups are sorted by overdue days
         for (uint128 i = 0; i < _poolStorage.writeOffGroups.length; i++) {
             uint128 overdueDays = _poolStorage.writeOffGroups[i].overdueDays;
@@ -369,7 +351,6 @@ library GenericLogic
     }
 
     function debt(DataTypes.Storage storage _poolStorage,uint256 loan) internal view  returns (uint256 loanDebt) {
-        // Storage storage $ = _getStorage();
         uint256 rate_ = _poolStorage.loanRates[loan];
         uint256 chi_ = _poolStorage.rates[rate_].chi;
         uint256 penaltyChi_ = _poolStorage.rates[rate_].penaltyChi;
@@ -390,7 +371,7 @@ library GenericLogic
     }
 
     function rateDebt(DataTypes.Storage storage _poolStorage,uint256 rate) internal view returns (uint256 totalDebt) {
-        // Storage storage $ = _getStorage();
+        
         uint256 chi_ = _poolStorage.rates[rate].chi;
         uint256 penaltyChi_ = _poolStorage.rates[rate].penaltyChi;
         uint256 pie_ = _poolStorage.rates[rate].pie;
@@ -412,7 +393,7 @@ library GenericLogic
     }
 
     function setRate(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 rate) internal {
-        // Storage storage $ = _getStorage();
+        
         require(_poolStorage.pie[loan] == 0, 'non-zero-debt');
         // rate category has to be initiated
         require(_poolStorage.rates[rate].chi != 0, 'rate-group-not-set');
@@ -421,7 +402,7 @@ library GenericLogic
     }
 
     function changeRate(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 newRate) internal {
-        // Storage storage $ = _getStorage();
+        
         require(_poolStorage.rates[newRate].chi != 0, 'rate-group-not-set');
         if (newRate >= WRITEOFF_RATE_GROUP_START) {
             _poolStorage.rates[newRate].timeStartPenalty = uint48(block.timestamp);
@@ -443,7 +424,7 @@ library GenericLogic
     }
 
     function drip(DataTypes.Storage storage _poolStorage,uint256 rate) internal {
-        // Storage storage $ = _getStorage();
+        
         if (block.timestamp >= _poolStorage.rates[rate].lastUpdated) {
             (uint256 chi, ) = compounding(
                 _poolStorage.rates[rate].chi,
@@ -523,7 +504,7 @@ library GenericLogic
     }
 
     function getAsset(DataTypes.Storage storage _poolStorage,bytes32 agreementId) internal view  returns (DataTypes.NFTDetails memory) {
-        // Storage storage $ = _getStorage();
+        
         return _poolStorage.details[agreementId];
     }
 

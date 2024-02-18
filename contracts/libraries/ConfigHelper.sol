@@ -6,7 +6,7 @@ import {Registry} from '../storage/Registry.sol';
 import {Configuration} from './Configuration.sol';
 
 import {ISecuritizationManager} from '../interfaces/ISecuritizationManager.sol';
-import {ISecuritizationPool} from '../interfaces/ISecuritizationPool.sol';
+import {IPool} from '../interfaces/IPool.sol';
 import {INoteTokenFactory} from '../interfaces/INoteTokenFactory.sol';
 import {INoteToken} from '../interfaces/INoteToken.sol';
 import {ITokenGenerationEventFactory} from '../interfaces/ITokenGenerationEventFactory.sol';
@@ -19,7 +19,7 @@ import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPool
 import {IMintedNormalTGE} from '../interfaces/IMintedNormalTGE.sol';
 import {IGo} from '../interfaces/IGo.sol';
 
-import {POOL_ADMIN, OWNER_ROLE} from './types.sol';
+import {POOL_ADMIN, OWNER_ROLE} from './DataTypes.sol';
 import {INoteTokenVault} from '../interfaces/INoteTokenVault.sol';
 
 /**
@@ -37,8 +37,8 @@ library ConfigHelper {
         return ISecuritizationManager(getAddress(registry, Configuration.CONTRACT_TYPE.SECURITIZATION_MANAGER));
     }
 
-    function getSecuritizationPool(Registry registry) internal view returns (ISecuritizationPool) {
-        return ISecuritizationPool(getAddress(registry, Configuration.CONTRACT_TYPE.SECURITIZATION_POOL));
+    function getSecuritizationPool(Registry registry) internal view returns (IPool) {
+        return IPool(getAddress(registry, Configuration.CONTRACT_TYPE.SECURITIZATION_POOL));
     }
 
     function getNoteTokenFactory(Registry registry) internal view returns (INoteTokenFactory) {

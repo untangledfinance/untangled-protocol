@@ -36,16 +36,14 @@ const setUpTokenGenerationEventFactory = async (registry, factoryAdmin) => {
         factoryAdmin.address,
     ]);
 
-    const MintedIncreasingInterestTGE = await ethers.getContractFactory('MintedIncreasingInterestTGE');
-    const mintedIncreasingInterestTGEImpl = await MintedIncreasingInterestTGE.deploy();
+    // const MintedIncreasingInterestTGE = await ethers.getContractFactory('MintedIncreasingInterestTGE');
+    // const mintedIncreasingInterestTGEImpl = await MintedIncreasingInterestTGE.deploy();
     const MintedNormalTGE = await ethers.getContractFactory('MintedNormalTGE');
     const mintedNormalTGEImpl = await MintedNormalTGE.deploy();
 
-    await tokenGenerationEventFactory.setTGEImplAddress(0, mintedIncreasingInterestTGEImpl.address);
+    await tokenGenerationEventFactory.setTGEImplAddress(0, mintedNormalTGEImpl.address);
 
     await tokenGenerationEventFactory.setTGEImplAddress(1, mintedNormalTGEImpl.address);
-
-    await tokenGenerationEventFactory.setTGEImplAddress(2, mintedNormalTGEImpl.address);
 
     await registry.setTokenGenerationEventFactory(tokenGenerationEventFactory.address);
 
@@ -65,34 +63,34 @@ const setUpNoteTokenFactory = async (registry, factoryAdmin) => {
     return { noteTokenFactory };
 };
 
-const initPool = async (securitizationPoolImpl) => {
-    // SecuritizationAccessControl,
-    // SecuritizationPoolStorage,
-    // SecuritizationTGE,
-    // SecuritizationPoolAsset,
-    // SecuritizationPoolNAV
-    const SecuritizationAccessControl = await ethers.getContractFactory('SecuritizationAccessControl');
-    const securitizationAccessControlImpl = await SecuritizationAccessControl.deploy();
-    await securitizationPoolImpl.registerExtension(securitizationAccessControlImpl.address);
+// const initPool = async (securitizationPoolImpl) => {
+//     // SecuritizationAccessControl,
+//     // SecuritizationPoolStorage,
+//     // SecuritizationTGE,
+//     // SecuritizationPoolAsset,
+//     // SecuritizationPoolNAV
+//     const SecuritizationAccessControl = await ethers.getContractFactory('SecuritizationAccessControl');
+//     const securitizationAccessControlImpl = await SecuritizationAccessControl.deploy();
+//     await securitizationPoolImpl.registerExtension(securitizationAccessControlImpl.address);
 
-    const SecuritizationPoolStorage = await ethers.getContractFactory('SecuritizationPoolStorage');
-    const securitizationPoolStorageImpl = await SecuritizationPoolStorage.deploy();
-    await securitizationPoolImpl.registerExtension(securitizationPoolStorageImpl.address);
+//     const SecuritizationPoolStorage = await ethers.getContractFactory('SecuritizationPoolStorage');
+//     const securitizationPoolStorageImpl = await SecuritizationPoolStorage.deploy();
+//     await securitizationPoolImpl.registerExtension(securitizationPoolStorageImpl.address);
 
-    const SecuritizationPoolTGE = await ethers.getContractFactory('SecuritizationTGE');
-    const securitizationPoolTGEImpl = await SecuritizationPoolTGE.deploy();
-    await securitizationPoolImpl.registerExtension(securitizationPoolTGEImpl.address);
+//     const SecuritizationPoolTGE = await ethers.getContractFactory('SecuritizationTGE');
+//     const securitizationPoolTGEImpl = await SecuritizationPoolTGE.deploy();
+//     await securitizationPoolImpl.registerExtension(securitizationPoolTGEImpl.address);
 
-    const SecuritizationPoolAsset = await ethers.getContractFactory('SecuritizationPoolAsset');
-    const securitizationPoolAssetImpl = await SecuritizationPoolAsset.deploy();
-    await securitizationPoolImpl.registerExtension(securitizationPoolAssetImpl.address);
+//     const SecuritizationPoolAsset = await ethers.getContractFactory('SecuritizationPoolAsset');
+//     const securitizationPoolAssetImpl = await SecuritizationPoolAsset.deploy();
+//     await securitizationPoolImpl.registerExtension(securitizationPoolAssetImpl.address);
 
-    const SecuritizationPoolNAV = await ethers.getContractFactory('SecuritizationPoolNAV');
-    const securitizationPoolNAVImpl = await SecuritizationPoolNAV.deploy();
-    await securitizationPoolImpl.registerExtension(securitizationPoolNAVImpl.address);
+//     const SecuritizationPoolNAV = await ethers.getContractFactory('SecuritizationPoolNAV');
+//     const securitizationPoolNAVImpl = await SecuritizationPoolNAV.deploy();
+//     await securitizationPoolImpl.registerExtension(securitizationPoolNAVImpl.address);
 
-    return securitizationPoolImpl;
-};
+//     return securitizationPoolImpl;
+// };
 
 const setUpSecuritizationPoolImpl = async (registry) => {
     const PoolNAVLogic = await ethers.getContractFactory('PoolNAVLogic');

@@ -9,11 +9,7 @@ const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants');
 
 const { parseEther, formatEther } = ethers.utils;
 
-const {
-    unlimitedAllowance,
-    ZERO_ADDRESS,
-    getPoolByAddress,
-} = require('./utils.js');
+const { unlimitedAllowance, ZERO_ADDRESS, getPoolByAddress } = require('./utils.js');
 const { setup } = require('./setup.js');
 const { SaleType, ASSET_PURPOSE } = require('./shared/constants.js');
 
@@ -84,42 +80,44 @@ describe('Distribution', () => {
 
             const oneDayInSecs = 1 * 24 * 3600;
             const halfOfADay = oneDayInSecs / 2;
-            const riskScores = [{
-                daysPastDue: oneDayInSecs,
-                advanceRate: 950000,
-                penaltyRate: 900000,
-                interestRate: 910000,
-                probabilityOfDefault: 800000,
-                lossGivenDefault: 810000,
-                gracePeriod: halfOfADay,
-                collectionPeriod: halfOfADay,
-                writeOffAfterGracePeriod: halfOfADay,
-                writeOffAfterCollectionPeriod: halfOfADay,
-                discountRate: 100000,
-            }];
+            const riskScores = [
+                {
+                    daysPastDue: oneDayInSecs,
+                    advanceRate: 950000,
+                    penaltyRate: 900000,
+                    interestRate: 910000,
+                    probabilityOfDefault: 800000,
+                    lossGivenDefault: 810000,
+                    gracePeriod: halfOfADay,
+                    collectionPeriod: halfOfADay,
+                    writeOffAfterGracePeriod: halfOfADay,
+                    writeOffAfterCollectionPeriod: halfOfADay,
+                    discountRate: 100000,
+                },
+            ];
 
             const openingTime = dayjs(new Date()).unix();
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 10000;
-            const finalInterest = 10000;
+            // const initialInterest = 10000;
+            // const finalInterest = 10000;
+            const interestRate = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'Ticker_';
             const sotInfo = {
                 issuerTokenController: untangledAdminSigner.address,
-                saleType: SaleType.MINTED_INCREASING_INTEREST,
+                saleType: SaleType.NORMAL_SALE,
                 minBidAmount: parseEther('50'),
                 openingTime,
                 closingTime,
                 rate,
                 cap: totalCapOfToken,
-                initialInterest,
-                finalInterest,
                 timeInterval,
                 amountChangeEachInterval,
                 ticker: prefixOfNoteTokenSaleName,
+                interestRate,
             };
 
             const initialJOTAmount = parseEther('1');
@@ -135,17 +133,23 @@ describe('Distribution', () => {
                 cap: totalCapOfToken,
                 initialJOTAmount,
             };
-            const [poolAddress, sotCreated, jotCreated] = await untangledProtocol.createFullPool(poolCreatorSigner, poolParams, riskScores, sotInfo, jotInfo);
+            const [poolAddress, sotCreated, jotCreated] = await untangledProtocol.createFullPool(
+                poolCreatorSigner,
+                poolParams,
+                riskScores,
+                sotInfo,
+                jotInfo
+            );
             securitizationPoolContract = await getPoolByAddress(poolAddress);
             await securitizationPoolContract
-              .connect(poolCreatorSigner)
-              .grantRole(ORIGINATOR_ROLE, originatorSigner.address);
+                .connect(poolCreatorSigner)
+                .grantRole(ORIGINATOR_ROLE, originatorSigner.address);
 
             await securitizationPoolContract
-              .connect(poolCreatorSigner)
-              .grantRole(ORIGINATOR_ROLE, untangledAdminSigner.address);
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', sotCreated.sotTGEAddress);
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', jotCreated.jotTGEAddress);
+                .connect(poolCreatorSigner)
+                .grantRole(ORIGINATOR_ROLE, untangledAdminSigner.address);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotCreated.sotTGEAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotCreated.jotTGEAddress);
             sotToken = await ethers.getContractAt('NoteToken', sotCreated.sotTokenAddress);
             jotToken = await ethers.getContractAt('NoteToken', jotCreated.jotTokenAddress);
         });
@@ -179,16 +183,15 @@ describe('Distribution', () => {
                     expirationTimestamp: expirationTimestamps,
                     termInDays: 10,
                     riskScore: '1',
-                }
-            ]
-
+                },
+            ];
 
             tokenIds = await untangledProtocol.uploadLoans(
-              untangledAdminSigner,
-              securitizationPoolContract,
-              borrowerSigner,
-              ASSET_PURPOSE.LOAN,
-              loans
+                untangledAdminSigner,
+                securitizationPoolContract,
+                borrowerSigner,
+                ASSET_PURPOSE.LOAN,
+                loans
             );
 
             const ownerOfAgreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
@@ -196,7 +199,6 @@ describe('Distribution', () => {
 
             const balanceOfPool = await loanAssetTokenContract.balanceOf(securitizationPoolContract.address);
             expect(balanceOfPool).equal(tokenIds.length);
-
         });
     });
 

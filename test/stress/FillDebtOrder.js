@@ -258,8 +258,9 @@ describe('FillDebtOrder - Stress test', () => {
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 10000;
-            const finalInterest = 10000;
+            const interestRate = 10000;
+            // const initialInterest = 10000;
+            // const finalInterest = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'SOT_';
@@ -273,13 +274,8 @@ describe('FillDebtOrder - Stress test', () => {
                     longSale: true,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                { openingTime: openingTime, closingTime: closingTime, rate: rate, cap: totalCapOfToken },
-                {
-                    initialInterest,
-                    finalInterest,
-                    timeInterval,
-                    amountChangeEachInterval,
-                }
+                totalCapOfToken,
+                interestRate
             );
 
             const receipt = await transaction.wait();
@@ -287,7 +283,7 @@ describe('FillDebtOrder - Stress test', () => {
             const [sotTokenAddress, tgeAddress] = receipt.events.find((e) => e.event == 'SetupSot').args;
             expect(tgeAddress).to.be.properAddress;
 
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', tgeAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', tgeAddress);
 
             expect(sotTokenAddress).to.be.properAddress;
 
@@ -309,11 +305,10 @@ describe('FillDebtOrder - Stress test', () => {
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
                     saleType: SaleType.NORMAL_SALE,
-                    longSale: true,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                { openingTime: openingTime, closingTime: closingTime, rate: rate, cap: totalCapOfToken },
-                initialJotAmount
+                initialJotAmount,
+                totalCapOfToken
             );
             const receipt = await transaction.wait();
 
@@ -321,7 +316,7 @@ describe('FillDebtOrder - Stress test', () => {
 
             expect(tgeAddress).to.be.properAddress;
 
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', tgeAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', tgeAddress);
 
             expect(jotTokenAddress).to.be.properAddress;
 

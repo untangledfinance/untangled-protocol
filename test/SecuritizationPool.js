@@ -177,8 +177,9 @@ describe('SecuritizationPool', () => {
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 10000;
-            const finalInterest = 10000;
+            const interestRate = 10000;
+            // const initialInterest = 10000;
+            // const finalInterest = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'SOT_';
@@ -192,15 +193,14 @@ describe('SecuritizationPool', () => {
                 closingTime,
                 rate,
                 cap: totalCapOfToken,
-                initialInterest,
-                finalInterest,
                 timeInterval,
                 amountChangeEachInterval,
                 ticker: prefixOfNoteTokenSaleName,
+                interestRate,
             });
             expect(sotTGEAddress).to.be.properAddress;
 
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', sotTGEAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotTGEAddress);
 
             expect(sotTokenAddress).to.be.properAddress;
 
@@ -232,7 +232,7 @@ describe('SecuritizationPool', () => {
 
             expect(jotTGEAddress).to.be.properAddress;
 
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', jotTGEAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotTGEAddress);
 
             expect(jotTokenAddress).to.be.properAddress;
 
@@ -242,13 +242,13 @@ describe('SecuritizationPool', () => {
         it('Should buy tokens failed if buy sot first', async () => {
             await expect(
                 untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'))
-            ).to.be.revertedWith(`Crowdsale: sale not started`);
+            ).to.be.revertedWith(`MintedNormalTGE: sale not started`);
         });
 
         it('Should buy tokens failed if exceeds debt ceiling', async () => {
             await expect(
                 untangledProtocol.buyToken(lenderSigner, jotMintedIncreasingInterestTGE.address, parseEther('100'))
-            ).to.be.revertedWith('Crowdsale: Exceeds Debt Ceiling');
+            ).to.be.revertedWith('MintedNormalTGE: Exceeds Debt Ceiling');
         });
         it('set debt ceiling', async () => {
             await securitizationPoolContract.connect(poolCreatorSigner).setDebtCeiling(parseEther('300'));
@@ -260,7 +260,7 @@ describe('SecuritizationPool', () => {
         it('Should buy tokens failed if under min bid amount', async () => {
             await expect(
                 untangledProtocol.buyToken(lenderSigner, jotMintedIncreasingInterestTGE.address, parseEther('30'))
-            ).to.be.revertedWith('Crowdsale: Less than minBidAmount');
+            ).to.be.revertedWith('MintedNormalTGE: Less than minBidAmount');
         });
         it('Should buy tokens successfully', async () => {
             await untangledProtocol.buyToken(lenderSigner, jotMintedIncreasingInterestTGE.address, parseEther('100'));
@@ -530,23 +530,24 @@ describe('SecuritizationPool', () => {
             await securitizationPoolContract.connect(poolCreatorSigner).claimCashRemain(poolCreatorSigner.address);
         });
 
-        it('#startCycle', async () => {
-            expect(await stableCoin.balanceOf(poolCreatorSigner.address)).to.closeTo(
-                parseEther('199.9999'),
-                parseEther('0.001')
-            );
-            await expect(securitizationPoolContract.connect(poolCreatorSigner).startCycle()).to.be.revertedWith(
-                `FinalizableCrowdsale: not closed`
-            );
+        // No more this logic
+        // it('#startCycle', async () => {
+        //     expect(await stableCoin.balanceOf(poolCreatorSigner.address)).to.closeTo(
+        //         parseEther('199.9999'),
+        //         parseEther('0.001')
+        //     );
+        //     await expect(securitizationPoolContract.connect(poolCreatorSigner).startCycle()).to.be.revertedWith(
+        //         `FinalizableCrowdsale: not closed`
+        //     );
 
-            await time.increaseTo(dayjs(new Date()).add(8, 'days').unix());
+        //     await time.increaseTo(dayjs(new Date()).add(8, 'days').unix());
 
-            await expect(mintedIncreasingInterestTGE.finalize(false, untangledAdminSigner.address)).to.be.revertedWith(
-                `FinalizableCrowdsale: Only pool contract can finalize`
-            );
+        //     await expect(mintedIncreasingInterestTGE.finalize(false, untangledAdminSigner.address)).to.be.revertedWith(
+        //         `FinalizableCrowdsale: Only pool contract can finalize`
+        //     );
 
-            await securitizationPoolContract.connect(poolCreatorSigner).startCycle();
-        });
+        //     await securitizationPoolContract.connect(poolCreatorSigner).startCycle();
+        // });
     });
 
     describe('Burn agreement', async () => {

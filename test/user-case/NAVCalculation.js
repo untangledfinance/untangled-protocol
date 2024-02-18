@@ -140,8 +140,7 @@ describe('NAV', () => {
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 10000;
-            const finalInterest = 10000;
+            const interestRate = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'SOT_';
@@ -152,16 +151,10 @@ describe('NAV', () => {
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
                     saleType: SaleType.MINTED_INCREASING_INTEREST,
-                    longSale: true,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                { openingTime: openingTime, closingTime: closingTime, rate: rate, cap: totalCapOfToken },
-                {
-                    initialInterest,
-                    finalInterest,
-                    timeInterval,
-                    amountChangeEachInterval,
-                }
+                totalCapOfToken,
+                interestRate
             );
 
             const receipt = await transaction.wait();
@@ -169,7 +162,7 @@ describe('NAV', () => {
             const [sotTokenAddress, tgeAddress] = receipt.events.find((e) => e.event == 'SetupSot').args;
             expect(tgeAddress).to.be.properAddress;
 
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', tgeAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', tgeAddress);
             expect(sotTokenAddress).to.be.properAddress;
 
             sotToken = await ethers.getContractAt('NoteToken', sotTokenAddress);
@@ -190,18 +183,17 @@ describe('NAV', () => {
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
                     saleType: SaleType.NORMAL_SALE,
-                    longSale: true,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                { openingTime: openingTime, closingTime: closingTime, rate: rate, cap: totalCapOfToken },
-                initialJotAmount
+                initialJotAmount,
+                totalCapOfToken
             );
             const receipt = await transaction.wait();
 
             const [jotTokenAddress, tgeAddress] = receipt.events.find((e) => e.event == 'SetupJot').args;
             expect(tgeAddress).to.be.properAddress;
 
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', tgeAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', tgeAddress);
 
             expect(jotTokenAddress).to.be.properAddress;
 
@@ -303,10 +295,7 @@ describe('NAV', () => {
       */
 
             // PoolNAV contract
-            securitizationPoolNAV = await ethers.getContractAt(
-                'Pool',
-                securitizationPoolContract.address
-            );
+            securitizationPoolNAV = await ethers.getContractAt('Pool', securitizationPoolContract.address);
         });
 
         it('after upload loan successfully', async () => {
@@ -532,7 +521,7 @@ describe('NAV', () => {
                 ticker: 'Ticker',
             });
 
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', sotTGEAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotTGEAddress);
 
             expect(sotTokenAddress).to.be.properAddress;
 
@@ -555,7 +544,7 @@ describe('NAV', () => {
                 initialJOTAmount: parseEther('100'),
             });
 
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', jotTGEAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotTGEAddress);
 
             expect(jotTokenAddress).to.be.properAddress;
 
@@ -670,10 +659,7 @@ describe('NAV', () => {
       */
             uploadedLoanTime = await time.latest();
 
-            securitizationPoolContract = await ethers.getContractAt(
-                'SecuritizationPoolNAV',
-                securitizationPoolContract.address
-            );
+            securitizationPoolContract = await ethers.getContractAt('IPool', securitizationPoolContract.address);
         });
 
         it('after upload loan successfully', async () => {

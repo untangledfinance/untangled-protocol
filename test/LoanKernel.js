@@ -120,8 +120,9 @@ describe('LoanKernel', () => {
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 10000;
-            const finalInterest = 10000;
+            const interestRate = 10000;
+            // const initialInterest = 10000;
+            // const finalInterest = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'Ticker_';
@@ -133,11 +134,10 @@ describe('LoanKernel', () => {
                 closingTime,
                 rate,
                 cap: totalCapOfToken,
-                initialInterest,
-                finalInterest,
                 timeInterval,
                 amountChangeEachInterval,
                 ticker: prefixOfNoteTokenSaleName,
+                interestRate,
             };
 
             const initialJOTAmount = parseEther('1');
@@ -161,14 +161,8 @@ describe('LoanKernel', () => {
                 jotInfo
             );
             securitizationPoolContract = await getPoolByAddress(poolAddress);
-            mintedIncreasingInterestTGE = await ethers.getContractAt(
-                'MintedIncreasingInterestTGE',
-                sotCreated.sotTGEAddress
-            );
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt(
-                'MintedIncreasingInterestTGE',
-                jotCreated.jotTGEAddress
-            );
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotCreated.sotTGEAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotCreated.jotTGEAddress);
         });
 
         it('Should buy tokens successfully', async () => {
@@ -412,6 +406,5 @@ describe('LoanKernel', () => {
             const stablecoinBalanceOfPoolAfter = await stableCoin.balanceOf(securitizationPoolContract.address);
             expect(stablecoinBalanceOfPoolAfter).to.closeTo(parseEther('190.5'), parseEther('0.01'));
         });
-
     });
 });

@@ -220,13 +220,13 @@ const genRiskScoreParam = (...args) => {
 };
 
 const getPoolAbi = async () => {
-    const asset = await artifacts.readArtifact('ISecuritizationPool');
-    const control = await artifacts.readArtifact('SecuritizationAccessControl');
-    const storage = await artifacts.readArtifact('SecuritizationPoolStorage');
-    const tge = await artifacts.readArtifact('SecuritizationTGE');
-    const nav = await artifacts.readArtifact('SecuritizationPoolNAV');
+    const asset = await artifacts.readArtifact('IPool');
+    const control = await artifacts.readArtifact('IPool');
+    const storage = await artifacts.readArtifact('IPool');
+    const tge = await artifacts.readArtifact('IPool');
+    const nav = await artifacts.readArtifact('IPool');
     const pool = await artifacts.readArtifact('Pool');
-    const abis = [...storage.abi, ...asset.abi, ...control.abi, ...tge.abi, ...nav.abi,...pool.abi];
+    const abis = [...storage.abi, ...asset.abi, ...control.abi, ...tge.abi, ...nav.abi, ...pool.abi];
 
     const resultAbis = [];
     // remove duplicate

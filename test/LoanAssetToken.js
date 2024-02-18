@@ -7,10 +7,7 @@ const { expect } = require('chai');
 
 const { parseEther, formatEther } = ethers.utils;
 
-const {
-    unlimitedAllowance,
-    getPoolByAddress,
-} = require('./utils.js');
+const { unlimitedAllowance, getPoolByAddress } = require('./utils.js');
 const { setup } = require('./setup.js');
 
 const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants.js');
@@ -66,7 +63,7 @@ describe('LoanAssetToken', () => {
 
         chainId = await getChainId();
         // Gain UID
-        await untangledProtocol.mintUID(lenderSigner)
+        await untangledProtocol.mintUID(lenderSigner);
     });
 
     describe('#Initialize suit', async () => {
@@ -86,26 +83,29 @@ describe('LoanAssetToken', () => {
 
             const oneDayInSecs = 1 * 24 * 3600;
             const halfOfADay = oneDayInSecs / 2;
-            const riskScores = [{
-                daysPastDue: oneDayInSecs,
-                advanceRate: 950000,
-                penaltyRate: 900000,
-                interestRate: 910000,
-                probabilityOfDefault: 800000,
-                lossGivenDefault: 810000,
-                gracePeriod: halfOfADay,
-                collectionPeriod: halfOfADay,
-                writeOffAfterGracePeriod: halfOfADay,
-                writeOffAfterCollectionPeriod: halfOfADay,
-                discountRate: 100000,
-            }];
+            const riskScores = [
+                {
+                    daysPastDue: oneDayInSecs,
+                    advanceRate: 950000,
+                    penaltyRate: 900000,
+                    interestRate: 910000,
+                    probabilityOfDefault: 800000,
+                    lossGivenDefault: 810000,
+                    gracePeriod: halfOfADay,
+                    collectionPeriod: halfOfADay,
+                    writeOffAfterGracePeriod: halfOfADay,
+                    writeOffAfterCollectionPeriod: halfOfADay,
+                    discountRate: 100000,
+                },
+            ];
 
             const openingTime = dayjs(new Date()).unix();
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 10000;
-            const finalInterest = 10000;
+            const interestRate = 10000;
+            // const initialInterest = 10000;
+            // const finalInterest = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'Ticker_';
@@ -117,11 +117,10 @@ describe('LoanAssetToken', () => {
                 closingTime,
                 rate,
                 cap: totalCapOfToken,
-                initialInterest,
-                finalInterest,
                 timeInterval,
                 amountChangeEachInterval,
                 ticker: prefixOfNoteTokenSaleName,
+                interestRate,
             };
 
             const initialJOTAmount = parseEther('1');
@@ -137,10 +136,16 @@ describe('LoanAssetToken', () => {
                 cap: totalCapOfToken,
                 initialJOTAmount,
             };
-            const [poolAddress, sotCreated, jotCreated] = await untangledProtocol.createFullPool(poolCreatorSigner, poolParams, riskScores, sotInfo, jotInfo);
+            const [poolAddress, sotCreated, jotCreated] = await untangledProtocol.createFullPool(
+                poolCreatorSigner,
+                poolParams,
+                riskScores,
+                sotInfo,
+                jotInfo
+            );
             securitizationPoolContract = await getPoolByAddress(poolAddress);
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', sotCreated.sotTGEAddress);
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', jotCreated.jotTGEAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotCreated.sotTGEAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotCreated.jotTGEAddress);
         });
 
         it('Should buy tokens successfully', async () => {
@@ -177,23 +182,23 @@ describe('LoanAssetToken', () => {
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
                     riskScore: '1',
-                    nonce: 100
-                }
-            ]
+                    nonce: 100,
+                },
+            ];
 
             // tokenIds = genLoanAgreementIds(loanRepaymentRouter.address, debtors, termsContractParameters, salts);
 
             const [, , , , wrongLoanAssetTokenValidator] = await ethers.getSigners();
 
             await expect(
-                  untangledProtocol.uploadLoans(
+                untangledProtocol.uploadLoans(
                     untangledAdminSigner,
                     securitizationPoolContract,
                     borrowerSigner,
                     ASSET_PURPOSE.LOAN,
                     loans,
                     wrongLoanAssetTokenValidator
-                  )
+                )
             ).to.be.revertedWith('LATValidator: invalid nonce');
         });
 
@@ -203,21 +208,21 @@ describe('LoanAssetToken', () => {
                     principalAmount,
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
-                    riskScore: '1'
-                }
-            ]
+                    riskScore: '1',
+                },
+            ];
 
             const [, , , , wrongLoanAssetTokenValidator] = await ethers.getSigners();
 
             await expect(
-              untangledProtocol.uploadLoans(
-                untangledAdminSigner,
-                securitizationPoolContract,
-                borrowerSigner,
-                ASSET_PURPOSE.LOAN,
-                loans,
-                wrongLoanAssetTokenValidator
-              )
+                untangledProtocol.uploadLoans(
+                    untangledAdminSigner,
+                    securitizationPoolContract,
+                    borrowerSigner,
+                    ASSET_PURPOSE.LOAN,
+                    loans,
+                    wrongLoanAssetTokenValidator
+                )
             ).to.be.revertedWith('LATValidator: invalid validator signature');
         });
 
@@ -227,21 +232,21 @@ describe('LoanAssetToken', () => {
                     principalAmount,
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
-                    riskScore: '1'
-                }
-            ]
+                    riskScore: '1',
+                },
+            ];
             const [, , , , wrongLoanAssetTokenValidator] = await ethers.getSigners();
 
             await expect(
-              untangledProtocol.uploadLoans(
-                untangledAdminSigner,
-                securitizationPoolContract,
-                borrowerSigner,
-                ASSET_PURPOSE.LOAN,
-                loans,
-                wrongLoanAssetTokenValidator,
-                wrongLoanAssetTokenValidator.address
-              ),
+                untangledProtocol.uploadLoans(
+                    untangledAdminSigner,
+                    securitizationPoolContract,
+                    borrowerSigner,
+                    ASSET_PURPOSE.LOAN,
+                    loans,
+                    wrongLoanAssetTokenValidator,
+                    wrongLoanAssetTokenValidator.address
+                ),
                 'Validator not whitelisted'
             ).to.be.revertedWith('LATValidator: invalid validator');
         });
@@ -262,13 +267,26 @@ describe('LoanAssetToken', () => {
                     principalAmount,
                     expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),
                     termInDays: 10,
-                    riskScore: '1'
-                }
-            ]
+                    riskScore: '1',
+                },
+            ];
 
             // 1: no newValidator in AA
             await expect(
-              untangledProtocol.uploadLoans(
+                untangledProtocol.uploadLoans(
+                    untangledAdminSigner,
+                    securitizationPoolContract,
+                    borrowerSigner,
+                    ASSET_PURPOSE.LOAN,
+                    loans,
+                    newValidatorSigner,
+                    aa.address
+                )
+            ).to.be.revertedWith('LATValidator: invalid validator signature');
+
+            // add whitelist & try again
+            await aa.grantRole(await aa.VALIDATOR_ROLE(), newValidatorSigner.address);
+            tokenIds = await untangledProtocol.uploadLoans(
                 untangledAdminSigner,
                 securitizationPoolContract,
                 borrowerSigner,
@@ -276,20 +294,7 @@ describe('LoanAssetToken', () => {
                 loans,
                 newValidatorSigner,
                 aa.address
-              )
-            ).to.be.revertedWith('LATValidator: invalid validator signature');
-
-            // add whitelist & try again
-            await aa.grantRole(await aa.VALIDATOR_ROLE(), newValidatorSigner.address);
-            tokenIds = await untangledProtocol.uploadLoans(
-              untangledAdminSigner,
-              securitizationPoolContract,
-              borrowerSigner,
-              ASSET_PURPOSE.LOAN,
-              loans,
-              newValidatorSigner,
-              aa.address
-            )
+            );
 
             const ownerOfAgreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
             expect(ownerOfAgreement).equal(securitizationPoolContract.address);
@@ -307,17 +312,17 @@ describe('LoanAssetToken', () => {
                     principalAmount,
                     expirationTimestamp: expirationTimestamps,
                     termInDays: 10,
-                    riskScore: '1'
-                }
-            ]
+                    riskScore: '1',
+                },
+            ];
 
             tokenIds = await untangledProtocol.uploadLoans(
-              untangledAdminSigner,
-              securitizationPoolContract,
-              borrowerSigner,
-              ASSET_PURPOSE.LOAN,
-              loans
-            )
+                untangledAdminSigner,
+                securitizationPoolContract,
+                borrowerSigner,
+                ASSET_PURPOSE.LOAN,
+                loans
+            );
 
             const ownerOfAgreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
             expect(ownerOfAgreement).equal(securitizationPoolContract.address);

@@ -45,9 +45,9 @@ contract Registry is UntangledBase {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.TOKEN_GENERATION_EVENT_FACTORY), newAddress);
     }
 
-    function setDistributionAssessor(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.DISTRIBUTION_ASSESSOR), newAddress);
-    }
+    // function setDistributionAssessor(address newAddress) public onlyAdmin whenNotPaused {
+    //     _setAddress(uint8(Configuration.CONTRACT_TYPE.DISTRIBUTION_ASSESSOR), newAddress);
+    // }
 
     function setLoanAssetToken(address newAddress) public onlyAdmin whenNotPaused {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.LOAN_ASSET_TOKEN), newAddress);

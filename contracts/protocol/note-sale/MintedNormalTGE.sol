@@ -115,7 +115,7 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
     }
 
     function getTokenPrice() public view returns (uint256) {
-        return registry.getDistributionAssessor().calcTokenPrice(pool, token);
+        return registry.getSecuritizationPoolValueService().calcTokenPrice(pool, token);
     }
 
     function getTokenAmount(uint256 currencyAmount) public view returns (uint256) {

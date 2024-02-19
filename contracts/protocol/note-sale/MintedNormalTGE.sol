@@ -15,6 +15,8 @@ import '../../interfaces/INoteToken.sol';
 contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
     using ConfigHelper for Registry;
 
+    Registry public registry;
+
     /// @dev Pool address which this sale belongs to
     address public pool;
 
@@ -26,7 +28,8 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
     /// @dev The token being sold
     address public currency;
 
-    uint256 public firstNoteTokenMintedTimestamp; // Timestamp at which the first asset is collected to pool
+    /// @dev Timestamp at which the first asset is collected to pool
+    uint256 public firstNoteTokenMintedTimestamp;
 
     /// @dev Amount of currency raised
     uint256 internal _currencyRaised;
@@ -40,17 +43,17 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
     /// @dev Minimum currency bid amount for note token
     uint256 public minBidAmount;
 
-    // How many token units a buyer gets per currency.
-    uint256 public rate; // support by RATE_SCALING_FACTOR decimal numbers
+    uint256 public interestRate;
+
+    uint256 public initialAmount;
 
     mapping(address => uint256) public _currencyRaisedByInvestor;
 
-    Registry public registry;
-    uint256 public interestRate;
-    uint256 public initialAmount;
-
     function initialize(Registry _registry, address _pool, address _token, address _currency) public initializer {
         __UntangledBase__init_unchained(_msgSender());
+        require(_pool != address(0), 'Pool address cannot be empty');
+        require(_token != address(0), 'Token address cannot be empty');
+        require(_currency != address(0), 'Currency address cannot be empty');
         registry = _registry;
         pool = _pool;
         token = _token;
@@ -145,11 +148,6 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
             IPool(pool).setUpOpeningBlockTimestamp();
         }
         noteToken.mint(beneficiary, tokenAmount);
-    }
-
-    /// @dev Burns and delivers tokens to the beneficiary
-    function _ejectTokens(uint256 tokenAmount) internal {
-        INoteToken(token).burn(tokenAmount);
     }
 
     /// @dev Transfers the currency from the payer to the MintedNormalTGE contract

@@ -1,19 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
-import {IERC20MetadataUpgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20MetadataUpgradeable.sol';
 import '@openzeppelin/contracts/utils/math/Math.sol';
-
 import {INoteToken} from '../../interfaces/INoteToken.sol';
-import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
-import {IDistributionAssessor} from '../../interfaces/IDistributionAssessor.sol';
 import {SecuritizationPoolServiceBase} from './base/SecuritizationPoolServiceBase.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {Configuration} from '../../libraries/Configuration.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
 
@@ -329,5 +323,4 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         uint256 x = ((b - delta.sqrt()) * ONE_HUNDRED_PERCENT) / (2 * maxSeniorRatio);
         return x;
     }
-
 }

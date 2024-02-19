@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {UntangledBase} from '../../../base/UntangledBase.sol';
-import {ITokenGenerationEventFactory} from './ITokenGenerationEventFactory.sol';
+import {ITokenGenerationEventFactory} from '../../../interfaces/ITokenGenerationEventFactory.sol';
 import {ConfigHelper} from '../../../libraries/ConfigHelper.sol';
 import {Factory} from '../../../base/Factory.sol';
 import {Registry} from '../../../storage/Registry.sol';
@@ -14,6 +14,14 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
     using ConfigHelper for Registry;
 
     bytes4 constant TGE_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,address,address,address)'));
+
+    Registry public registry;
+
+    address[] public tgeAddresses;
+
+    mapping(address => bool) public isExistingTge;
+    
+    mapping(SaleType => address) public TGEImplAddress;
 
     function __TokenGenerationEventFactory_init(Registry _registry, address _factoryAdmin) internal onlyInitializing {
         __UntangledBase__init(_msgSender());

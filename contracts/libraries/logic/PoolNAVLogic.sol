@@ -374,7 +374,7 @@ library PoolNAVLogic
         uint256 latestNAV_ = _poolStorage.latestNAV;
 
         // first time written-off
-        if (GenericLogic.isLoanWrittenOff(_poolStorage,loan) == false) {
+        if (!GenericLogic.isLoanWrittenOff(_poolStorage,loan)) {
             uint256 fv = GenericLogic.futureValue(_poolStorage,nftID_);
             if (Discounting.uniqueDayTimestamp(_poolStorage.lastNAVUpdate) > maturityDate_) {
                 // write off after the maturity date

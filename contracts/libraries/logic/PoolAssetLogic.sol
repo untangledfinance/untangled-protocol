@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
+import {UntangledERC721} from '../../tokens/ERC721/UntangledERC721.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {DataTypes} from '../DataTypes.sol';
@@ -13,7 +13,6 @@ import './PoolNAVLogic.sol';
  * @author Untangled Team
  */
 library PoolAssetLogic {
-
     event ExportNFTAsset(address tokenAddress, address toPoolAddress, uint256[] tokenIds);
     event WithdrawNFTAsset(address[] tokenAddresses, uint256[] tokenIds, address[] recipients);
     event UpdateOpeningBlockTimestamp(uint256 newTimestamp);
@@ -53,7 +52,6 @@ library PoolAssetLogic {
         if (!existsTokenAssetAddress[tokenAddress]) tokenAssetAddresses.push(tokenAddress);
         existsTokenAssetAddress[tokenAddress] = true;
     }
-
 
     // TODO have to use modifier in main contract
     function setupRiskScores(
@@ -127,14 +125,13 @@ library PoolAssetLogic {
         address toPoolAddress,
         uint256[] calldata tokenIds
     ) external {
-
         uint256 tokenIdsLength = tokenIds.length;
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
             require(_removeNFTAsset(_nftAssets, tokenAddress, tokenIds[i]), 'SecuritizationPool: Asset does not exist');
         }
 
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
-            IUntangledERC721(tokenAddress).safeTransferFrom(address(this), toPoolAddress, tokenIds[i]);
+            UntangledERC721(tokenAddress).safeTransferFrom(address(this), toPoolAddress, tokenIds[i]);
         }
 
         emit ExportNFTAsset(tokenAddress, toPoolAddress, tokenIds);
@@ -161,7 +158,7 @@ library PoolAssetLogic {
             );
         }
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {
-            IUntangledERC721(tokenAddresses[i]).safeTransferFrom(address(this), recipients[i], tokenIds[i]);
+            UntangledERC721(tokenAddresses[i]).safeTransferFrom(address(this), recipients[i], tokenIds[i]);
         }
 
         emit WithdrawNFTAsset(tokenAddresses, tokenIds, recipients);
@@ -195,7 +192,6 @@ library PoolAssetLogic {
 
     // TODO have to use modifier in main contract
     function collectERC20Asset(DataTypes.Storage storage _poolStorgae, address tokenAddress) external {
-
         _pushTokenAssetAddress(_poolStorgae.existsTokenAssetAddress, _poolStorgae.tokenAssetAddresses, tokenAddress);
 
         if (_poolStorgae.openingBlockTimestamp == 0) {
@@ -212,7 +208,6 @@ library PoolAssetLogic {
         address[] calldata recipients,
         uint256[] calldata amounts
     ) external {
-
         uint256 tokenAddressesLength = tokenAddresses.length;
         require(tokenAddressesLength == recipients.length, 'tokenAddresses length and tokenIds length are not equal');
         require(tokenAddressesLength == amounts.length, 'tokenAddresses length and recipients length are not equal');
@@ -225,7 +220,6 @@ library PoolAssetLogic {
 
         emit WithdrawERC20Asset(tokenAddresses, recipients, amounts);
     }
-
 
     // TODO have to use modifier in main contract
     function setUpOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage) public {

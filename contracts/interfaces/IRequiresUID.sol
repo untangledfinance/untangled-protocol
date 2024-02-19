@@ -2,4 +2,7 @@
 
 pragma solidity 0.8.19;
 
-import {IRequiresUID} from '../uid/IRequiresUID.sol';
+interface IRequiresUID {
+    function hasAllowedUID(address sender) external view returns (bool);
+}
+

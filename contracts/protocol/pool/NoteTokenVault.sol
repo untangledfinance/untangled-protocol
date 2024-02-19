@@ -7,8 +7,6 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import {ERC20BurnableUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol';
-import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
-
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {INoteTokenVault} from '../../interfaces/INoteTokenVault.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
@@ -47,7 +45,7 @@ contract NoteTokenVault is
     /// @dev Checks if redeeming is allowed for a given pool.
     /// @param pool The address of the pool to check.
     modifier orderAllowed(address pool) {
-        require(poolRedeemDisabled[pool] == false, 'redeem-not-allowed');
+        require(!poolRedeemDisabled[pool], 'redeem-not-allowed');
         _;
     }
 
@@ -278,5 +276,4 @@ contract NoteTokenVault is
     function _isSotToken(address noteToken, address sotToken) internal pure returns (bool) {
         return noteToken == sotToken;
     }
-
 }

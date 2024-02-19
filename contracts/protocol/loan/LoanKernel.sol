@@ -170,13 +170,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return riskScores;
     }
 
-    function _getAssetPurposeAndRiskScore(uint8 assetPurpose, uint8 riskScore) private pure returns (uint8[] memory) {
-        uint8[] memory assetPurposeAndRiskScore = new uint8[](2);
-        assetPurposeAndRiskScore[0] = assetPurpose;
-        assetPurposeAndRiskScore[1] = riskScore;
-        return assetPurposeAndRiskScore;
-    }
-
     function _burnLoanAssetToken(bytes32 agreementId) private {
         registry.getLoanAssetToken().burn(uint256(agreementId));
     }
@@ -233,27 +226,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return true;
     }
 
-    /// @inheritdoc ILoanKernel
-    function repayInBatch(
-        bytes32[] calldata agreementIds,
-        uint256[] calldata amounts,
-        address tokenAddress
-    ) external override whenNotPaused nonReentrant returns (bool) {
-        uint256 agreementIdsLength = agreementIds.length;
-        for (uint256 i = 0; i < agreementIdsLength; i++) {
-            require(
-                _assertRepaymentRequest(agreementIds[i], tokenAddress),
-                'LoanRepaymentRouter: Invalid repayment request'
-            );
-            require(
-                _doRepay(agreementIds[i], _msgSender(), amounts[i], tokenAddress),
-                'LoanRepaymentRouter: Repayment has failed'
-            );
-        }
-        emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
-        return true;
-    }
-
     /// @dev A loan, stop lending/loan terms or allow the loan loss
     function _concludeLoan(address creditor, bytes32 agreementId) internal {
         require(creditor != address(0), 'Invalid creditor account.');
@@ -264,6 +236,39 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         }
 
         _burnLoanAssetToken(agreementId);
+    }
+
+    function _getDebtOrderHash(
+        bytes32 agreementId,
+        uint256 principalAmount,
+        address principalTokenAddress,
+        uint256 expirationTimestampInSec
+    ) private view returns (bytes32 _debtorMessageHash) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    address(this),
+                    agreementId,
+                    principalAmount,
+                    principalTokenAddress,
+                    expirationTimestampInSec
+                )
+            );
+    }
+
+    function _genLoanAgreementIds(
+        address _version,
+        address[] memory _debtors,
+        bytes32[] memory _termsContractParameters,
+        uint256[] memory _salts
+    ) private pure returns (bytes32[] memory) {
+        bytes32[] memory agreementIds = new bytes32[](_salts.length);
+        for (uint256 i = 0; i < (0 + _salts.length); i = UntangledMath.uncheckedInc(i)) {
+            agreementIds[i] = keccak256(
+                abi.encodePacked(_version, _debtors[i], _termsContractParameters[i], _salts[i])
+            );
+        }
+        return agreementIds;
     }
 
     /*********************** */
@@ -337,36 +342,24 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         IPool(poolAddress).withdraw(_msgSender(), expectedAssetsValue);
     }
 
-    function _getDebtOrderHash(
-        bytes32 agreementId,
-        uint256 principalAmount,
-        address principalTokenAddress,
-        uint256 expirationTimestampInSec
-    ) private view returns (bytes32 _debtorMessageHash) {
-        return
-            keccak256(
-                abi.encodePacked(
-                    address(this),
-                    agreementId,
-                    principalAmount,
-                    principalTokenAddress,
-                    expirationTimestampInSec
-                )
+    /// @inheritdoc ILoanKernel
+    function repayInBatch(
+        bytes32[] calldata agreementIds,
+        uint256[] calldata amounts,
+        address tokenAddress
+    ) external override whenNotPaused nonReentrant returns (bool) {
+        uint256 agreementIdsLength = agreementIds.length;
+        for (uint256 i = 0; i < agreementIdsLength; i++) {
+            require(
+                _assertRepaymentRequest(agreementIds[i], tokenAddress),
+                'LoanRepaymentRouter: Invalid repayment request'
             );
-    }
-
-    function _genLoanAgreementIds(
-        address _version,
-        address[] memory _debtors,
-        bytes32[] memory _termsContractParameters,
-        uint256[] memory _salts
-    ) private pure returns (bytes32[] memory) {
-        bytes32[] memory agreementIds = new bytes32[](_salts.length);
-        for (uint256 i = 0; i < (0 + _salts.length); i = UntangledMath.uncheckedInc(i)) {
-            agreementIds[i] = keccak256(
-                abi.encodePacked(_version, _debtors[i], _termsContractParameters[i], _salts[i])
+            require(
+                _doRepay(agreementIds[i], _msgSender(), amounts[i], tokenAddress),
+                'LoanRepaymentRouter: Repayment has failed'
             );
         }
-        return agreementIds;
+        emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
+        return true;
     }
 }

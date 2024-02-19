@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: Unlicense
-import {DataTypes} from '../libraries/DataTypes.sol';
 pragma solidity 0.8.19;
+
+import {DataTypes} from '../libraries/DataTypes.sol';
+
 interface IPool {
     function BACKEND_ADMIN() external view returns (bytes32);
     function DEFAULT_ADMIN_ROLE() external view returns (bytes32);

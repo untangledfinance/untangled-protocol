@@ -20,8 +20,11 @@ import {Configuration} from '../../libraries/Configuration.sol';
  */
 contract Pool is PoolStorage, UntangledBase {
     using ConfigHelper for Registry;
+
     Registry public registry;
+
     event InsertNFTAsset(address token, uint256 tokenId);
+
     modifier onlyIssuingTokenStage() {
         DataTypes.CycleState _state = _poolStorage.state;
         require(
@@ -176,28 +179,10 @@ contract Pool is PoolStorage, UntangledBase {
     function writeOff(uint256 loan) public {
         PoolNAVLogic.writeOff(_poolStorage, loan);
     }
-    function addLoan(uint256 loan, DataTypes.LoanEntry calldata loanEntry) private returns (uint256) {
-        return PoolNAVLogic.addLoan(_poolStorage, loan, loanEntry);
-    }
 
     function repayLoan(uint256 loan, uint256 amount) external returns (uint256) {
         require(address(registry.getLoanKernel()) == msg.sender, 'not authorized');
         return PoolNAVLogic.repayLoan(_poolStorage, loan, amount);
-    }
-
-    function file(bytes32 name, uint256 value) private {
-        PoolNAVLogic.file(_poolStorage, name, value);
-    }
-
-    function file(
-        bytes32 name,
-        uint256 rate_,
-        uint256 writeOffPercentage_,
-        uint256 overdueDays_,
-        uint256 penaltyRate_,
-        uint256 riskIndex
-    ) private {
-        PoolNAVLogic.file(_poolStorage, name, rate_, writeOffPercentage_, overdueDays_, penaltyRate_, riskIndex);
     }
 
     function debt(uint256 loan) external view returns (uint256 loanDebt) {

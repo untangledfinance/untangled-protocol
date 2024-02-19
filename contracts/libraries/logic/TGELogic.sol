@@ -9,7 +9,6 @@ import {DataTypes} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
 
 library TGELogic {
-    bytes32 constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
     uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
     event UpdateTGEAddress(address tge, Configuration.NOTE_TOKEN_TYPE noteType);
@@ -19,7 +18,6 @@ library TGELogic {
     event UpdateMintFirstLoss(uint32 _mintFirstLoss);
     event Withdraw(address originatorAddress, uint256 amount);
     event ClaimCashRemain(address pot, address recipientWallet, uint256 balance);
-
 
     // alias
     function sotToken(DataTypes.Storage storage _poolStorage) public view returns (address) {
@@ -70,17 +68,14 @@ library TGELogic {
         return _poolStorage.totalAssetRepaidCurrency;
     }
 
-
     function injectTGEAddress(
         DataTypes.Storage storage _poolStorage,
         address _tgeAddress,
         Configuration.NOTE_TOKEN_TYPE _noteType
     ) external {
-
         require(_tgeAddress != address(0), 'SecuritizationPool: Address zero');
         address _tokenAddress = IMintedNormalTGE(_tgeAddress).token();
         require(_tokenAddress != address(0), 'SecuritizationPool: Address zero');
-
 
         if (_noteType == Configuration.NOTE_TOKEN_TYPE.SENIOR) {
             _poolStorage.tgeAddress = _tgeAddress;
@@ -108,7 +103,6 @@ library TGELogic {
     }
 
     function isDebtCeilingValid(DataTypes.Storage storage _poolStorage) public view returns (bool) {
-        
         uint256 totalDebt = 0;
         if (_poolStorage.tgeAddress != address(0)) {
             totalDebt += IMintedNormalTGE(_poolStorage.tgeAddress).currencyRaised();
@@ -121,7 +115,6 @@ library TGELogic {
 
     // Increase by value
     function increaseTotalAssetRepaidCurrency(DataTypes.Storage storage _poolStorage, uint256 amount) external {
-
         _poolStorage.reserve = _poolStorage.reserve + amount;
         _poolStorage.totalAssetRepaidCurrency = _poolStorage.totalAssetRepaidCurrency + amount;
 
@@ -143,7 +136,6 @@ library TGELogic {
     }
 
     function setPot(DataTypes.Storage storage _poolStorage, address _pot) external {
-
         require(_poolStorage.pot != _pot, 'SecuritizationPool: Same address with current pot');
         _poolStorage.pot = _pot;
 
@@ -165,7 +157,6 @@ library TGELogic {
             'SecuritizationPool: minFirstLossCushion is greater than 100'
         );
 
-        
         _poolStorage.minFirstLossCushion = _minFirstLossCushion;
         emit UpdateMintFirstLoss(_minFirstLossCushion);
     }
@@ -175,7 +166,6 @@ library TGELogic {
     }
 
     function _setDebtCeiling(DataTypes.Storage storage _poolStorage, uint256 _debtCeiling) internal {
-        
         _poolStorage.debtCeiling = _debtCeiling;
         emit UpdateDebtCeiling(_debtCeiling);
     }
@@ -185,7 +175,6 @@ library TGELogic {
         address poolServiceAddress,
         uint256 currencyAmount
     ) external {
-
         _poolStorage.reserve = _poolStorage.reserve + currencyAmount;
         require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
 
@@ -205,7 +194,6 @@ library TGELogic {
         address poolServiceAddress,
         uint256 currencyAmount
     ) private {
-        
         _poolStorage.reserve = _poolStorage.reserve - currencyAmount;
         require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
 
@@ -214,8 +202,6 @@ library TGELogic {
 
     // After closed pool and redeem all not -> get remain cash to recipient wallet
     function claimCashRemain(DataTypes.Storage storage _poolStorage, address recipientWallet) external {
-        
-
         IERC20Upgradeable currency = IERC20Upgradeable(_poolStorage.underlyingCurrency);
         uint256 balance = currency.balanceOf(_poolStorage.pot);
         require(
@@ -232,7 +218,6 @@ library TGELogic {
         address to,
         uint256 amount
     ) public {
-        
         require(_poolStorage.reserve >= amount, 'SecuritizationPool: not enough reserve');
 
         _decreaseReserve(_poolStorage, poolServiceAddress, amount);

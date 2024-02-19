@@ -3,10 +3,9 @@ pragma solidity 0.8.19;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC721/presets/ERC721PresetMinterPauserAutoIdUpgradeable.sol';
 import '@openzeppelin/contracts/utils/Strings.sol';
-
 import '../../storage/Registry.sol';
 
-abstract contract IUntangledERC721 is ERC721PresetMinterPauserAutoIdUpgradeable {
+abstract contract UntangledERC721 is ERC721PresetMinterPauserAutoIdUpgradeable {
     Registry public registry;
 
     string private _baseTokenURI;

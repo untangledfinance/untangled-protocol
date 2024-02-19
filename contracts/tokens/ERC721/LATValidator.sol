@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {AccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import {EIP712Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol';
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import {SignatureCheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol';
 import {ERC165CheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol';
 import {IPool} from '../../interfaces/IPool.sol';
-import {IERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
-import {IERC5008} from './IERC5008.sol';
+import {IERC5008} from '../../interfaces/IERC5008.sol';
 import {VALIDATOR_ROLE, DataTypes} from '../../libraries/DataTypes.sol';
 
 abstract contract LATValidator is IERC5008, EIP712Upgradeable {

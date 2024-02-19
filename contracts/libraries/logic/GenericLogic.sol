@@ -30,8 +30,7 @@ import {Discounting} from '../Discounting.sol';
  *  Automatically invests across borrower pools using an adjustable strategy.
  * @author Untangled Team
  */
-library GenericLogic 
-{
+library GenericLogic {
     uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
     uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
@@ -46,8 +45,10 @@ library GenericLogic
     /// @notice getter function for the maturityDate
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
     /// @return maturityDate_ the maturityDate of the nft
-    function maturityDate(DataTypes.Storage storage _poolStorage,bytes32 nft_) internal view  returns (uint256 maturityDate_) {
-        
+    function maturityDate(
+        DataTypes.Storage storage _poolStorage,
+        bytes32 nft_
+    ) internal view returns (uint256 maturityDate_) {
         return uint256(_poolStorage.details[nft_].maturityDate);
     }
 
@@ -55,8 +56,7 @@ library GenericLogic
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
     /// @return risk_ the risk group of the nft
 
-    function risk(DataTypes.Storage storage _poolStorage,bytes32 nft_) internal view returns (uint256 risk_) {
-        
+    function risk(DataTypes.Storage storage _poolStorage, bytes32 nft_) internal view returns (uint256 risk_) {
         return uint256(_poolStorage.details[nft_].risk);
     }
 
@@ -67,8 +67,7 @@ library GenericLogic
     /// @notice getter function for the future value
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
     /// @return fv_ future value of the loan
-    function futureValue(DataTypes.Storage storage _poolStorage, bytes32 nft_) internal view  returns (uint256 fv_) {
-        
+    function futureValue(DataTypes.Storage storage _poolStorage, bytes32 nft_) internal view returns (uint256 fv_) {
         return uint256(_poolStorage.details[nft_].futureValue);
     }
 
@@ -79,8 +78,12 @@ library GenericLogic
     /// @notice getter function for the recovery rate PD
     /// @param riskID id of a risk group
     /// @return recoveryRatePD_ recovery rate PD of the risk group
-    function recoveryRatePD(DataTypes.RiskScore[] storage riskScores,uint256 riskID, uint256 termLength) internal view returns (uint256 recoveryRatePD_) {
-        DataTypes.RiskScore memory riskParam = getRiskScoreByIdx(riskScores,riskID);
+    function recoveryRatePD(
+        DataTypes.RiskScore[] storage riskScores,
+        uint256 riskID,
+        uint256 termLength
+    ) internal view returns (uint256 recoveryRatePD_) {
+        DataTypes.RiskScore memory riskParam = getRiskScoreByIdx(riskScores, riskID);
         return
             Math.ONE -
             (Math.ONE * riskParam.probabilityOfDefault * riskParam.lossGivenDefault * termLength) /
@@ -90,13 +93,16 @@ library GenericLogic
     /// @notice getter function for the borrowed amount
     /// @param loan id of a loan
     /// @return borrowed_ borrowed amount of the loan
-    function borrowed(DataTypes.Storage storage _poolStorage,uint256 loan) internal view returns (uint256 borrowed_) {
+    function borrowed(DataTypes.Storage storage _poolStorage, uint256 loan) internal view returns (uint256 borrowed_) {
         return uint256(_poolStorage.loanDetails[loan].borrowed);
     }
 
     /** UTILITY FUNCTION */
     // TODO have to use modifier in main contract
-    function getRiskScoreByIdx(DataTypes.RiskScore[] storage riskScores,uint256 idx) internal view returns (DataTypes.RiskScore memory) {
+    function getRiskScoreByIdx(
+        DataTypes.RiskScore[] storage riskScores,
+        uint256 idx
+    ) internal view returns (DataTypes.RiskScore memory) {
         if (idx == 0 || riskScores.length == 0) {
             // Default risk score
             return
@@ -128,10 +134,9 @@ library GenericLogic
     }
     // TODO have to use modifier in main contract
 
-
     /// @notice returns if a loan is written off
     /// @param loan the id of the loan
-    function isLoanWrittenOff(DataTypes.Storage storage _poolStorage,uint256 loan) internal view returns (bool) {
+    function isLoanWrittenOff(DataTypes.Storage storage _poolStorage, uint256 loan) internal view returns (bool) {
         return _poolStorage.loanRates[loan] >= WRITEOFF_RATE_GROUP_START;
     }
 
@@ -142,8 +147,8 @@ library GenericLogic
         return Math.safeAdd(totalDiscount, Math.safeAdd(overdue, writeOffs));
     }
 
-    function currentNAVAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) internal view returns (uint256) {
-        (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentAV(_poolStorage,tokenId);
+    function currentNAVAsset(DataTypes.Storage storage _poolStorage, bytes32 tokenId) internal view returns (uint256) {
+        (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) = currentAV(_poolStorage, tokenId);
         return Math.safeAdd(totalDiscount, Math.safeAdd(overdue, writeOffs));
     }
 
@@ -151,15 +156,16 @@ library GenericLogic
     /// @return totalDiscount the present value of the loans
     /// @return overdue the present value of the overdue loans
     /// @return writeOffs the present value of the written off loans
-    function currentPVs(DataTypes.Storage storage _poolStorage) internal view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
-        
+    function currentPVs(
+        DataTypes.Storage storage _poolStorage
+    ) internal view returns (uint256 totalDiscount, uint256 overdue, uint256 writeOffs) {
         uint256 latestDiscount;
         uint256 overdueLoans;
         uint256 discountRate;
         uint256 lastNAVUpdate;
         {
-            latestDiscount = _poolStorage.latestDiscount; 
-            overdueLoans = _poolStorage.overdueLoans; 
+            latestDiscount = _poolStorage.latestDiscount;
+            overdueLoans = _poolStorage.overdueLoans;
             discountRate = _poolStorage.discountRate;
             lastNAVUpdate = _poolStorage.lastNAVUpdate;
         }
@@ -177,7 +183,10 @@ library GenericLogic
         for (uint256 i = lastNAVUpdate; i < nnow; i = i + 1 days) {
             uint256 b = _poolStorage.buckets[i];
             if (b != 0) {
-                errPV = Math.safeAdd(errPV, Math.rmul(b, Discounting.rpow(discountRate, Math.safeSub(nnow, i), Math.ONE)));
+                errPV = Math.safeAdd(
+                    errPV,
+                    Math.rmul(b, Discounting.rpow(discountRate, Math.safeSub(nnow, i), Math.ONE))
+                );
                 overdue = Math.safeAdd(overdue, b);
             }
         }
@@ -185,19 +194,15 @@ library GenericLogic
         return (
             // calculate current totalDiscount based on the previous totalDiscount (optimized calculation)
             // the overdue loans are incorrectly in this new result with their current PV and need to be removed
-            Discounting.secureSub(Math.rmul(latestDiscount, Discounting.rpow(discountRate, Math.safeSub(nnow, lastNAVUpdate), Math.ONE)), errPV),
+            Discounting.secureSub(
+                Math.rmul(latestDiscount, Discounting.rpow(discountRate, Math.safeSub(nnow, lastNAVUpdate), Math.ONE)),
+                errPV
+            ),
             // current overdue loans not written off
             Math.safeAdd(overdueLoans, overdue),
             // current write-offs loans
             currentWriteOffs(_poolStorage)
         );
-    }
-
-    function currentWriteOffAsset(DataTypes.Storage storage _poolStorage,bytes32 tokenId) internal view returns (uint256) {
-        uint256 _currentWriteOffs = 0;
-        uint256 writeOffGroupIndex = currentValidWriteOffGroup(_poolStorage,uint256(tokenId));
-        _currentWriteOffs = Math.rmul(debt(_poolStorage,uint256(tokenId)), uint256(_poolStorage.writeOffGroups[writeOffGroupIndex].percentage));
-        return _currentWriteOffs;
     }
 
     function currentAV(
@@ -216,9 +221,12 @@ library GenericLogic
             overdueLoansOfNavAssetsID = _poolStorage.overdueLoansOfNavAssets[tokenId];
         }
 
-        if (isLoanWrittenOff(_poolStorage,uint256(tokenId))) {
-            uint256 writeOffGroupIndex = currentValidWriteOffGroup(_poolStorage,uint256(tokenId));
-            _currentWriteOffs = Math.rmul(debt(_poolStorage,uint256(tokenId)), uint256(_poolStorage.writeOffGroups[writeOffGroupIndex].percentage));
+        if (isLoanWrittenOff(_poolStorage, uint256(tokenId))) {
+            uint256 writeOffGroupIndex = currentValidWriteOffGroup(_poolStorage, uint256(tokenId));
+            _currentWriteOffs = Math.rmul(
+                debt(_poolStorage, uint256(tokenId)),
+                uint256(_poolStorage.writeOffGroups[writeOffGroupIndex].percentage)
+            );
         }
 
         if (latestDiscountOfNavAssetsID == 0) {
@@ -230,16 +238,19 @@ library GenericLogic
         uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
 
         // loan is overdue since lastNAVUpdate
-        uint256 mat = Discounting.uniqueDayTimestamp(maturityDate(_poolStorage,tokenId));
+        uint256 mat = Discounting.uniqueDayTimestamp(maturityDate(_poolStorage, tokenId));
         if (mat >= lastNAVUpdate && mat < nnow) {
-            uint256 b = futureValue(_poolStorage,tokenId);
+            uint256 b = futureValue(_poolStorage, tokenId);
             errPV = Math.rmul(b, Discounting.rpow(discountRate, Math.safeSub(nnow, mat), Math.ONE));
             overdue = b;
         }
 
         return (
             Discounting.secureSub(
-                Math.rmul(latestDiscountOfNavAssetsID, Discounting.rpow(discountRate, Math.safeSub(nnow, lastNAVUpdate), Math.ONE)),
+                Math.rmul(
+                    latestDiscountOfNavAssetsID,
+                    Discounting.rpow(discountRate, Math.safeSub(nnow, lastNAVUpdate), Math.ONE)
+                ),
                 errPV
             ),
             Math.safeAdd(overdueLoansOfNavAssetsID, overdue),
@@ -253,7 +264,13 @@ library GenericLogic
         for (uint256 i = 0; i < _poolStorage.writeOffGroups.length; i++) {
             // multiply writeOffGroupDebt with the writeOff rate
 
-            sum = Math.safeAdd(sum, Math.rmul(rateDebt(_poolStorage,WRITEOFF_RATE_GROUP_START + i), uint256(_poolStorage.writeOffGroups[i].percentage)));
+            sum = Math.safeAdd(
+                sum,
+                Math.rmul(
+                    rateDebt(_poolStorage, WRITEOFF_RATE_GROUP_START + i),
+                    uint256(_poolStorage.writeOffGroups[i].percentage)
+                )
+            );
         }
         return sum;
     }
@@ -266,7 +283,7 @@ library GenericLogic
         for (uint i = 0; i < _poolStorage.loanCount; ++i) {
             bytes32 _nftID = _poolStorage.loanToNFT[i];
 
-            (uint256 td, uint256 ol, ) = currentAV(_poolStorage,_nftID);
+            (uint256 td, uint256 ol, ) = currentAV(_poolStorage, _nftID);
             _poolStorage.overdueLoansOfNavAssets[_nftID] = ol;
             _poolStorage.latestDiscountOfNavAssets[_nftID] = td;
         }
@@ -289,7 +306,7 @@ library GenericLogic
         uint256 latestDiscount_ = 0;
         for (uint256 loanID = 1; loanID < _poolStorage.loanCount; loanID++) {
             bytes32 nftID_ = nftID(loanID);
-            uint256 maturityDate_ = maturityDate(_poolStorage,nftID_);
+            uint256 maturityDate_ = maturityDate(_poolStorage, nftID_);
 
             if (maturityDate_ < _poolStorage.lastNAVUpdate) {
                 continue;
@@ -297,7 +314,7 @@ library GenericLogic
 
             uint256 discountIncrease_ = Discounting.calcDiscount(
                 _poolStorage.discountRate,
-                futureValue(_poolStorage,nftID_),
+                futureValue(_poolStorage, nftID_),
                 _poolStorage.lastNAVUpdate,
                 maturityDate_
             );
@@ -305,12 +322,14 @@ library GenericLogic
             _poolStorage.latestDiscountOfNavAssets[nftID_] = discountIncrease_;
         }
 
-        _poolStorage.latestNAV = Math.safeAdd(latestDiscount_, Math.safeSub(_poolStorage.latestNAV, _poolStorage.latestDiscount));
+        _poolStorage.latestNAV = Math.safeAdd(
+            latestDiscount_,
+            Math.safeSub(_poolStorage.latestNAV, _poolStorage.latestDiscount)
+        );
         _poolStorage.latestDiscount = latestDiscount_;
 
         return _poolStorage.latestNAV;
     }
-
 
     /// @notice returns the nftID for the underlying collateral nft
     /// @param loan the loan id
@@ -322,12 +341,15 @@ library GenericLogic
     /// @notice returns the current valid write off group of a loan
     /// @param loan the loan id
     /// @return writeOffGroup_ the current valid write off group of a loan
-    function currentValidWriteOffGroup(DataTypes.Storage storage _poolStorage,uint256 loan) internal view returns (uint256 writeOffGroup_) {
+    function currentValidWriteOffGroup(
+        DataTypes.Storage storage _poolStorage,
+        uint256 loan
+    ) internal view returns (uint256 writeOffGroup_) {
         bytes32 nftID_ = nftID(loan);
-        uint256 maturityDate_ = maturityDate(_poolStorage,nftID_);
+        uint256 maturityDate_ = maturityDate(_poolStorage, nftID_);
         uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
 
-        DataTypes.NFTDetails memory nftDetail = getAsset(_poolStorage,nftID_);
+        DataTypes.NFTDetails memory nftDetail = getAsset(_poolStorage, nftID_);
 
         uint128 _loanRiskIndex = nftDetail.risk - 1;
 
@@ -350,12 +372,16 @@ library GenericLogic
         return lastValidWriteOff;
     }
 
-    function debt(DataTypes.Storage storage _poolStorage,uint256 loan) internal view  returns (uint256 loanDebt) {
+    function debt(DataTypes.Storage storage _poolStorage, uint256 loan) internal view returns (uint256 loanDebt) {
         uint256 rate_ = _poolStorage.loanRates[loan];
         uint256 chi_ = _poolStorage.rates[rate_].chi;
         uint256 penaltyChi_ = _poolStorage.rates[rate_].penaltyChi;
         if (block.timestamp >= _poolStorage.rates[rate_].lastUpdated) {
-            chi_ = chargeInterest(_poolStorage.rates[rate_].chi, _poolStorage.rates[rate_].ratePerSecond, _poolStorage.rates[rate_].lastUpdated);
+            chi_ = chargeInterest(
+                _poolStorage.rates[rate_].chi,
+                _poolStorage.rates[rate_].ratePerSecond,
+                _poolStorage.rates[rate_].lastUpdated
+            );
             penaltyChi_ = chargeInterest(
                 _poolStorage.rates[rate_].penaltyChi,
                 _poolStorage.rates[rate_].penaltyRatePerSecond,
@@ -370,14 +396,17 @@ library GenericLogic
         }
     }
 
-    function rateDebt(DataTypes.Storage storage _poolStorage,uint256 rate) internal view returns (uint256 totalDebt) {
-        
+    function rateDebt(DataTypes.Storage storage _poolStorage, uint256 rate) internal view returns (uint256 totalDebt) {
         uint256 chi_ = _poolStorage.rates[rate].chi;
         uint256 penaltyChi_ = _poolStorage.rates[rate].penaltyChi;
         uint256 pie_ = _poolStorage.rates[rate].pie;
 
         if (block.timestamp >= _poolStorage.rates[rate].lastUpdated) {
-            chi_ = chargeInterest(_poolStorage.rates[rate].chi, _poolStorage.rates[rate].ratePerSecond, _poolStorage.rates[rate].lastUpdated);
+            chi_ = chargeInterest(
+                _poolStorage.rates[rate].chi,
+                _poolStorage.rates[rate].ratePerSecond,
+                _poolStorage.rates[rate].lastUpdated
+            );
             penaltyChi_ = chargeInterest(
                 _poolStorage.rates[rate].penaltyChi,
                 _poolStorage.rates[rate].penaltyRatePerSecond,
@@ -392,8 +421,7 @@ library GenericLogic
         }
     }
 
-    function setRate(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 rate) internal {
-        
+    function setRate(DataTypes.Storage storage _poolStorage, uint256 loan, uint256 rate) internal {
         require(_poolStorage.pie[loan] == 0, 'non-zero-debt');
         // rate category has to be initiated
         require(_poolStorage.rates[rate].chi != 0, 'rate-group-not-set');
@@ -401,15 +429,14 @@ library GenericLogic
         emit SetRate(nftID(loan), rate);
     }
 
-    function changeRate(DataTypes.Storage storage _poolStorage,uint256 loan, uint256 newRate) internal {
-        
+    function changeRate(DataTypes.Storage storage _poolStorage, uint256 loan, uint256 newRate) internal {
         require(_poolStorage.rates[newRate].chi != 0, 'rate-group-not-set');
         if (newRate >= WRITEOFF_RATE_GROUP_START) {
             _poolStorage.rates[newRate].timeStartPenalty = uint48(block.timestamp);
         }
         uint256 currentRate = _poolStorage.loanRates[loan];
-        drip(_poolStorage,currentRate);
-        drip(_poolStorage,newRate);
+        drip(_poolStorage, currentRate);
+        drip(_poolStorage, newRate);
         uint256 pie_ = _poolStorage.pie[loan];
         uint256 debt_ = toAmount(_poolStorage.rates[currentRate].chi, pie_);
         _poolStorage.rates[currentRate].pie = Math.safeSub(_poolStorage.rates[currentRate].pie, pie_);
@@ -419,12 +446,11 @@ library GenericLogic
         emit ChangeRate(nftID(loan), newRate);
     }
 
-    function accrue(DataTypes.Storage storage _poolStorage,uint256 loan) internal {
-        drip(_poolStorage,_poolStorage.loanRates[loan]);
+    function accrue(DataTypes.Storage storage _poolStorage, uint256 loan) internal {
+        drip(_poolStorage, _poolStorage.loanRates[loan]);
     }
 
-    function drip(DataTypes.Storage storage _poolStorage,uint256 rate) internal {
-        
+    function drip(DataTypes.Storage storage _poolStorage, uint256 rate) internal {
         if (block.timestamp >= _poolStorage.rates[rate].lastUpdated) {
             (uint256 chi, ) = compounding(
                 _poolStorage.rates[rate].chi,
@@ -503,8 +529,10 @@ library GenericLogic
         return Math.rdivup(amount, chi);
     }
 
-    function getAsset(DataTypes.Storage storage _poolStorage,bytes32 agreementId) internal view  returns (DataTypes.NFTDetails memory) {
-        
+    function getAsset(
+        DataTypes.Storage storage _poolStorage,
+        bytes32 agreementId
+    ) internal view returns (DataTypes.NFTDetails memory) {
         return _poolStorage.details[agreementId];
     }
 
@@ -572,5 +600,4 @@ library GenericLogic
                 termLengthInAmortizationUnits: termLengthInAmortizationUnits
             });
     }
-    
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {IPauseable} from '../../../base/IPauseable.sol';
+import {IPauseable} from '../../../interfaces/IPauseable.sol';
 import '../../../base/UntangledBase.sol';
 import '../../../base/Factory.sol';
 import '../../../interfaces/INoteTokenFactory.sol';
@@ -18,9 +18,9 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
 
     INoteToken[] public override tokens;
 
-    mapping(address => bool) public override isExistingTokens;
-
     address public override noteTokenImplementation;
+
+    mapping(address => bool) public override isExistingTokens;
 
     modifier onlySecuritizationManager() {
         require(

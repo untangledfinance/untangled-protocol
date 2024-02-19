@@ -4,21 +4,16 @@ pragma solidity 0.8.19;
 import {IAccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol';
 import {Registry} from '../storage/Registry.sol';
 import {Configuration} from './Configuration.sol';
-
 import {ISecuritizationManager} from '../interfaces/ISecuritizationManager.sol';
 import {IPool} from '../interfaces/IPool.sol';
 import {INoteTokenFactory} from '../interfaces/INoteTokenFactory.sol';
 import {INoteToken} from '../interfaces/INoteToken.sol';
 import {ITokenGenerationEventFactory} from '../interfaces/ITokenGenerationEventFactory.sol';
-import {IUntangledERC721} from '../interfaces/IUntangledERC721.sol';
-import {ILoanRepaymentRouter} from '../interfaces/ILoanRepaymentRouter.sol';
 import {ILoanKernel} from '../interfaces/ILoanKernel.sol';
-import {ILoanAssetToken} from '../interfaces/ILoanAssetToken.sol';
+import {LoanAssetToken} from '../tokens/ERC721/LoanAssetToken.sol';
 import {IDistributionAssessor} from '../interfaces/IDistributionAssessor.sol';
 import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPoolValueService.sol';
-import {IMintedNormalTGE} from '../interfaces/IMintedNormalTGE.sol';
 import {IGo} from '../interfaces/IGo.sol';
-
 import {POOL_ADMIN, OWNER_ROLE} from './DataTypes.sol';
 import {INoteTokenVault} from '../interfaces/INoteTokenVault.sol';
 
@@ -56,8 +51,8 @@ library ConfigHelper {
             );
     }
 
-    function getLoanAssetToken(Registry registry) internal view returns (ILoanAssetToken) {
-        return ILoanAssetToken(getAddress(registry, Configuration.CONTRACT_TYPE.LOAN_ASSET_TOKEN));
+    function getLoanAssetToken(Registry registry) internal view returns (LoanAssetToken) {
+        return LoanAssetToken(getAddress(registry, Configuration.CONTRACT_TYPE.LOAN_ASSET_TOKEN));
     }
 
     function getLoanKernel(Registry registry) internal view returns (ILoanKernel) {

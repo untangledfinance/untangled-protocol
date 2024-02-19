@@ -8,21 +8,15 @@ import {IRequiresUID} from '../../interfaces/IRequiresUID.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {Factory2} from '../../base/Factory2.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-import {INoteTokenFactory} from '../note-sale/fab/INoteTokenFactory.sol';
+import {INoteTokenFactory} from '../../interfaces/INoteTokenFactory.sol';
 import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-import {POOL_ADMIN,VALIDATOR_ROLE} from '../../libraries/DataTypes.sol';
+import {POOL_ADMIN, VALIDATOR_ROLE} from '../../libraries/DataTypes.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
-import {ITokenGenerationEventFactory} from '../note-sale/fab/ITokenGenerationEventFactory.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
-
-import 'hardhat/console.sol';
-// import {ISecuritizationTGE} from './ISecuritizationTGE.sol';
-// import {SecuritizationAccessControl} from './SecuritizationAccessControl.sol';
-// import {ISecuritizationPoolStorage} from "../../interfaces/ISecuritizationPoolStorage.sol";
 
 abstract contract SecuritizationManagerBase is ISecuritizationManager {
     Registry public override registry;
@@ -258,7 +252,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             currencyAmount
         );
         address pool = tge.pool();
-        require(registry.getNoteTokenVault().redeemDisabled(pool) == false, 'SM: Buy token paused');
+        require(!registry.getNoteTokenVault().redeemDisabled(pool), 'SM: Buy token paused');
 
         address noteToken = tge.token();
         if (INoteToken(noteToken).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
@@ -320,5 +314,4 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         IAccessControlUpgradeable(address(registry.getLoanAssetToken())).revokeRole(VALIDATOR_ROLE, validator);
         emit ValidatorUnRegistered(validator);
     }
-
 }

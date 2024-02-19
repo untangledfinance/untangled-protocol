@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import {ERC1155PresetPauserUpgradeable} from '../external/ERC1155PresetPauserUpgradeable.sol';
-import {IUniqueIdentity} from './IUniqueIdentity.sol';
+import {IUniqueIdentity} from '../interfaces/IUniqueIdentity.sol';
 
 /**
  * @title UniqueIdentity

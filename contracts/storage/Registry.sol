@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {AccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import {UntangledBase} from '../base/UntangledBase.sol';
 import {Configuration} from '../libraries/Configuration.sol';
 
@@ -69,6 +68,4 @@ contract Registry is UntangledBase {
     function setNoteTokenVault(address newAddress) public onlyAdmin whenNotPaused {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT), newAddress);
     }
-
-    uint256[49] private __gap;
 }

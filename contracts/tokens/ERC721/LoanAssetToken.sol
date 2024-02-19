@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {ILoanAssetToken} from './ILoanAssetToken.sol';
+import {UntangledERC721} from './UntangledERC721.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {LATValidator} from './LATValidator.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {DataTypes, VALIDATOR_ROLE, VALIDATOR_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
-import {Configuration} from '../../libraries/Configuration.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 
 /**
  * LoanAssetToken: The representative for ownership of a Loan
  */
-contract LoanAssetToken is ILoanAssetToken, LATValidator {
+contract LoanAssetToken is UntangledERC721, LATValidator {
     using ConfigHelper for Registry;
 
     /** CONSTRUCTOR */
@@ -46,7 +45,7 @@ contract LoanAssetToken is ILoanAssetToken, LATValidator {
     function safeMint(
         address creditor,
         DataTypes.LoanAssetInfo calldata latInfo
-    ) public virtual override onlyRole(MINTER_ROLE) validateCreditor(creditor, latInfo) {
+    ) public onlyRole(MINTER_ROLE) validateCreditor(creditor, latInfo) {
         for (uint i = 0; i < latInfo.tokenIds.length; i = UntangledMath.uncheckedInc(i)) {
             _safeMint(creditor, latInfo.tokenIds[i]);
         }
@@ -55,6 +54,4 @@ contract LoanAssetToken is ILoanAssetToken, LATValidator {
     function isValidator(address sender) public view virtual override returns (bool) {
         return hasRole(VALIDATOR_ROLE, sender);
     }
-
-    uint256[50] private __gap;
 }

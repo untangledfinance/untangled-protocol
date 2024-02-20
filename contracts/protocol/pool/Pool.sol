@@ -180,9 +180,27 @@ contract Pool is PoolStorage, UntangledBase {
         PoolNAVLogic.writeOff(_poolStorage, loan);
     }
 
-    function repayLoan(uint256 loan, uint256 amount) external returns (uint256) {
+    function repayLoan(uint256 loan, uint256 amount) external returns (uint256, uint256) {
         require(address(registry.getLoanKernel()) == msg.sender, 'not authorized');
         return PoolNAVLogic.repayLoan(_poolStorage, loan, amount);
+    }
+
+    function chiAndPenaltyChi(uint256 loan) external view returns (uint256, uint256) {
+        return GenericLogic.chiAndPenaltyChi(_poolStorage, loan);
+    }
+
+    function debtWithChi(uint256 loan, uint256 chi, uint256 penaltyChi) external view returns (uint256) {
+        return GenericLogic.debtWithChi(_poolStorage, loan, chi, penaltyChi);
+    }
+
+    function increaseRepayAmount(uint256 principalRepay, uint256 interestRepay) external {
+        require(address(registry.getLoanKernel()) == msg.sender, 'not authorized');
+        _poolStorage.totalPrincipalRepaid += principalRepay;
+        _poolStorage.totalInterestRepaid += interestRepay;
+    }
+
+    function getRepaidAmount() external view returns (uint256, uint256) {
+        return (_poolStorage.totalPrincipalRepaid, _poolStorage.totalInterestRepaid);
     }
 
     function debt(uint256 loan) external view returns (uint256 loanDebt) {

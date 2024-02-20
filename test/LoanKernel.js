@@ -2,7 +2,7 @@ const { ethers, artifacts } = require('hardhat');
 const _ = require('lodash');
 const dayjs = require('dayjs');
 const { expect } = require('chai');
-const { impersonateAccount, setBalance } = require('@nomicfoundation/hardhat-network-helpers');
+const { impersonateAccount, setBalance, time } = require('@nomicfoundation/hardhat-network-helpers');
 
 const { parseEther, formatEther, formatBytes32String } = ethers.utils;
 const { presignedMintMessage } = require('./shared/uid-helper.js');
@@ -183,7 +183,7 @@ describe('LoanKernel', () => {
     const ASSET_PURPOSE_INVOICE = '1';
     const inputAmount = 10;
     const inputPrice = 15;
-    const principalAmount = 10000000000000000000;
+    const principalAmount = 10000000000000000000n;
 
     describe('#LoanKernel', async () => {
         it('No one than LoanKernel can mint', async () => {
@@ -346,13 +346,20 @@ describe('LoanKernel', () => {
                 loans
             );
 
+            console.log('tokenIds: ', tokenIds);
+
             const ownerOfAgreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
             expect(ownerOfAgreement).equal(securitizationPoolContract.address);
 
             const balanceOfPool = await loanAssetTokenContract.balanceOf(securitizationPoolContract.address);
             expect(balanceOfPool).equal(tokenIds.length);
 
+            const debtAmount = await securitizationPoolContract.debt(tokenIds[1]);
+            // expect(debtAmount).equal(principalAmount);
+            console.log('debtAmount: ', debtAmount);
+
             stablecoinBalanceOfAdmin = await stableCoin.balanceOf(untangledAdminSigner.address);
+            console.log('stablecoinBalanceOfAdmin: ', stablecoinBalanceOfAdmin);
             expect(stablecoinBalanceOfAdmin).to.closeTo(parseEther('99019.000'), parseEther('0.01'));
         });
     });
@@ -393,7 +400,21 @@ describe('LoanKernel', () => {
 
             await loanRepaymentRouter
                 .connect(untangledAdminSigner)
-                .repayInBatch([tokenIds[0]], [parseEther('100')], stableCoin.address);
+                .repayInBatch([tokenIds[0]], [parseEther('3')], stableCoin.address);
+
+            let amount = await securitizationPoolContract.getRepaidAmount();
+            console.log('principal amount: ', amount[0]);
+            console.log('interest amount: ', amount[1]);
+
+            time.increase(100);
+
+            await loanRepaymentRouter
+                .connect(untangledAdminSigner)
+                .repayInBatch([tokenIds[0]], [parseEther('10')], stableCoin.address);
+
+            amount = await securitizationPoolContract.getRepaidAmount();
+            console.log('principal amount: ', amount[0]);
+            console.log('interest amount: ', amount[1]);
 
             await expect(loanAssetTokenContract.ownerOf(tokenIds[0])).to.be.revertedWith(`ERC721: invalid token ID`);
 

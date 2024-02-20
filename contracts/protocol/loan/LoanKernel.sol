@@ -195,30 +195,50 @@ contract LoanKernel is ILoanKernel, UntangledBase {
     /// transferring the repayment amount to the creditor, and handling additional logic related to securitization pools
     /// and completed repayments
     function _doRepay(
+        IPool pool,
         bytes32 _agreementId,
         address _payer,
         uint256 _amount,
-        address _tokenAddress
+        address _tokenAddress,
+        uint256 _preChi,
+        uint256 _penaltyChi
     ) private returns (bool) {
-        address beneficiary = registry.getLoanAssetToken().ownerOf(uint256(_agreementId));
+        address beneficiary = address(pool);
+        // this principal is not the same inside contract pool
+        uint256 prePrincipalAmount = pool.debtWithChi(uint256(_agreementId), _preChi, _penaltyChi);
+        (uint256 repayAmount, uint256 preDebt) = pool.repayLoan(uint256(_agreementId), _amount);
+        uint256 interestAmount = preDebt - prePrincipalAmount;
 
-        IPool poolInstance = IPool(beneficiary);
-        IPool poolNAV = IPool(beneficiary);
-        uint256 repayAmount = poolNAV.repayLoan(uint256(_agreementId), _amount);
-        uint256 outstandingAmount = poolNAV.debt(uint256(_agreementId));
-        IPool poolTGE = IPool(beneficiary);
+        uint256 outstandingAmount = pool.debt(uint256(_agreementId));
 
-        require(poolTGE.underlyingCurrency() == _tokenAddress, 'LoanRepaymentRouter: currency mismatch');
+        require(pool.underlyingCurrency() == _tokenAddress, 'LoanRepaymentRouter: currency mismatch');
 
-        if (registry.getSecuritizationManager().isExistingPools(beneficiary)) beneficiary = poolInstance.pot();
+        if (registry.getSecuritizationManager().isExistingPools(beneficiary)) beneficiary = pool.pot();
 
         TransferHelper.safeTransferFrom(_tokenAddress, _payer, beneficiary, repayAmount);
 
-        poolTGE.increaseTotalAssetRepaidCurrency(repayAmount);
+        pool.increaseTotalAssetRepaidCurrency(repayAmount);
 
-        if (outstandingAmount == 0) {
-            // Burn LAT token when repay completely
-            _concludeLoan(beneficiary, _agreementId);
+        {
+            // prevent stack too deep
+            IPool tempPool = pool;
+            bytes32 agreementId = _agreementId;
+            uint256 principalRepay;
+            uint256 interestRepay;
+            if (repayAmount <= interestAmount) {
+                interestRepay = repayAmount;
+            } else {
+                interestRepay = interestAmount;
+                if (outstandingAmount == 0) {
+                    // repay all principal and interest
+                    // Burn LAT token when repay completely
+                    _concludeLoan(beneficiary, agreementId);
+                    principalRepay = prePrincipalAmount;
+                } else {
+                    principalRepay = repayAmount - interestAmount;
+                }
+            }
+            tempPool.increaseRepayAmount(principalRepay, interestRepay);
         }
 
         // Log event for repayment
@@ -349,16 +369,36 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         address tokenAddress
     ) external override whenNotPaused nonReentrant returns (bool) {
         uint256 agreementIdsLength = agreementIds.length;
+
+        address[] memory pool = new address[](agreementIdsLength);
+        uint256[] memory chi = new uint256[](agreementIdsLength);
+        uint256[] memory penaltyChi = new uint256[](agreementIdsLength);
+
         for (uint256 i = 0; i < agreementIdsLength; i++) {
             require(
                 _assertRepaymentRequest(agreementIds[i], tokenAddress),
                 'LoanRepaymentRouter: Invalid repayment request'
             );
+            address poolAddress = registry.getLoanAssetToken().ownerOf(uint256(agreementIds[i]));
+            pool[i] = poolAddress;
+            (chi[i], penaltyChi[i]) = IPool(poolAddress).chiAndPenaltyChi(uint256(agreementIds[i]));
+        }
+
+        for (uint256 i = 0; i < agreementIdsLength; i++) {
             require(
-                _doRepay(agreementIds[i], _msgSender(), amounts[i], tokenAddress),
+                _doRepay(
+                    IPool(pool[i]),
+                    agreementIds[i],
+                    _msgSender(),
+                    amounts[i],
+                    tokenAddress,
+                    chi[i],
+                    penaltyChi[i]
+                ),
                 'LoanRepaymentRouter: Repayment has failed'
             );
         }
+
         emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
         return true;
     }

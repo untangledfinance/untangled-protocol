@@ -396,6 +396,28 @@ library GenericLogic {
         }
     }
 
+    function debtWithChi(
+        DataTypes.Storage storage _poolStorage,
+        uint256 loan,
+        uint256 chi,
+        uint256 penaltyChi
+    ) internal view returns (uint256 loanDebt) {
+        if (penaltyChi == 0) {
+            return toAmount(chi, _poolStorage.pie[loan]);
+        } else {
+            return toAmount(penaltyChi, toAmount(chi, _poolStorage.pie[loan]));
+        }
+    }
+
+    function chiAndPenaltyChi(
+        DataTypes.Storage storage _poolStorage,
+        uint256 loan
+    ) internal view returns (uint256 chi, uint256 penaltyChi) {
+        uint256 rate_ = _poolStorage.loanRates[loan];
+        chi = _poolStorage.rates[rate_].chi;
+        penaltyChi = _poolStorage.rates[rate_].penaltyChi;
+    }
+
     function rateDebt(DataTypes.Storage storage _poolStorage, uint256 rate) internal view returns (uint256 totalDebt) {
         uint256 chi_ = _poolStorage.rates[rate].chi;
         uint256 penaltyChi_ = _poolStorage.rates[rate].penaltyChi;

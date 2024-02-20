@@ -195,6 +195,9 @@ library DataTypes {
         mapping(bytes32 => uint256) latestDiscountOfNavAssets;
         mapping(bytes32 => uint256) overdueLoansOfNavAssets;
         mapping(uint256 => bytes32) loanToNFT;
+        // value to view
+        uint256 totalPrincipalRepaid;
+        uint256 totalInterestRepaid;
     }
     struct LoanAssetInfo {
         uint256[] tokenIds;

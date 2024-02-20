@@ -11,7 +11,7 @@ import {INoteToken} from '../interfaces/INoteToken.sol';
 import {ITokenGenerationEventFactory} from '../interfaces/ITokenGenerationEventFactory.sol';
 import {ILoanKernel} from '../interfaces/ILoanKernel.sol';
 import {LoanAssetToken} from '../tokens/ERC721/LoanAssetToken.sol';
-import {IDistributionAssessor} from '../interfaces/IDistributionAssessor.sol';
+import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPoolValueService.sol';
 import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPoolValueService.sol';
 import {IGo} from '../interfaces/IGo.sol';
 import {POOL_ADMIN, OWNER_ROLE} from './DataTypes.sol';
@@ -66,10 +66,6 @@ library ConfigHelper {
             ISecuritizationPoolValueService(
                 getAddress(registry, Configuration.CONTRACT_TYPE.SECURITIZATION_POOL_VALUE_SERVICE)
             );
-    }
-
-    function getDistributionAssessor(Registry registry) internal view returns (IDistributionAssessor) {
-        return IDistributionAssessor(getAddress(registry, Configuration.CONTRACT_TYPE.DISTRIBUTION_ASSESSOR));
     }
 
     function getGo(Registry registry) internal view returns (IGo) {

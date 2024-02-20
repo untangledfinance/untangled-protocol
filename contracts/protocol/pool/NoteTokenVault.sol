@@ -106,13 +106,13 @@ contract NoteTokenVault is
             require(currentRedeemAmount == 0, 'NoteTokenVault: User already created redeem order');
             poolUserRedeems[pool][usr].redeemJOTAmount = noteTokenRedeemAmount;
             poolTotalJOTRedeem[pool] = poolTotalJOTRedeem[pool] + noteTokenRedeemAmount;
-            noteTokenPrice = registry.getDistributionAssessor().getJOTTokenPrice(pool);
+            noteTokenPrice = registry.getSecuritizationPoolValueService().getJOTTokenPrice(pool);
         } else {
             uint256 currentRedeemAmount = poolUserRedeems[pool][usr].redeemSOTAmount;
             require(currentRedeemAmount == 0, 'NoteTokenVault: User already created redeem order');
             poolUserRedeems[pool][usr].redeemSOTAmount = noteTokenRedeemAmount;
             poolTotalSOTRedeem[pool] = poolTotalSOTRedeem[pool] + noteTokenRedeemAmount;
-            noteTokenPrice = registry.getDistributionAssessor().getSOTTokenPrice(pool);
+            noteTokenPrice = registry.getSecuritizationPoolValueService().getSOTTokenPrice(pool);
         }
 
         require(

@@ -28,6 +28,12 @@ bytes32 constant VALIDATOR_ADMIN_ROLE = keccak256('VALIDATOR_ADMIN_ROLE');
 bytes32 constant MINTER_ROLE = keccak256('MINTER_ROLE');
 
 library DataTypes {
+    struct NoteToken {
+        address poolAddress;
+        address noteTokenAddress;
+        uint256 balance;
+        uint256 apy;
+    }
     struct RiskScore {
         uint32 daysPastDue;
         uint32 advanceRate;

@@ -7,15 +7,15 @@ import {IPool} from '../../interfaces/IPool.sol';
 import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
 import {SecuritizationPoolServiceBase} from './base/SecuritizationPoolServiceBase.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-import {Registry} from '../../storage/Registry.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
-import {ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
+import {DataTypes, ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
+import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
+
 
 /// @title SecuritizationPoolValueService
 /// @author Untangled Team
 /// @dev Calculate pool's values
 contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecuritizationPoolValueService {
-    using ConfigHelper for Registry;
     using Math for uint256;
 
     uint256 public constant RATE_SCALING_FACTOR = 10 ** 4;
@@ -105,7 +105,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
             address tokenAddress = securitizationPool.tokenAssetAddresses(i);
             expectedAssetsValue =
                 expectedAssetsValue +
-                registry.getDistributionAssessor().calcCorrespondingTotalAssetValue(tokenAddress, poolAddress);
+                calcCorrespondingTotalAssetValue(tokenAddress, poolAddress);
         }
     }
 
@@ -270,7 +270,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         address jotToken = securitizationPool.jotToken();
         uint256 reserve = securitizationPool.reserve();
 
-        uint256 sotPrice = registry.getDistributionAssessor().calcTokenPrice(poolAddress, sotToken);
+        uint256 sotPrice = calcTokenPrice(poolAddress, sotToken);
         if (sotPrice == 0) {
             return (reserve, 0, 0);
         }
@@ -279,7 +279,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
             return (reserve, (reserve * (10 ** INoteToken(sotToken).decimals())) / sotPrice, 0);
         }
 
-        uint256 jotPrice = registry.getDistributionAssessor().calcTokenPrice(poolAddress, jotToken);
+        uint256 jotPrice = calcTokenPrice(poolAddress, jotToken);
         uint256 x = solveReserveEquation(poolAddress, expectedSOTCurrencyAmount, sotRequest);
         if (jotPrice == 0) {
             return (x + expectedSOTCurrencyAmount, sotRequest, 0);
@@ -322,5 +322,131 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         uint256 delta = b ** 2 - (4 * c * maxSeniorRatio) / ONE_HUNDRED_PERCENT;
         uint256 x = ((b - delta.sqrt()) * ONE_HUNDRED_PERCENT) / (2 * maxSeniorRatio);
         return x;
+    }
+
+    function _getTokenPrice(
+        address securitizationPool,
+        INoteToken noteToken,
+        uint256 asset
+    ) private view returns (uint256) {
+        require(address(securitizationPool) != address(0), 'DistributionAssessor: Invalid pool address');
+
+        uint256 totalSupply = noteToken.totalSupply();
+        uint256 decimals = noteToken.decimals();
+
+        require(address(noteToken) != address(0), 'DistributionAssessor: Invalid note token address');
+        // In initial state, SOT price = 1$
+        if (noteToken.totalSupply() == 0) return 10 ** decimals;
+
+        return (asset * 10 ** decimals) / totalSupply;
+    }
+
+    // get current individual asset for SOT tranche
+    function getSOTTokenPrice(address securitizationPool) public view returns (uint256) {
+        uint256 seniorAsset = getSeniorAsset(address(securitizationPool));
+        return _getTokenPrice(securitizationPool, INoteToken(IPool(securitizationPool).sotToken()), seniorAsset);
+    }
+
+    function calcCorrespondingTotalAssetValue(
+        address tokenAddress,
+        address investor
+    ) public view returns (uint256) {
+        return _calcCorrespondingAssetValue(tokenAddress, investor);
+    }
+
+    /// @dev Calculate SOT/JOT asset value belongs to an investor
+    /// @param tokenAddress Address of SOT or JOT token
+    /// @param investor Investor's wallet
+    /// @return The value in pool's underlying currency
+    function _calcCorrespondingAssetValue(address tokenAddress, address investor) internal view returns (uint256) {
+        INoteToken notesToken = INoteToken(tokenAddress);
+        uint256 tokenPrice = calcTokenPrice(notesToken.poolAddress(), tokenAddress);
+        uint256 tokenBalance = notesToken.balanceOf(investor);
+
+        return (tokenBalance * tokenPrice) / 10 ** notesToken.decimals();
+    }
+
+    /// @notice Calculate SOT/JOT asset value for multiple investors
+    function calcCorrespondingAssetValue(
+        address tokenAddress,
+        address[] calldata investors
+    ) external view returns (uint256[] memory values) {
+        uint256 investorsLength = investors.length;
+        values = new uint256[](investorsLength);
+
+        for (uint256 i = 0; i < investorsLength; i = UntangledMath.uncheckedInc(i)) {
+            values[i] = _calcCorrespondingAssetValue(tokenAddress, investors[i]);
+        }
+    }
+
+    function calcTokenPrice(address pool, address tokenAddress) public view returns (uint256) {
+        IPool securitizationPool = IPool(pool);
+        if (tokenAddress == securitizationPool.sotToken()) return getSOTTokenPrice(pool);
+        if (tokenAddress == securitizationPool.jotToken()) return getJOTTokenPrice(pool);
+        return 0;
+    }
+
+    function getTokenPrices(
+        address[] calldata pools,
+        address[] calldata tokenAddresses
+    ) public view returns (uint256[] memory tokenPrices) {
+        tokenPrices = new uint256[](pools.length);
+
+        for (uint i = 0; i < pools.length; i++) {
+            tokenPrices[i] = calcTokenPrice(pools[i], tokenAddresses[i]);
+        }
+
+        return tokenPrices;
+    }
+
+    function getTokenValues(
+        address[] calldata tokenAddresses,
+        address[] calldata investors
+    ) public view returns (uint256[] memory tokenValues) {
+        tokenValues = new uint256[](investors.length);
+
+        for (uint i = 0; i < investors.length; i++) {
+            tokenValues[i] = _calcCorrespondingAssetValue(tokenAddresses[i], investors[i]);
+        }
+
+        return tokenValues;
+    }
+
+    function getExternalTokenInfos(address poolAddress) public view returns (DataTypes.NoteToken[] memory noteTokens) {
+        IPool securitizationPool = IPool(poolAddress);
+
+        uint256 tokenAssetAddressesLength = securitizationPool.getTokenAssetAddressesLength();
+        noteTokens = new DataTypes.NoteToken[](tokenAssetAddressesLength);
+        for (uint256 i = 0; i < tokenAssetAddressesLength; i = UntangledMath.uncheckedInc(i)) {
+            address tokenAddress = securitizationPool.tokenAssetAddresses(i);
+            INoteToken noteToken = INoteToken(tokenAddress);
+            IPool notePool = IPool(noteToken.poolAddress());
+
+            uint256 apy;
+
+            if (tokenAddress == IPool(noteToken.poolAddress()).sotToken()) {
+                apy = IMintedNormalTGE(notePool.tgeAddress()).getInterest();
+            } else {
+                apy = IMintedNormalTGE(notePool.secondTGEAddress()).getInterest();
+            }
+
+            noteTokens[i] = DataTypes.NoteToken({
+                poolAddress: address(notePool),
+                noteTokenAddress: tokenAddress,
+                balance: noteToken.balanceOf(poolAddress),
+                apy: apy
+            });
+        }
+
+        return noteTokens;
+    }
+
+    function getJOTTokenPrice(address securitizationPool) public view returns (uint256) {
+        uint256 juniorrAsset = getJuniorAsset(address(securitizationPool));
+        return _getTokenPrice(securitizationPool, INoteToken(IPool(securitizationPool).jotToken()), juniorrAsset);
+    }
+
+    function getCashBalance(address pool) public view returns (uint256) {
+        return INoteToken(IPool(pool).underlyingCurrency()).balanceOf(IPool(pool).pot());
     }
 }

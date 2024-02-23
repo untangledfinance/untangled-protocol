@@ -11,7 +11,6 @@ interface IMintedNormalTGE {
     event TokensPurchased(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
 
     enum SaleType {
-        MINTED_INCREASING_INTEREST,
         NORMAL_SALE
     }
 
@@ -19,8 +18,6 @@ interface IMintedNormalTGE {
 
     ///@notice investor bids for SOT/JOT token. Paid by pool's currency
     function buyTokens(address payee, address beneficiary, uint256 currencyAmount) external returns (uint256);
-
-    function getInterest() external view returns (uint256);
 
     function pool() external view returns (address);
 
@@ -39,8 +36,6 @@ interface IMintedNormalTGE {
     function setMinBidAmount(uint256 _minBidAmount) external;
 
     function onRedeem(uint256 _currencyAmount) external;
-
-    function setInterestRate(uint256 _interestRate) external;
 
     function setInitialAmount(uint256 _initialAmount) external;
 

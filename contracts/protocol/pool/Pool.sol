@@ -287,8 +287,6 @@ contract Pool is PoolStorage, UntangledBase {
         TGELogic.decreaseReserve(_poolStorage, poolServiceAddress, currencyAmount);
     }
 
-    // function tgeAddress() external view returns (address);
-
     function secondTGEAddress() external view returns (address) {
         return _poolStorage.secondTGEAddress;
     }
@@ -324,6 +322,11 @@ contract Pool is PoolStorage, UntangledBase {
     // Annually, support 4 decimals num
     function interestRateSOT() external view returns (uint32) {
         return _poolStorage.interestRateSOT;
+    }
+
+    function setInterestRateSOT(uint32 _newRate) external {
+        registry.requireSecuritizationManager(_msgSender());
+        _poolStorage.interestRateSOT = _newRate;
     }
 
     function minFirstLossCushion() external view returns (uint32) {

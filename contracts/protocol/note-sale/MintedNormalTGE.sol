@@ -43,8 +43,6 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
     /// @dev Minimum currency bid amount for note token
     uint256 public minBidAmount;
 
-    uint256 public interestRate;
-
     uint256 public initialAmount;
 
     mapping(address => uint256) public _currencyRaisedByInvestor;
@@ -167,10 +165,6 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
         return _currencyRaised;
     }
 
-    function getInterest() public view override returns (uint256) {
-        return interestRate;
-    }
-
     /// @notice Check if the total amount of currency raised is equal to the total cap
     function isDistributedFully() public view returns (bool) {
         return _currencyRaised == totalCap;
@@ -179,14 +173,6 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
     /// @notice Calculates the remaining amount of currency available for purchase
     function getCurrencyRemainAmount() public view virtual returns (uint256) {
         return totalCap - _currencyRaised;
-    }
-
-    function setInterestRate(uint256 _interestRate) external override whenNotPaused {
-        require(
-            hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
-            'MintedNormalTGE: Caller must be owner or manager'
-        );
-        interestRate = _interestRate;
     }
 
     function setTotalCap(uint256 cap_) external whenNotPaused {

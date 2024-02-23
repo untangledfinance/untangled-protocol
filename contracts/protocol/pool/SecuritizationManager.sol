@@ -175,7 +175,8 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             tgeParam.ticker
         );
         IMintedNormalTGE tge = IMintedNormalTGE(tgeAddress);
-        tge.setInterestRate(interestRate);
+        IPool pool = IPool(tgeParam.pool);
+        pool.setInterestRateSOT(uint32(interestRate));
         tge.setTotalCap(cap);
         tge.setMinBidAmount(tgeParam.minBidAmount);
 
@@ -300,6 +301,18 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         }
 
         emit UpdateTGEInfo(tgeInfos);
+    }
+
+    function updateSOT(address _poolAddress, uint32 _newInterestRate) public {
+        require(
+            IAccessControlUpgradeable(_poolAddress).hasRole(
+                OWNER_ROLE,
+                _msgSender()
+            ),
+            'SecuritizationManager: Not the controller of the project'
+        );
+        IPool pool = IPool(_poolAddress);
+        pool.setInterestRateSOT(_newInterestRate);
     }
 
     function registerValidator(address validator) public onlyRole(POOL_ADMIN) {

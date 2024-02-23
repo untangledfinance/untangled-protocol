@@ -100,4 +100,5 @@ interface IPool {
     function debtWithChi(uint256 loan, uint256 chi, uint256 penaltyChi) external returns (uint256);
     function increaseRepayAmount(uint256 principalRepay, uint256 interestRepay) external;
     function getRepaidAmount() external view returns (uint256 principalAmount, uint256 interestAmount);
+    function setInterestRateSOT(uint32 _newRate) external;
 }

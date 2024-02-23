@@ -422,13 +422,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
             INoteToken noteToken = INoteToken(tokenAddress);
             IPool notePool = IPool(noteToken.poolAddress());
 
-            uint256 apy;
-
-            if (tokenAddress == IPool(noteToken.poolAddress()).sotToken()) {
-                apy = IMintedNormalTGE(notePool.tgeAddress()).getInterest();
-            } else {
-                apy = IMintedNormalTGE(notePool.secondTGEAddress()).getInterest();
-            }
+            uint256 apy = notePool.interestRateSOT();
 
             noteTokens[i] = DataTypes.NoteToken({
                 poolAddress: address(notePool),

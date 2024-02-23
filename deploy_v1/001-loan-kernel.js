@@ -1,27 +1,27 @@
+//deploy LoanKernel
+
 module.exports = async ({ getNamedAccounts, deployments }) => {
-    const { deploy, read, execute, get } = deployments;
+    const { get, execute, deploy } = deployments;
     const { deployer } = await getNamedAccounts();
-    const proxyAdmin = await get('DefaultProxyAdmin');
 
     const registry = await get('Registry');
 
-    const noteTokenFactory = await deploy('NoteTokenFactory', {
+    const loanKernelProxy = await deploy('LoanKernel', {
         from: deployer,
         proxy: {
             proxyContract: 'OpenZeppelinTransparentProxy',
-
             execute: {
                 init: {
                     methodName: 'initialize',
-                    args: [registry.address, proxyAdmin.address],
+                    args: [registry.address],
                 },
             },
         },
         log: true,
     });
 
-    await execute('Registry', { from: deployer, log: true }, 'setNoteTokenFactory', noteTokenFactory.address);
+    await execute('Registry', { from: deployer, log: true }, 'setLoanKernel', loanKernelProxy.address);
 };
 
 module.exports.dependencies = ['Registry'];
-module.exports.tags = ['next', 'mainnet', 'NoteTokenFactory'];
+module.exports.tags = ['next', 'mainnet', 'LoanKernel'];

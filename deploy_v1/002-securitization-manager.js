@@ -20,6 +20,20 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         log: true,
     });
 
+    // const currentVersion = await read('SecuritizationManager', {}, 'getInitializedVersion');
+    // if (currentVersion.toNumber() < 2) {
+    //     await execute(
+    //         'SecuritizationManager',
+    //         {
+    //             from: deployer,
+    //             log: true,
+    //         },
+    //         'initialize',
+    //         registry.address,
+    //         proxyAdmin.address
+    //     );
+    // }
+
     await execute('Registry', { from: deployer, log: true }, 'setSecuritizationManager', SecuritizationManager.address);
 };
 

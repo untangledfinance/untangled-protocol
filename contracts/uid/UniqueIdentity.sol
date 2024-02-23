@@ -18,10 +18,10 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
     bytes32 public constant SUPER_ADMIN = keccak256('SUPER_ADMIN');
 
     uint256 public constant ID_TYPE_0 = 0; // non-US individual
-    uint256 public constant ID_TYPE_1 = 1; // US accredited individual
-    uint256 public constant ID_TYPE_2 = 2; // US non accredited individual
+    uint256 public constant ID_TYPE_1 = 1; // US individual
+    uint256 public constant ID_TYPE_2 = 2; // non-US entity
     uint256 public constant ID_TYPE_3 = 3; // US entity
-    uint256 public constant ID_TYPE_4 = 4; // non-US entity
+    uint256 public constant ID_TYPE_4 = 4;
     uint256 public constant ID_TYPE_5 = 5;
     uint256 public constant ID_TYPE_6 = 6;
     uint256 public constant ID_TYPE_7 = 7;

@@ -7,17 +7,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         log: true,
     });
 
-    await execute(
-        'TokenGenerationEventFactory',
-        {
-            from: deployer,
-            log: true,
-        },
-        'setTGEImplAddress',
-        0,
-        tgeNormal.address
-    );
-
+    // if (tgeNormal.newlyDeployed) {
     await execute(
         'TokenGenerationEventFactory',
         {
@@ -28,6 +18,18 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         1,
         tgeNormal.address
     );
+
+    await execute(
+        'TokenGenerationEventFactory',
+        {
+            from: deployer,
+            log: true,
+        },
+        'setTGEImplAddress',
+        2,
+        tgeNormal.address
+    );
+    // }
 };
 
 module.exports.dependencies = ['Registry'];

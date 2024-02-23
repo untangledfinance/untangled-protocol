@@ -20,6 +20,18 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         log: true,
     });
 
+    // const currentVersion = await read('NoteTokenFactory', {}, 'getInitializedVersion');
+    // if (currentVersion.toNumber() < 3) {
+    //   await execute('NoteTokenFactory', {
+    //     from: deployer,
+    //     log: true,
+    //   }, 'initialize', registry.address, proxyAdmin.address);
+    // }
+
+    // await execute('NoteTokenFactory', {
+    //   from: deployer,
+    //   log: true,
+    // }, 'initialize', registry.address, proxyAdmin.address);
     await execute('Registry', { from: deployer, log: true }, 'setNoteTokenFactory', noteTokenFactory.address);
 };
 

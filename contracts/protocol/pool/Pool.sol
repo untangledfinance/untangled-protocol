@@ -12,6 +12,7 @@ import {PoolAssetLogic} from '../../libraries/logic/PoolAssetLogic.sol';
 import {TGELogic} from '../../libraries/logic/TGELogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
+
 /**
  * @title Untangled's SecuritizationPool contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
@@ -65,15 +66,19 @@ contract Pool is PoolStorage, UntangledBase {
 
         registry.getLoanAssetToken().setApprovalForAll(address(registry.getLoanKernel()), true);
     }
+
     function state() external view returns (DataTypes.CycleState) {
         return _poolStorage.state;
     }
+
     function isClosedState() internal view returns (bool) {
         return _poolStorage.state == DataTypes.CycleState.CLOSED;
     }
+
     function tgeAddress() public view returns (address) {
         return _poolStorage.tgeAddress;
     }
+
     function getNFTAssetsLength() external view returns (uint256) {
         return _poolStorage.nftAssets.length;
     }
@@ -97,6 +102,7 @@ contract Pool is PoolStorage, UntangledBase {
     function riskScores(uint256 index) external view returns (DataTypes.RiskScore memory) {
         return _poolStorage.riskScores[index];
     }
+
     function nftAssets(uint256 idx) external view returns (DataTypes.NFTAsset memory) {
         return _poolStorage.nftAssets[idx];
     }
@@ -104,6 +110,7 @@ contract Pool is PoolStorage, UntangledBase {
     function tokenAssetAddresses(uint256 idx) external view returns (address) {
         return _poolStorage.tokenAssetAddresses[idx];
     }
+
     /// @notice sets up the risk scores for the contract for pool
     function setupRiskScores(
         uint32[] calldata _daysPastDues,
@@ -163,6 +170,7 @@ contract Pool is PoolStorage, UntangledBase {
         require(_msgSender() == tgeAddress(), 'SecuritizationPool: Only tge address');
         PoolAssetLogic.setUpOpeningBlockTimestamp(_poolStorage);
     }
+
     function onERC721Received(address, address, uint256 tokenId, bytes memory) external returns (bytes4) {
         address token = _msgSender();
         require(
@@ -242,6 +250,7 @@ contract Pool is PoolStorage, UntangledBase {
     function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory) {
         return _poolStorage.details[agreementId];
     }
+
     /*==================== TGE ====================*/
     function setPot(address _pot) external whenNotPaused nonReentrant notClosingStage {
         registry.requirePoolAdminOrOwner(address(this), _msgSender());
@@ -326,7 +335,7 @@ contract Pool is PoolStorage, UntangledBase {
 
     function setInterestRateSOT(uint32 _newRate) external {
         registry.requireSecuritizationManager(_msgSender());
-        _poolStorage.interestRateSOT = _newRate;
+        TGELogic._setInterestRateSOT(_poolStorage, _newRate);
     }
 
     function minFirstLossCushion() external view returns (uint32) {
@@ -392,6 +401,7 @@ contract Pool is PoolStorage, UntangledBase {
         address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
         TGELogic.withdraw(_poolStorage, poolServiceAddress, to, amount);
     }
+
     function validatorRequired() external view returns (bool) {
         return _poolStorage.validatorRequired;
     }

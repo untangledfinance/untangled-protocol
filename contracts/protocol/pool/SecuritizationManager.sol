@@ -303,18 +303,6 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         emit UpdateTGEInfo(tgeInfos);
     }
 
-    function updateSOT(address _poolAddress, uint32 _newInterestRate) public {
-        require(
-            IAccessControlUpgradeable(_poolAddress).hasRole(
-                OWNER_ROLE,
-                _msgSender()
-            ),
-            'SecuritizationManager: Not the controller of the project'
-        );
-        IPool pool = IPool(_poolAddress);
-        pool.setInterestRateSOT(_newInterestRate);
-    }
-
     function registerValidator(address validator) public onlyRole(POOL_ADMIN) {
         require(validator != address(0), 'SecuritizationManager: Invalid validator address');
         IAccessControlUpgradeable(address(registry.getLoanAssetToken())).grantRole(VALIDATOR_ROLE, validator);

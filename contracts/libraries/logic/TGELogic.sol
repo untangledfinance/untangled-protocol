@@ -16,6 +16,7 @@ library TGELogic {
     event DecreaseReserve(uint256 decreasingAmount, uint256 currencyAmount);
     event UpdateDebtCeiling(uint256 _debtCeiling);
     event UpdateMintFirstLoss(uint32 _mintFirstLoss);
+    event UpdateInterestRateSot(uint32 _interestRateSot);
     event Withdraw(address originatorAddress, uint256 amount);
     event ClaimCashRemain(address pot, address recipientWallet, uint256 balance);
 
@@ -168,6 +169,11 @@ library TGELogic {
     function _setDebtCeiling(DataTypes.Storage storage _poolStorage, uint256 _debtCeiling) internal {
         _poolStorage.debtCeiling = _debtCeiling;
         emit UpdateDebtCeiling(_debtCeiling);
+    }
+
+    function _setInterestRateSOT(DataTypes.Storage storage _poolStorage, uint32 _newRate) external {
+        _poolStorage.interestRateSOT = _newRate;
+        emit UpdateInterestRateSot(_newRate);
     }
 
     function increaseReserve(

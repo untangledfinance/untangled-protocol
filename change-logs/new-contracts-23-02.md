@@ -80,12 +80,12 @@ Need to generate go file again from new ABIs
 - Set pool linked wallet
 - Setup Jot - [changed]
 - Setup Sot - [changed]
-- Start cycle - [Not existed anymore]
+- Start cycle - [changed to UpdateInterestRateSot]
 - TGE info update
 - Withdraw ERC20
 - RedeemOrder
--	CancelOrder
--	SetRedeemDisabled
--	DisburseOrder
--	PreDistribute
+- CancelOrder
+- SetRedeemDisabled
+- DisburseOrder
+- PreDistribute
 ```

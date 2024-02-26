@@ -101,6 +101,7 @@ module.exports = {
     etherscan: {
         apiKey: {
             alfajores: process.env.ALFAJORES_SCAN_API_KEY,
+            polygon_v2: process.env.POLYGON_SCAN_API_KEY,
         },
         customChains: [
             {
@@ -109,6 +110,14 @@ module.exports = {
                 urls: {
                     apiURL: 'https://api-alfajores.celoscan.io/api',
                     browserURL: 'https://api-alfajores.celoscan.io',
+                },
+            },
+            {
+                network: 'polygon_v2',
+                chainId: 137,
+                urls: {
+                    apiURL: 'https://api.polygonscan.com/api',
+                    browserURL: 'https://api.polygonscan.com',
                 },
             },
         ],

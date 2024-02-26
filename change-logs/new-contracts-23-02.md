@@ -19,6 +19,8 @@ Removed `DistributionAccessor` Merged into `SecuritizationPoolValueService`
 
 Removed all Pool Diamond logics, Merged into `Pool`
 
+Removed `startCycle` function, need to remove from FE side
+
 ## Function updates
 
 ### Securitization Manager

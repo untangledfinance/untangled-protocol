@@ -20,5 +20,5 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     );
 };
 
-module.exports.dependencies = ['Registry', 'NoteTokenFactory'];
+// module.exports.dependencies = ['Registry', 'NoteTokenFactory'];
 module.exports.tags = ['next', 'mainnet', 'NoteToken'];

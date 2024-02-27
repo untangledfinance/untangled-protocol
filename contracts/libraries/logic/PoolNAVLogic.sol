@@ -298,83 +298,104 @@ library PoolNAVLogic {
     }
 
     /// @notice repay updates the NAV for a new repaid loan
-    /// @param loan the id of the loan
-    /// @param amount the amount repaid
+    /// @param loans the ids of the loan
+    /// @param amounts the amounts repaid
     function repayLoan(
         DataTypes.Storage storage _poolStorage,
-        uint256 loan,
-        uint256 amount
-    ) external returns (uint256, uint256) {
-        GenericLogic.accrue(_poolStorage, loan);
+        uint256[] calldata loans,
+        uint256[] calldata amounts
+    ) external returns (uint256[] memory, uint256[] memory) {
         uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
 
-        if (nnow > _poolStorage.lastNAVUpdate) {
-            GenericLogic.calcUpdateNAV(_poolStorage);
-        }
+        uint256 numberOfLoans = loans.length;
 
-        // In case of successful repayment the latestNAV is decreased by the repaid amount
-        bytes32 nftID_ = GenericLogic.nftID(loan);
-        uint256 maturityDate_ = GenericLogic.maturityDate(_poolStorage, nftID_);
+        uint256[] memory repayAmounts = new uint256[](numberOfLoans);
+        uint256[] memory previousDebts = new uint256[](numberOfLoans);
 
-        uint256 _currentDebt = GenericLogic.debt(_poolStorage, loan);
-        if (amount > _currentDebt) {
-            amount = _currentDebt;
-        }
-        // case 1: repayment of a written-off loan
-        if (GenericLogic.isLoanWrittenOff(_poolStorage, loan)) {
-            // update nav with write-off decrease
-            _decreaseLoan(_poolStorage, loan, amount);
-            return (amount, _currentDebt);
-        }
-        uint256 _debt = Math.safeSub(_currentDebt, amount); // Remaining
-        uint256 preFV = GenericLogic.futureValue(_poolStorage, nftID_);
-        // in case of partial repayment, compute the fv of the remaining debt and add to the according fv bucket
-        uint256 fv = 0;
-        uint256 fvDecrease = preFV;
-        if (_debt != 0) {
-            fv = _calcFutureValue(_poolStorage, loan, _debt, maturityDate_);
-            if (preFV >= fv) {
-                fvDecrease = Math.safeSub(preFV, fv);
-            } else {
-                fvDecrease = 0;
+        for (uint256 i; i < numberOfLoans; i++) {
+            uint256 loan = loans[i];
+            uint256 amount = amounts[i];
+
+            // re-define: prevent stack too deep
+            DataTypes.Storage storage __poolStorage = _poolStorage;
+
+            GenericLogic.accrue(__poolStorage, loan);
+
+            if (nnow > __poolStorage.lastNAVUpdate) {
+                GenericLogic.calcUpdateNAV(__poolStorage);
             }
+
+            // In case of successful repayment the latestNAV is decreased by the repaid amount
+            uint256 maturityDate_ = GenericLogic.maturityDate(__poolStorage, bytes32(loan));
+
+            uint256 _currentDebt = GenericLogic.debt(__poolStorage, loan);
+            if (amount > _currentDebt) {
+                amount = _currentDebt;
+            }
+
+            repayAmounts[i] = amount;
+            previousDebts[i] = _currentDebt;
+
+            // case 1: repayment of a written-off loan
+            if (GenericLogic.isLoanWrittenOff(__poolStorage, loan)) {
+                // update nav with write-off decrease
+                _decreaseLoan(__poolStorage, loan, amount);
+                continue;
+            }
+
+            uint256 preFV = GenericLogic.futureValue(__poolStorage, bytes32(loan));
+            // in case of partial repayment, compute the fv of the remaining debt and add to the according fv bucket
+            uint256 fvDecrease = preFV;
+
+            // prevent stack too deep
+            {
+                uint256 fv = 0;
+                uint256 _debt = Math.safeSub(_currentDebt, amount); // Remaining
+                if (_debt != 0) {
+                    fv = _calcFutureValue(__poolStorage, loan, _debt, maturityDate_);
+                    if (preFV >= fv) {
+                        fvDecrease = Math.safeSub(preFV, fv);
+                    } else {
+                        fvDecrease = 0;
+                    }
+                }
+
+                __poolStorage.details[bytes32(loan)].futureValue = GenericLogic.toUint128(fv);
+            }
+
+            // case 2: repayment of a loan before or on maturity date
+            if (maturityDate_ >= nnow) {
+                // remove future value decrease from bucket
+                __poolStorage.buckets[maturityDate_] = Math.safeSub(__poolStorage.buckets[maturityDate_], fvDecrease);
+
+                uint256 discountDecrease = Discounting.calcDiscount(
+                    __poolStorage.discountRate,
+                    fvDecrease,
+                    nnow,
+                    maturityDate_
+                );
+
+                __poolStorage.latestDiscount = Discounting.secureSub(__poolStorage.latestDiscount, discountDecrease);
+                __poolStorage.latestDiscountOfNavAssets[bytes32(loan)] = Discounting.secureSub(
+                    __poolStorage.latestDiscountOfNavAssets[bytes32(loan)],
+                    discountDecrease
+                );
+
+                __poolStorage.latestNAV = Discounting.secureSub(__poolStorage.latestNAV, discountDecrease);
+            } else {
+                // case 3: repayment of an overdue loan
+                __poolStorage.overdueLoans = Math.safeSub(__poolStorage.overdueLoans, fvDecrease);
+                __poolStorage.overdueLoansOfNavAssets[bytes32(loan)] = Math.safeSub(
+                    __poolStorage.overdueLoansOfNavAssets[bytes32(loan)],
+                    fvDecrease
+                );
+                __poolStorage.latestNAV = Discounting.secureSub(__poolStorage.latestNAV, fvDecrease);
+            }
+
+            decDebt(__poolStorage, loan, amount);
+            emit Repay(bytes32(loan), amount);
         }
-
-        _poolStorage.details[nftID_].futureValue = GenericLogic.toUint128(fv);
-
-        // case 2: repayment of a loan before or on maturity date
-        if (maturityDate_ >= nnow) {
-            // remove future value decrease from bucket
-            _poolStorage.buckets[maturityDate_] = Math.safeSub(_poolStorage.buckets[maturityDate_], fvDecrease);
-
-            uint256 discountDecrease = Discounting.calcDiscount(
-                _poolStorage.discountRate,
-                fvDecrease,
-                nnow,
-                maturityDate_
-            );
-
-            _poolStorage.latestDiscount = Discounting.secureSub(_poolStorage.latestDiscount, discountDecrease);
-            _poolStorage.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub(
-                _poolStorage.latestDiscountOfNavAssets[nftID_],
-                discountDecrease
-            );
-
-            _poolStorage.latestNAV = Discounting.secureSub(_poolStorage.latestNAV, discountDecrease);
-        } else {
-            // case 3: repayment of an overdue loan
-            _poolStorage.overdueLoans = Math.safeSub(_poolStorage.overdueLoans, fvDecrease);
-            _poolStorage.overdueLoansOfNavAssets[nftID_] = Math.safeSub(
-                _poolStorage.overdueLoansOfNavAssets[nftID_],
-                fvDecrease
-            );
-            _poolStorage.latestNAV = Discounting.secureSub(_poolStorage.latestNAV, fvDecrease);
-        }
-
-        decDebt(_poolStorage, loan, amount);
-
-        emit Repay(nftID_, amount);
-        return (amount, _currentDebt);
+        return (repayAmounts, previousDebts);
     }
 
     /// @notice writeOff writes off a loan if it is overdue

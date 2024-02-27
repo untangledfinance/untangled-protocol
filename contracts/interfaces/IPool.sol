@@ -58,7 +58,7 @@ interface IPool {
     function pot() external view returns (address);
     function registry() external view returns (address);
     function renounceRole(bytes32 role, address account) external;
-    function repayLoan(uint256 loan, uint256 amount) external returns (uint256, uint256);
+    function repayLoan(uint256[] calldata loans, uint256[] calldata amounts) external returns (uint256[] memory, uint256[] memory);
     function reserve() external view returns (uint256);
     function revokeRole(bytes32 role, address account) external;
     function risk(bytes32 nft_) external view returns (uint256 risk_);

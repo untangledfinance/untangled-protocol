@@ -178,71 +178,36 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return registry.getLoanAssetToken().ownerOf(uint256(agreementId)) != address(0);
     }
 
-    /// @dev performs various checks to validate the repayment request, including ensuring that the token address is not null,
-    /// the amount is greater than zero, and the debt agreement exists
-    function _assertRepaymentRequest(bytes32 _agreementId, address _tokenAddress) private view returns (bool) {
-        require(_tokenAddress != address(0), 'Token address must different with NULL.');
-
-        // Ensure agreement exists.
-        if (registry.getLoanAssetToken().ownerOf(uint256(_agreementId)) == address(0)) {
-            return false;
-        }
-
-        return true;
-    }
-
     /// @dev executes the loan repayment by notifying the terms contract about the repayment,
     /// transferring the repayment amount to the creditor, and handling additional logic related to securitization pools
     /// and completed repayments
     function _doRepay(
-        IPool pool,
-        bytes32 _agreementId,
+        IPool _pool,
+        uint256[] memory _nftIds,
         address _payer,
-        uint256 _amount,
-        address _tokenAddress,
-        uint256 _preChi,
-        uint256 _penaltyChi
+        uint256[] memory _amount,
+        address _tokenAddress
     ) private returns (bool) {
-        address beneficiary = address(pool);
-        // this principal is not the same inside contract pool
-        uint256 prePrincipalAmount = pool.debtWithChi(uint256(_agreementId), _preChi, _penaltyChi);
-        (uint256 repayAmount, uint256 preDebt) = pool.repayLoan(uint256(_agreementId), _amount);
-        uint256 interestAmount = preDebt - prePrincipalAmount;
+        address beneficiary = address(_pool);
+        if (registry.getSecuritizationManager().isExistingPools(beneficiary)) beneficiary = _pool.pot();
 
-        uint256 outstandingAmount = pool.debt(uint256(_agreementId));
+        uint256 totalRepayAmount;
+        (uint256[] memory repayAmounts, uint256[] memory previousDebts) = _pool.repayLoan(_nftIds, _amount);
 
-        require(pool.underlyingCurrency() == _tokenAddress, 'LoanRepaymentRouter: currency mismatch');
-
-        if (registry.getSecuritizationManager().isExistingPools(beneficiary)) beneficiary = pool.pot();
-
-        TransferHelper.safeTransferFrom(_tokenAddress, _payer, beneficiary, repayAmount);
-
-        pool.increaseTotalAssetRepaidCurrency(repayAmount);
-
-        {
-            // prevent stack too deep
-            IPool tempPool = pool;
-            bytes32 agreementId = _agreementId;
-            uint256 principalRepay;
-            uint256 interestRepay;
-            if (repayAmount <= interestAmount) {
-                interestRepay = repayAmount;
-            } else {
-                interestRepay = interestAmount;
-                if (outstandingAmount == 0) {
-                    // repay all principal and interest
-                    // Burn LAT token when repay completely
-                    _concludeLoan(beneficiary, agreementId);
-                    principalRepay = prePrincipalAmount;
-                } else {
-                    principalRepay = repayAmount - interestAmount;
-                }
+        for (uint256 i; i < repayAmounts.length; i++) {
+            // repay all principal and interest
+            // Burn LAT token when repay completely
+            if (repayAmounts[i] == previousDebts[i]) {
+                _concludeLoan(beneficiary, bytes32(_nftIds[i]));
             }
-            tempPool.increaseRepayAmount(principalRepay, interestRepay);
+            totalRepayAmount += repayAmounts[i];
+            // Log event for repayment
+            emit AssetRepay(bytes32(_nftIds[i]), _payer, beneficiary, repayAmounts[i], _tokenAddress);
         }
 
-        // Log event for repayment
-        emit AssetRepay(_agreementId, _payer, beneficiary, _amount, _tokenAddress);
+        TransferHelper.safeTransferFrom(_tokenAddress, _payer, beneficiary, totalRepayAmount);
+        _pool.increaseTotalAssetRepaidCurrency(totalRepayAmount);
+
         return true;
     }
 
@@ -369,35 +334,32 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         address tokenAddress
     ) external override whenNotPaused nonReentrant returns (bool) {
         uint256 agreementIdsLength = agreementIds.length;
+        require(agreementIdsLength == amounts.length, 'LoanRepaymentRouter: Invalid length');
+        require(tokenAddress != address(0), 'LoanRepaymentRouter: Token address must different with NULL');
 
-        address[] memory pool = new address[](agreementIdsLength);
-        uint256[] memory chi = new uint256[](agreementIdsLength);
-        uint256[] memory penaltyChi = new uint256[](agreementIdsLength);
+        uint256[] memory nftIds = new uint256[](agreementIdsLength);
 
-        for (uint256 i = 0; i < agreementIdsLength; i++) {
-            require(
-                _assertRepaymentRequest(agreementIds[i], tokenAddress),
-                'LoanRepaymentRouter: Invalid repayment request'
-            );
-            address poolAddress = registry.getLoanAssetToken().ownerOf(uint256(agreementIds[i]));
-            pool[i] = poolAddress;
-            (chi[i], penaltyChi[i]) = IPool(poolAddress).chiAndPenaltyChi(uint256(agreementIds[i]));
+        // check all the loans must have the same owner
+        address poolAddress = registry.getLoanAssetToken().ownerOf(uint256(agreementIds[0]));
+        require(poolAddress != address(0), 'LoanRepaymentRouter: Invalid repayment request');
+        require(IPool(poolAddress).underlyingCurrency() == tokenAddress, 'LoanRepaymentRouter: currency mismatch');
+
+        nftIds[0] = uint256(agreementIds[0]);
+
+        if (agreementIdsLength > 1) {
+            for (uint256 i = 1; i < agreementIdsLength; i++) {
+                nftIds[i] = uint256(agreementIds[i]);
+                require(
+                    registry.getLoanAssetToken().ownerOf(nftIds[i]) == poolAddress,
+                    'LoanRepaymentRouter: Invalid repayment request'
+                );
+            }
         }
 
-        for (uint256 i = 0; i < agreementIdsLength; i++) {
-            require(
-                _doRepay(
-                    IPool(pool[i]),
-                    agreementIds[i],
-                    _msgSender(),
-                    amounts[i],
-                    tokenAddress,
-                    chi[i],
-                    penaltyChi[i]
-                ),
-                'LoanRepaymentRouter: Repayment has failed'
-            );
-        }
+        require(
+            _doRepay(IPool(poolAddress), nftIds, _msgSender(), amounts, tokenAddress),
+            'LoanRepaymentRouter: Repayment has failed'
+        );
 
         emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
         return true;

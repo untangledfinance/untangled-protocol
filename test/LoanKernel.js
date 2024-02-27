@@ -417,6 +417,7 @@ describe('LoanKernel', () => {
             console.log('interest amount: ', amount[1]);
 
             await expect(loanAssetTokenContract.ownerOf(tokenIds[0])).to.be.revertedWith(`ERC721: invalid token ID`);
+            expect(await loanAssetTokenContract.ownerOf(tokenIds[1])).to.be.equal(securitizationPoolContract.address);
 
             const balanceOfPool = await loanAssetTokenContract.balanceOf(securitizationPoolContract.address);
             expect(balanceOfPool).equal(tokenIds.length - 1);

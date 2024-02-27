@@ -28,10 +28,7 @@ contract Pool is PoolStorage, UntangledBase {
 
     modifier onlyIssuingTokenStage() {
         DataTypes.CycleState _state = _poolStorage.state;
-        require(
-            _state != DataTypes.CycleState.OPEN && _state != DataTypes.CycleState.CLOSED,
-            'Not in issuing token stage'
-        );
+        require(_state != DataTypes.CycleState.CLOSED, 'Not in issuing token stage');
         _;
     }
 
@@ -188,9 +185,45 @@ contract Pool is PoolStorage, UntangledBase {
         PoolNAVLogic.writeOff(_poolStorage, loan);
     }
 
-    function repayLoan(uint256 loan, uint256 amount) external returns (uint256, uint256) {
+    function repayLoan(
+        uint256[] calldata loans,
+        uint256[] calldata amounts
+    ) external returns (uint256[] memory, uint256[] memory) {
         require(address(registry.getLoanKernel()) == msg.sender, 'not authorized');
-        return PoolNAVLogic.repayLoan(_poolStorage, loan, amount);
+        uint256 numberOfLoans = loans.length;
+        require(numberOfLoans == amounts.length, 'Invalid length');
+
+        uint256[] memory lastOutstandingDebt = new uint256[](numberOfLoans);
+
+        for (uint256 i; i < numberOfLoans; i++) {
+            (uint256 chi, uint256 penaltyChi) = GenericLogic.chiAndPenaltyChi(_poolStorage, loans[i]);
+            lastOutstandingDebt[i] = GenericLogic.debtWithChi(_poolStorage, loans[i], chi, penaltyChi);
+        }
+
+        (uint256[] memory repayAmounts, uint256[] memory previousDebts) = PoolNAVLogic.repayLoan(
+            _poolStorage,
+            loans,
+            amounts
+        );
+
+        uint256 totalInterestRepay;
+        uint256 totalPrincipalRepay;
+
+        for (uint256 i; i < numberOfLoans; i++) {
+            uint256 interestAmount = previousDebts[i] - lastOutstandingDebt[i];
+
+            if (repayAmounts[i] <= interestAmount) {
+                totalInterestRepay += repayAmounts[i];
+            } else {
+                totalInterestRepay += interestAmount;
+                totalPrincipalRepay += repayAmounts[i] - interestAmount;
+            }
+        }
+
+        _poolStorage.totalInterestRepaid += totalInterestRepay;
+        _poolStorage.totalPrincipalRepaid += totalPrincipalRepay;
+
+        return (repayAmounts, previousDebts);
     }
 
     function chiAndPenaltyChi(uint256 loan) external view returns (uint256, uint256) {

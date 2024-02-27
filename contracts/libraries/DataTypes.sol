@@ -28,6 +28,13 @@ bytes32 constant VALIDATOR_ADMIN_ROLE = keccak256('VALIDATOR_ADMIN_ROLE');
 bytes32 constant MINTER_ROLE = keccak256('MINTER_ROLE');
 
 library DataTypes {
+    
+    enum CycleState {
+        INITIATED,
+        CROWDSALE,
+        CLOSED
+    }
+
     struct NoteToken {
         address poolAddress;
         address noteTokenAddress;
@@ -61,13 +68,6 @@ library DataTypes {
     struct NFTAsset {
         address tokenAddress;
         uint256 tokenId;
-    }
-
-    enum CycleState {
-        INITIATED,
-        CROWDSALE,
-        OPEN,
-        CLOSED
     }
 
     struct NewPoolParams {

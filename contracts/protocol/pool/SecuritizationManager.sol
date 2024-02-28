@@ -273,6 +273,9 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             IPool(poolOfPot).decreaseReserve(currencyAmount);
         }
 
+        // rebase
+        IPool(pool).changeSeniorAsset(currencyAmount, 0);
+
         emit TokensPurchased(_msgSender(), tgeAddress, currencyAmount, tokenAmount);
         emit NoteTokenPurchased(_msgSender(), tgeAddress, address(pool), currencyAmount, tokenAmount);
     }

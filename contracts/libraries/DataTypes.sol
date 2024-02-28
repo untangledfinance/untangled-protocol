@@ -20,6 +20,7 @@ uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
 
 uint256 constant ONE = 10 ** 27;
+uint256 constant PRICE_DECIMAL = 10 ** 18;
 uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
 
 bytes32 constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
@@ -28,7 +29,6 @@ bytes32 constant VALIDATOR_ADMIN_ROLE = keccak256('VALIDATOR_ADMIN_ROLE');
 bytes32 constant MINTER_ROLE = keccak256('MINTER_ROLE');
 
 library DataTypes {
-    
     enum CycleState {
         INITIATED,
         CROWDSALE,
@@ -204,7 +204,12 @@ library DataTypes {
         // value to view
         uint256 totalPrincipalRepaid;
         uint256 totalInterestRepaid;
+        // value to calculate rebase
+        uint256 seniorDebt;
+        uint256 seniorBalance;
+        uint64 lastUpdateSeniorInterest;
     }
+
     struct LoanAssetInfo {
         uint256[] tokenIds;
         uint256[] nonces;

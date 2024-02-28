@@ -166,6 +166,10 @@ describe('LoanKernel', () => {
         });
 
         it('Should buy tokens successfully', async () => {
+            let tokenPrice = await securitizationPoolContract.calcTokenPrices();
+            console.log('Jot price: ', tokenPrice[0]);
+            console.log('Sot price: ', tokenPrice[1]);
+
             await untangledProtocol.buyToken(lenderSigner, jotMintedIncreasingInterestTGE.address, parseEther('100'));
 
             await untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'));

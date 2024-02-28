@@ -135,6 +135,9 @@ contract NoteTokenVault is
         }
         poolTGE.decreaseReserve(totalCurrencyAmount);
 
+        // rebase
+        IPool(pool).changeSeniorAsset(0, totalCurrencyAmount);
+
         emit PreDistribute(pool, totalCurrencyAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
     }
 

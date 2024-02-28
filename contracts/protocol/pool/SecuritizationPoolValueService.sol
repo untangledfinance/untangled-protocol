@@ -11,7 +11,6 @@ import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {DataTypes, ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 
-
 /// @title SecuritizationPoolValueService
 /// @author Untangled Team
 /// @dev Calculate pool's values
@@ -103,9 +102,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         uint256 tokenAssetAddressesLength = securitizationPool.getTokenAssetAddressesLength();
         for (uint256 i = 0; i < tokenAssetAddressesLength; i = UntangledMath.uncheckedInc(i)) {
             address tokenAddress = securitizationPool.tokenAssetAddresses(i);
-            expectedAssetsValue =
-                expectedAssetsValue +
-                calcCorrespondingTotalAssetValue(tokenAddress, poolAddress);
+            expectedAssetsValue = expectedAssetsValue + calcCorrespondingTotalAssetValue(tokenAddress, poolAddress);
         }
     }
 
@@ -121,144 +118,9 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         return poolValue;
     }
 
-    // @notice this function return value 90 in example
-    function getBeginningSeniorAsset(address poolAddress) public view returns (uint256) {
-        require(poolAddress != address(0), 'Invalid pool address');
-        IPool securitizationPool = IPool(poolAddress);
-        address sotToken = securitizationPool.sotToken();
-        if (sotToken == address(0)) {
-            return 0;
-        }
-        uint256 tokenSupply = INoteToken(sotToken).totalSupply();
-        return tokenSupply;
-    }
-
-    // @notice this function will return 72 in example
-    function getBeginningSeniorDebt(address poolAddress) public view returns (uint256) {
-        (uint256 beginningSeniorDebt, ) = _getBeginningSeniorDebt(poolAddress);
-
-        return beginningSeniorDebt;
-    }
-
-    function _getBeginningSeniorDebt(address poolAddress) public view returns (uint256, uint256) {
-        IPool securitizationPool = IPool(poolAddress);
-        require(address(securitizationPool) != address(0), 'Pool was not deployed');
-
-        uint256 navpoolValue = getExpectedAssetsValue(poolAddress);
-
-        uint256 balancePool = IPool(poolAddress).reserve();
-        uint256 poolValue = balancePool + navpoolValue;
-        if (poolValue == 0) return (0, 0);
-
-        uint256 beginningSeniorAsset = getBeginningSeniorAsset(poolAddress);
-
-        return ((beginningSeniorAsset * navpoolValue) / poolValue, beginningSeniorAsset);
-    }
-
-    // @notice get beginning of senior debt, get interest of this debt over number of interval
-    function getSeniorDebt(address poolAddress) public view returns (uint256) {
-        uint256 beginningSeniorDebt = getBeginningSeniorDebt(poolAddress);
-        if (beginningSeniorDebt == 0) return 0;
-
-        return _getSeniorDebt(poolAddress, beginningSeniorDebt);
-    }
-
-    function _getSeniorDebt(address poolAddress, uint256 beginningSeniorDebt) internal view returns (uint256) {
-        IPool securitizationPool = IPool(poolAddress);
-        require(address(securitizationPool) != address(0), 'Pool was not deployed');
-        uint256 seniorInterestRate = IPool(poolAddress).interestRateSOT();
-        uint256 openingTime = securitizationPool.openingBlockTimestamp();
-        uint256 compoundingPeriods = block.timestamp - openingTime;
-        uint256 oneYearInSeconds = YEAR_LENGTH_IN_SECONDS;
-
-        uint256 seniorDebt = beginningSeniorDebt +
-            (beginningSeniorDebt * seniorInterestRate * compoundingPeriods) /
-            (ONE_HUNDRED_PERCENT * oneYearInSeconds);
-        return seniorDebt;
-    }
-
-    // @notice get beginning senior asset, then calculate ratio reserve on pools.Finaly multiple them
-    function getSeniorBalance(address poolAddress) public view returns (uint256) {
-        (uint256 beginningSeniorDebt, uint256 beginningSeniorAsset) = _getBeginningSeniorDebt(poolAddress);
-        return beginningSeniorAsset - beginningSeniorDebt;
-    }
-
-    function _getSeniorAsset(address poolAddress) internal view returns (uint256, uint256, uint256) {
-        uint256 navpoolValue = getExpectedAssetsValue(poolAddress);
-        uint256 balancePool = IPool(poolAddress).reserve();
-        uint256 poolValue = balancePool + navpoolValue;
-
-        if (poolValue == 0) {
-            return (0, 0, navpoolValue);
-        }
-
-        uint256 seniorAsset;
-        uint256 beginningSeniorAsset = getBeginningSeniorAsset(poolAddress);
-        uint256 beginningSeniorDebt = (beginningSeniorAsset * navpoolValue) / poolValue;
-        uint256 seniorDebt = _getSeniorDebt(poolAddress, beginningSeniorDebt);
-
-        uint256 seniorBalance = beginningSeniorAsset - beginningSeniorDebt;
-        uint256 expectedSeniorAsset = seniorDebt + seniorBalance;
-
-        if (poolValue > expectedSeniorAsset) {
-            seniorAsset = expectedSeniorAsset;
-        } else {
-            seniorAsset = poolValue;
-        }
-
-        return (seniorAsset, poolValue, navpoolValue);
-    }
-
-    /// @inheritdoc ISecuritizationPoolValueService
-    function getSeniorAsset(address poolAddress) public view returns (uint256) {
-        (uint256 seniorAsset, , ) = _getSeniorAsset(poolAddress);
-        return seniorAsset;
-    }
-
-    /// @inheritdoc ISecuritizationPoolValueService
-    function getJuniorAsset(address poolAddress) public view returns (uint256) {
-        (uint256 seniorAsset, uint256 poolValue, ) = _getSeniorAsset(poolAddress);
-
-        uint256 juniorAsset = 0;
-        if (poolValue >= seniorAsset) {
-            juniorAsset = poolValue - seniorAsset;
-        }
-
-        return juniorAsset;
-    }
-
     /// @inheritdoc ISecuritizationPoolValueService
     function getJuniorRatio(address poolAddress) public view returns (uint256) {
-        uint256 rateSenior = getSeniorRatio(poolAddress);
-        require(rateSenior <= 100 * RATE_SCALING_FACTOR, 'securitizationPool.rateSenior >100');
-
-        return 100 * RATE_SCALING_FACTOR - rateSenior;
-    }
-
-    function getSeniorRatio(address poolAddress) public view returns (uint256) {
-        (uint256 seniorAsset, uint256 poolValue, ) = _getSeniorAsset(poolAddress);
-        if (poolValue == 0) {
-            return 0;
-        }
-
-        return (seniorAsset * 100 * RATE_SCALING_FACTOR) / poolValue;
-    }
-
-    function getExpectedSeniorAssets(address poolAddress) public view returns (uint256) {
-        uint256 navpoolValue = getExpectedAssetsValue(poolAddress);
-        uint256 balancePool = IPool(poolAddress).reserve();
-        uint256 poolValue = balancePool + navpoolValue;
-
-        if (poolValue == 0) {
-            return 0;
-        }
-
-        uint256 beginningSeniorAsset = getBeginningSeniorAsset(poolAddress);
-
-        uint256 seniorBalance = (beginningSeniorAsset * navpoolValue) / poolValue;
-        uint256 seniorDebt = _getSeniorDebt(poolAddress, seniorBalance);
-
-        return seniorDebt + seniorBalance;
+        return IPool(poolAddress).calcJuniorRatio();
     }
 
     function getMaxAvailableReserve(
@@ -324,33 +186,13 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         return x;
     }
 
-    function _getTokenPrice(
-        address securitizationPool,
-        INoteToken noteToken,
-        uint256 asset
-    ) private view returns (uint256) {
-        require(address(securitizationPool) != address(0), 'DistributionAssessor: Invalid pool address');
-
-        uint256 totalSupply = noteToken.totalSupply();
-        uint256 decimals = noteToken.decimals();
-
-        require(address(noteToken) != address(0), 'DistributionAssessor: Invalid note token address');
-        // In initial state, SOT price = 1$
-        if (noteToken.totalSupply() == 0) return 10 ** decimals;
-
-        return (asset * 10 ** decimals) / totalSupply;
-    }
-
     // get current individual asset for SOT tranche
     function getSOTTokenPrice(address securitizationPool) public view returns (uint256) {
-        uint256 seniorAsset = getSeniorAsset(address(securitizationPool));
-        return _getTokenPrice(securitizationPool, INoteToken(IPool(securitizationPool).sotToken()), seniorAsset);
+        (, uint256 sotTokenPrice) = IPool(securitizationPool).calcTokenPrices();
+        return sotTokenPrice;
     }
 
-    function calcCorrespondingTotalAssetValue(
-        address tokenAddress,
-        address investor
-    ) public view returns (uint256) {
+    function calcCorrespondingTotalAssetValue(address tokenAddress, address investor) public view returns (uint256) {
         return _calcCorrespondingAssetValue(tokenAddress, investor);
     }
 
@@ -381,8 +223,9 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
 
     function calcTokenPrice(address pool, address tokenAddress) public view returns (uint256) {
         IPool securitizationPool = IPool(pool);
-        if (tokenAddress == securitizationPool.sotToken()) return getSOTTokenPrice(pool);
-        if (tokenAddress == securitizationPool.jotToken()) return getJOTTokenPrice(pool);
+        (uint256 jotTokenPrice, uint256 sotTokenPrice) = IPool(pool).calcTokenPrices();
+        if (tokenAddress == securitizationPool.sotToken()) return sotTokenPrice;
+        if (tokenAddress == securitizationPool.jotToken()) return jotTokenPrice;
         return 0;
     }
 
@@ -412,7 +255,9 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         return tokenValues;
     }
 
-    function getExternalTokenInfos(address poolAddress) public view returns (DataTypes.NoteToken[] memory noteTokens) {
+    function getExternalTokenInfos(
+        address poolAddress
+    ) external view returns (DataTypes.NoteToken[] memory noteTokens) {
         IPool securitizationPool = IPool(poolAddress);
 
         uint256 tokenAssetAddressesLength = securitizationPool.getTokenAssetAddressesLength();
@@ -436,11 +281,11 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
     }
 
     function getJOTTokenPrice(address securitizationPool) public view returns (uint256) {
-        uint256 juniorrAsset = getJuniorAsset(address(securitizationPool));
-        return _getTokenPrice(securitizationPool, INoteToken(IPool(securitizationPool).jotToken()), juniorrAsset);
+        (uint256 jotTokenPrice, ) = IPool(securitizationPool).calcTokenPrices();
+        return jotTokenPrice;
     }
 
-    function getCashBalance(address pool) public view returns (uint256) {
+    function getCashBalance(address pool) external view returns (uint256) {
         return INoteToken(IPool(pool).underlyingCurrency()).balanceOf(IPool(pool).pot());
     }
 }

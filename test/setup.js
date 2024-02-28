@@ -107,11 +107,16 @@ const setUpSecuritizationPoolImpl = async (registry) => {
     const tgeLogic = await TGELogic.deploy();
     await tgeLogic.deployed();
 
+    const RebaseLogic = await ethers.getContractFactory('RebaseLogic');
+    const rebaseLogic = await RebaseLogic.deploy();
+    await rebaseLogic.deployed();
+
     const SecuritizationPool = await ethers.getContractFactory('Pool', {
         libraries: {
             PoolAssetLogic: poolAssetLogic.address,
             PoolNAVLogic: poolNAVLogic.address,
             TGELogic: tgeLogic.address,
+            RebaseLogic: rebaseLogic.address,
         },
     });
     const securitizationPoolImpl = await SecuritizationPool.deploy();

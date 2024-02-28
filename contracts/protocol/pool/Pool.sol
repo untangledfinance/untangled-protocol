@@ -11,6 +11,7 @@ import {PoolNAVLogic} from '../../libraries/logic/PoolNAVLogic.sol';
 import {PoolAssetLogic} from '../../libraries/logic/PoolAssetLogic.sol';
 import {TGELogic} from '../../libraries/logic/TGELogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
+import {RebaseLogic} from '../../libraries/logic/RebaseLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
 
 /**
@@ -116,6 +117,8 @@ contract Pool is PoolStorage, UntangledBase {
     ) external whenNotPaused notClosingStage {
         registry.requirePoolAdmin(_msgSender());
         PoolAssetLogic.setupRiskScores(_poolStorage, _daysPastDues, _ratesAndDefaults, _periodsAndWriteOffs);
+        // rebase
+        rebase();
     }
 
     /// @notice exports NFT assets to another pool address
@@ -183,6 +186,8 @@ contract Pool is PoolStorage, UntangledBase {
     /*==================== NAV ====================*/
     function writeOff(uint256 loan) public {
         PoolNAVLogic.writeOff(_poolStorage, loan);
+        // rebase
+        rebase();
     }
 
     function repayLoan(
@@ -224,14 +229,6 @@ contract Pool is PoolStorage, UntangledBase {
         _poolStorage.totalPrincipalRepaid += totalPrincipalRepay;
 
         return (repayAmounts, previousDebts);
-    }
-
-    function chiAndPenaltyChi(uint256 loan) external view returns (uint256, uint256) {
-        return GenericLogic.chiAndPenaltyChi(_poolStorage, loan);
-    }
-
-    function debtWithChi(uint256 loan, uint256 chi, uint256 penaltyChi) external view returns (uint256) {
-        return GenericLogic.debtWithChi(_poolStorage, loan, chi, penaltyChi);
     }
 
     function increaseRepayAmount(uint256 principalRepay, uint256 interestRepay) external {
@@ -437,5 +434,56 @@ contract Pool is PoolStorage, UntangledBase {
 
     function validatorRequired() external view returns (bool) {
         return _poolStorage.validatorRequired;
+    }
+
+    /*==================== REBASE ====================*/
+    /// @notice rebase the debt and balance of the senior tranche according to
+    /// the current ratio between senior and junior
+    function rebase() public {
+        RebaseLogic.rebase(_poolStorage, GenericLogic.currentNAV(_poolStorage), _poolStorage.reserve);
+    }
+
+    /// @notice changes the senior asset value based on new supply or redeems
+    /// @param _seniorSupply senior supply amount
+    /// @param _seniorRedeem senior redeem amount
+    function changeSeniorAsset(uint256 _seniorSupply, uint256 _seniorRedeem) external {
+        require(
+            _msgSender() == address(registry.getSecuritizationManager()) ||
+                _msgSender() == address(registry.getNoteTokenVault()),
+            'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
+        );
+        RebaseLogic.changeSeniorAsset(
+            _poolStorage,
+            GenericLogic.currentNAV(_poolStorage),
+            _poolStorage.reserve,
+            _seniorSupply,
+            _seniorRedeem
+        );
+    }
+
+    function seniorDebtAndBalance() external view returns (uint256, uint256) {
+        return (RebaseLogic.seniorDebt(_poolStorage), _poolStorage.seniorBalance);
+    }
+
+    function calcTokenPrices() external view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice) {
+        return
+            RebaseLogic.calcTokenPrices(
+                GenericLogic.currentNAV(_poolStorage),
+                _poolStorage.reserve,
+                RebaseLogic.seniorDebt(_poolStorage),
+                _poolStorage.seniorBalance,
+                IERC20Upgradeable(TGELogic.jotToken(_poolStorage)).totalSupply(),
+                IERC20Upgradeable(TGELogic.sotToken(_poolStorage)).totalSupply()
+            );
+    }
+
+    function calcJuniorRatio() external view returns (uint256 juniorRatio) {
+        return
+            RebaseLogic.calcJuniorRatio(
+                GenericLogic.currentNAV(_poolStorage),
+                _poolStorage.reserve,
+                RebaseLogic.seniorDebt(_poolStorage),
+                _poolStorage.seniorBalance
+            );
     }
 }

@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
 import {IERC20MetadataUpgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20MetadataUpgradeable.sol';
 import '@openzeppelin/contracts/utils/math/Math.sol';
+import '@openzeppelin/contracts/interfaces/IERC20.sol';
 
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IUntangledERC721} from '../../interfaces/IUntangledERC721.sol';
@@ -272,6 +273,14 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         return seniorDebt + seniorBalance;
     }
 
+    function getApprovedReserved(address poolAddress) public view returns (uint256 approvedReserved) {
+        address poolPot = ISecuritizationPoolStorage(poolAddress).pot();
+        address underlyingCurrency = ISecuritizationTGE(poolAddress).underlyingCurrency();
+        uint256 currentAllowance = IERC20Upgradeable(underlyingCurrency).allowance(poolAddress, poolPot);
+
+        return currentAllowance;
+    }
+
     function getMaxAvailableReserve(
         address poolAddress,
         uint256 sotRequest
@@ -279,7 +288,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         ISecuritizationTGE securitizationPool = ISecuritizationTGE(poolAddress);
         address sotToken = securitizationPool.sotToken();
         address jotToken = securitizationPool.jotToken();
-        uint256 reserve = securitizationPool.reserve();
+        uint256 reserve = Math.min(securitizationPool.reserve(), getApprovedReserved(poolAddress));
 
         uint256 sotPrice = registry.getDistributionAssessor().calcTokenPrice(poolAddress, sotToken);
         if (sotPrice == 0) {

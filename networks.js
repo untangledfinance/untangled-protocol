@@ -68,7 +68,7 @@ const networks = {
     },
     polygon: {
         url: 'https://polygon-rpc.com',
-        gasPrice: 70_000_000_000, //wei
+        gasPrice: 90_000_000_000, //wei
         blockGasLimit: 100000000429720,
         accounts: PRIVATEKEY !== undefined ? [PRIVATEKEY] : [],
         // verifyApiKey: "THIS HAS NOT BEEN SET",

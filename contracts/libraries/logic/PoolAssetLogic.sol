@@ -6,7 +6,9 @@ import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
+import {INoteToken} from '../../interfaces/INoteToken.sol';
 import './PoolNAVLogic.sol';
+
 /**
  * @title Untangled's SecuritizationPoolAsset contract
  * @notice Provides pool's asset related functions
@@ -17,9 +19,10 @@ library PoolAssetLogic {
     event WithdrawNFTAsset(address[] tokenAddresses, uint256[] tokenIds, address[] recipients);
     event UpdateOpeningBlockTimestamp(uint256 newTimestamp);
     event CollectNFTAsset(uint256[] tokenIds, uint256 expectedAssetsValue);
-    event CollectERC20Asset(address token);
+    event CollectERC20Asset(address token, uint256 currentBalance);
     event WithdrawERC20Asset(address[] tokenAddresses, address[] recipients, uint256[] amounts);
     event SetRiskScore(DataTypes.RiskScore[] riskscores);
+
     /** UTILITY FUNCTION */
     function _removeNFTAsset(
         DataTypes.NFTAsset[] storage _nftAssets,
@@ -199,8 +202,9 @@ library PoolAssetLogic {
             _setOpeningBlockTimestamp(_poolStorgae, uint64(block.timestamp));
         }
 
-        emit CollectERC20Asset(tokenAddress);
+        emit CollectERC20Asset(tokenAddress, INoteToken(tokenAddress).balanceOf(address(this)));
     }
+
     // TODO have to use modifier in main contract
     function withdrawERC20Assets(
         mapping(address => bool) storage existsTokenAssetAddress,
@@ -212,7 +216,6 @@ library PoolAssetLogic {
         require(tokenAddressesLength == recipients.length, 'tokenAddresses length and tokenIds length are not equal');
         require(tokenAddressesLength == amounts.length, 'tokenAddresses length and recipients length are not equal');
 
-        // mapping(address => bool) storage existsTokenAssetAddress = _getStorage().existsTokenAssetAddress;
         for (uint256 i = 0; i < tokenAddressesLength; i = UntangledMath.uncheckedInc(i)) {
             require(existsTokenAssetAddress[tokenAddresses[i]], 'SecuritizationPool: note token asset does not exist');
             TransferHelper.safeTransfer(tokenAddresses[i], recipients[i], amounts[i]);

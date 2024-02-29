@@ -8,6 +8,8 @@ import {Configuration} from '../Configuration.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
 
+import 'hardhat/console.sol';
+
 library TGELogic {
     uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
@@ -100,6 +102,8 @@ library TGELogic {
         address poolServiceAddress
     ) public view returns (bool) {
         ISecuritizationPoolValueService poolService = ISecuritizationPoolValueService(poolServiceAddress);
+        console.log('_poolStorage.minFirstLossCushion: ', _poolStorage.minFirstLossCushion);
+        console.log('poolService.getJuniorRatio(address(this)): ', poolService.getJuniorRatio(address(this)));
         return _poolStorage.minFirstLossCushion <= poolService.getJuniorRatio(address(this));
     }
 

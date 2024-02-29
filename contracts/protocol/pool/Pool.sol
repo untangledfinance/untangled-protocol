@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
-import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
+import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {OWNER_ROLE, ORIGINATOR_ROLE} from '../../libraries/DataTypes.sol';
 import {PoolStorage} from './PoolStorage.sol';
-import {DataTypes} from '../../libraries/DataTypes.sol';
+import {DataTypes, ONE} from '../../libraries/DataTypes.sol';
 import {UntangledBase} from '../../base/UntangledBase.sol';
 import {PoolNAVLogic} from '../../libraries/logic/PoolNAVLogic.sol';
 import {PoolAssetLogic} from '../../libraries/logic/PoolAssetLogic.sol';
@@ -13,6 +13,8 @@ import {TGELogic} from '../../libraries/logic/TGELogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {RebaseLogic} from '../../libraries/logic/RebaseLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
+
+import 'hardhat/console.sol';
 
 /**
  * @title Untangled's SecuritizationPool contract
@@ -58,7 +60,7 @@ contract Pool is PoolStorage, UntangledBase {
         TGELogic._setDebtCeiling(_poolStorage, newPoolParams.debtCeiling);
 
         require(
-            IERC20Upgradeable(newPoolParams.currency).approve(address(this), type(uint256).max),
+            INoteToken(newPoolParams.currency).approve(address(this), type(uint256).max),
             'Pool: Currency approval failed'
         );
 
@@ -466,15 +468,18 @@ contract Pool is PoolStorage, UntangledBase {
     }
 
     function calcTokenPrices() external view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice) {
-        return
-            RebaseLogic.calcTokenPrices(
-                GenericLogic.currentNAV(_poolStorage),
-                _poolStorage.reserve,
-                RebaseLogic.seniorDebt(_poolStorage),
-                _poolStorage.seniorBalance,
-                IERC20Upgradeable(TGELogic.jotToken(_poolStorage)).totalSupply(),
-                IERC20Upgradeable(TGELogic.sotToken(_poolStorage)).totalSupply()
-            );
+        address jotTokenAddress = TGELogic.sotToken(_poolStorage);
+        address sotTokenAddress = TGELogic.sotToken(_poolStorage);
+        uint256 noteTokenDecimal = (10 ** INoteToken(sotTokenAddress).decimals());
+        (uint256 _juniorTokenPrice, uint256 _seniorTokenPrice) = RebaseLogic.calcTokenPrices(
+            GenericLogic.currentNAV(_poolStorage),
+            _poolStorage.reserve,
+            RebaseLogic.seniorDebt(_poolStorage),
+            _poolStorage.seniorBalance,
+            INoteToken(jotTokenAddress).totalSupply(),
+            INoteToken(sotTokenAddress).totalSupply()
+        );
+        return ((_juniorTokenPrice * noteTokenDecimal) / ONE, (_seniorTokenPrice * noteTokenDecimal) / ONE);
     }
 
     function calcJuniorRatio() external view returns (uint256 juniorRatio) {

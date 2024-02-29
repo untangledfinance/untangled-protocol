@@ -24,6 +24,9 @@ import '../UnpackLoanParamtersLib.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
+
+import 'hardhat/console.sol';
+
 /**
  * @title Untangled's SecuritizaionPoolNAV contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
@@ -132,6 +135,7 @@ library GenericLogic {
         require(value <= type(uint128).max, "SafeCast: value doesn't fit in 128 bits");
         return uint128(value);
     }
+
     // TODO have to use modifier in main contract
 
     /// @notice returns if a loan is written off
@@ -603,6 +607,8 @@ library GenericLogic {
             termLengthInAmortizationUnits,
             gracePeriodInDays
         ) = UnpackLoanParamtersLib.unpackParametersFromBytes(loan.termsParam);
+
+        console.log('interestRate: ', interestRate);
 
         UnpackLoanParamtersLib.AmortizationUnitType amortizationUnitType = UnpackLoanParamtersLib.AmortizationUnitType(
             rawAmortizationUnitType

@@ -256,7 +256,8 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         require(!registry.getNoteTokenVault().redeemDisabled(pool), 'SM: Buy token paused');
 
         address noteToken = tge.token();
-        if (INoteToken(noteToken).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
+        uint8 noteTokenType = INoteToken(noteToken).noteTokenType();
+        if (noteTokenType == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
             if (IMintedNormalTGE(tgeAddress).currencyRaised() >= IMintedNormalTGE(tgeAddress).initialAmount()) {
                 // Currency Raised For JOT > initialJOTAmount => SOT sale start
                 address sotTGEAddress = IPool(pool).tgeAddress();
@@ -274,7 +275,11 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         }
 
         // rebase
-        IPool(pool).changeSeniorAsset(currencyAmount, 0);
+        if (noteTokenType == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {
+            IPool(pool).changeSeniorAsset(0, 0);
+        } else {
+            IPool(pool).changeSeniorAsset(currencyAmount, 0);
+        }
 
         emit TokensPurchased(_msgSender(), tgeAddress, currencyAmount, tokenAmount);
         emit NoteTokenPurchased(_msgSender(), tgeAddress, address(pool), currencyAmount, tokenAmount);

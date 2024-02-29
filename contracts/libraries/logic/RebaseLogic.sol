@@ -4,7 +4,7 @@ pragma solidity 0.8.19;
 import {UntangledERC721} from '../../tokens/ERC721/UntangledERC721.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
-import {DataTypes, PRICE_DECIMAL, ONE, RATE_SCALING_FACTOR} from '../DataTypes.sol';
+import {DataTypes, PRICE_DECIMAL, ONE, ONE_HUNDRED_PERCENT} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
 import {GenericLogic} from './GenericLogic.sol';
 import {TGELogic} from './TGELogic.sol';
@@ -61,7 +61,7 @@ library RebaseLogic {
         uint256 _seniorSupply,
         uint256 _seniorRedeem
     ) external {
-        _rebase(
+        (uint256 seniorDebt_, uint256 seniorBalance_) = _rebase(
             _nav,
             _reserve,
             calcExpectedSeniorAsset(
@@ -71,6 +71,8 @@ library RebaseLogic {
                 dripSeniorDebt(_poolStorage)
             )
         );
+        _poolStorage.seniorDebt = seniorDebt_;
+        _poolStorage.seniorBalance = seniorBalance_;
     }
 
     /// @notice internal function for the rebalance of senior debt and balance
@@ -144,7 +146,7 @@ library RebaseLogic {
     }
 
     /// @notice calculates the senior token price
-    /// @return seniorTokenPrice the senior token price
+    /// @return seniorTokenPrice the senior token price in RAY decimal (10^27)
     function calcSeniorTokenPrice(
         uint256 _nav,
         uint256 _reserve,
@@ -156,7 +158,7 @@ library RebaseLogic {
     }
 
     /// @notice calculates the junior token price
-    /// @return juniorTokenPrice the junior token price
+    /// @return juniorTokenPrice the junior token price in RAY decimal (10^27)
     function calcJuniorTokenPrice(
         uint256 _nav,
         uint256 _reserve,
@@ -168,8 +170,8 @@ library RebaseLogic {
     }
 
     /// @notice calculates the senior and junior token price based on current NAV and reserve
-    /// @return juniorTokenPrice the junior token price
-    /// @return seniorTokenPrice the senior token price
+    /// @return juniorTokenPrice the junior token price in RAY decimal (10^27)
+    /// @return seniorTokenPrice the senior token price in RAY decimal (10^27)
     function calcTokenPrices(
         uint256 _nav,
         uint256 _reserve,
@@ -190,7 +192,7 @@ library RebaseLogic {
     /// @param _seniorDebt the senior debt
     /// @param _seniorBalance the senior balance
     /// @param _sotTotalSupply the token supply
-    /// @return seniorTokenPrice the senior token price
+    /// @return seniorTokenPrice the senior token price in RAY decimal (10^27)
     function _calcSeniorTokenPrice(
         uint256 _nav,
         uint256 _reserve,
@@ -203,7 +205,7 @@ library RebaseLogic {
         if ((_nav == 0 && _reserve == 0) || _sotTotalSupply <= 2) {
             // we are using a tolerance of 2 here, as there can be minimal supply leftovers after all redemptions due to rounding
             // initial token price at start 1.00
-            return PRICE_DECIMAL;
+            return ONE;
         }
 
         uint256 poolValue = Math.safeAdd(_nav, _reserve);
@@ -212,7 +214,7 @@ library RebaseLogic {
         if (poolValue < seniorAssetValue) {
             seniorAssetValue = poolValue;
         }
-        return (Math.rdiv(seniorAssetValue, _sotTotalSupply) * PRICE_DECIMAL) / ONE;
+        return Math.rdiv(seniorAssetValue, _sotTotalSupply) / ONE;
     }
 
     /// @notice internal function to calculate the junior token price
@@ -221,7 +223,7 @@ library RebaseLogic {
     /// @param _seniorDebt the senior debt
     /// @param _seniorBalance the senior balance
     /// @param _jotTotalSupply the token supply
-    /// @return juniorTokenPrice the junior token price
+    /// @return juniorTokenPrice the junior token price in RAY decimal (10^27)
     function _calcJuniorTokenPrice(
         uint256 _nav,
         uint256 _reserve,
@@ -232,7 +234,7 @@ library RebaseLogic {
         if ((_nav == 0 && _reserve == 0) || _jotTotalSupply <= 2) {
             // we are using a tolerance of 2 here, as there can be minimal supply leftovers after all redemptions due to rounding
             // initial token price at start 1.00
-            return PRICE_DECIMAL;
+            return ONE;
         }
         // reserve includes creditline from maker
         uint256 poolValue = Math.safeAdd(_nav, _reserve);
@@ -244,7 +246,7 @@ library RebaseLogic {
             return 0;
         }
 
-        return (Math.rdiv(Math.safeSub(poolValue, seniorAssetValue), _jotTotalSupply) * PRICE_DECIMAL) / ONE;
+        return Math.rdiv(Math.safeSub(poolValue, seniorAssetValue), _jotTotalSupply) / ONE;
     }
 
     /// @notice returns the current junior ratio protection in the Tinlake
@@ -263,13 +265,13 @@ library RebaseLogic {
         }
 
         if (seniorAsset_ == 0 && assets_ > 0) {
-            return RATE_SCALING_FACTOR;
+            return ONE_HUNDRED_PERCENT;
         }
 
         if (seniorAsset_ > assets_) {
             return 0;
         }
 
-        return (Math.safeSub(ONE, Math.rdiv(seniorAsset_, assets_)) * RATE_SCALING_FACTOR) / ONE;
+        return (Math.safeSub(ONE, Math.rdiv(seniorAsset_, assets_)) * ONE_HUNDRED_PERCENT) / ONE;
     }
 }

@@ -23,6 +23,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         log: true,
     });
 
+    const rebaseLogic = await deploy('RebaseLogic', {
+        from: deployer,
+        args: [],
+        log: true,
+    });
+
     const securitizationPool = await deploy('Pool', {
         from: deployer,
         args: [],
@@ -30,6 +36,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             PoolAssetLogic: poolAssetLogic.address,
             PoolNAVLogic: poolNAVLogic.address,
             TGELogic: tgeLogic.address,
+            RebaseLogic: rebaseLogic.address,
         },
         log: true,
     });

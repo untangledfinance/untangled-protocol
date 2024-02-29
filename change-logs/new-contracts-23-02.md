@@ -67,6 +67,8 @@ function setUpTGEForJOT(
 
 ## BE events update
 
+Removed `TokenPurchased` from `SecuritizationManager` => Need to handle the Chart in Pool detail in Investor app
+
 Need to generate go file again from new ABIs
 
 ```

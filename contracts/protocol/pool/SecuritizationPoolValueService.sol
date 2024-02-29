@@ -276,7 +276,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
     function getApprovedReserved(address poolAddress) public view returns (uint256 approvedReserved) {
         address poolPot = ISecuritizationPoolStorage(poolAddress).pot();
         address underlyingCurrency = ISecuritizationTGE(poolAddress).underlyingCurrency();
-        uint256 currentAllowance = IERC20Upgradeable(underlyingCurrency).allowance(poolAddress, poolPot);
+        uint256 currentAllowance = IERC20Upgradeable(underlyingCurrency).allowance(poolPot, poolAddress);
 
         return currentAllowance;
     }
@@ -289,7 +289,16 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         address sotToken = securitizationPool.sotToken();
         address jotToken = securitizationPool.jotToken();
         uint256 reserve = Math.min(securitizationPool.reserve(), getApprovedReserved(poolAddress));
+        uint256 maxJOTRedeem;
+        uint256 jotPrice;
 
+        if (sotRequest == 0) {
+            jotPrice = registry.getDistributionAssessor().calcTokenPrice(poolAddress, jotToken);
+            uint256 jotSupply = INoteToken(jotToken).totalSupply();
+            maxJOTRedeem = Math.min(reserve, (jotSupply * 10 ** INoteToken(jotToken).decimals()) / jotPrice);
+
+            return (maxJOTRedeem, 0, maxJOTRedeem);
+        }
         uint256 sotPrice = registry.getDistributionAssessor().calcTokenPrice(poolAddress, sotToken);
         if (sotPrice == 0) {
             return (reserve, 0, 0);
@@ -299,12 +308,12 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
             return (reserve, (reserve * (10 ** INoteToken(sotToken).decimals())) / sotPrice, 0);
         }
 
-        uint256 jotPrice = registry.getDistributionAssessor().calcTokenPrice(poolAddress, jotToken);
+        jotPrice = registry.getDistributionAssessor().calcTokenPrice(poolAddress, jotToken);
         uint256 x = solveReserveEquation(poolAddress, expectedSOTCurrencyAmount, sotRequest);
         if (jotPrice == 0) {
             return (x + expectedSOTCurrencyAmount, sotRequest, 0);
         }
-        uint256 maxJOTRedeem = (x * 10 ** INoteToken(jotToken).decimals()) / jotPrice;
+        maxJOTRedeem = (x * 10 ** INoteToken(jotToken).decimals()) / jotPrice;
 
         return (x + expectedSOTCurrencyAmount, sotRequest, maxJOTRedeem);
     }

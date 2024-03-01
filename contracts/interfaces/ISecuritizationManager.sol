@@ -4,6 +4,7 @@ pragma solidity 0.8.19;
 import '../storage/Registry.sol';
 import './IPool.sol';
 import {DataTypes} from '../libraries/DataTypes.sol';
+
 interface ISecuritizationManager {
     event NewPoolCreated(address indexed instanceAddress);
     event NewPoolDeployed(address indexed instanceAddress, address poolOwner, DataTypes.NewPoolParams newPoolParams);
@@ -11,22 +12,8 @@ interface ISecuritizationManager {
     event SotDeployed(address indexed sotAddress, address tgeAddress, address poolAddress);
     event JotDeployed(address indexed jotAddress, address tgeAddress, address poolAddress);
 
-    event SetupSot(
-        address indexed sotAddress,
-        address tgeAddress,
-        address poolAddress,
-        TGEParam tgeParam,
-        uint256 cap,
-        uint256 interestRate
-    );
-    event SetupJot(
-        address indexed jotAddress,
-        address tgeAddress,
-        address poolAddress,
-        TGEParam tgeParam,
-        uint256 cap,
-        uint256 initialJOTAmount
-    );
+    event SetupSot(address indexed sotAddress, address tgeAddress, TGEParam tgeParam, uint256 interestRate);
+    event SetupJot(address indexed jotAddress, address tgeAddress, TGEParam tgeParam, uint256 initialJOTAmount);
 
     event UpdateAllowedUIDTypes(uint256[] uids);
     event TokensPurchased(address indexed investor, address indexed tgeAddress, uint256 amount, uint256 tokenAmount);

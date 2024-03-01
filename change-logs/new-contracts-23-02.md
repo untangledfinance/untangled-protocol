@@ -21,7 +21,7 @@ Removed all Pool Diamond logics, Merged into `Pool`
 
 Removed `startCycle` function, need to remove from FE side
 
-SOT/JOT now only long sale, remove `openingTime` and `ClosingTime` when issuing sot/jot, need to remove on FE side
+SOT/JOT now only long sale, remove `ClosingTime` when issuing sot/jot, need to remove on FE side
 
 ## Function updates
 
@@ -40,11 +40,7 @@ function setUpTGEForSOT(
 After
 
 ```
-function setUpTGEForSOT(
-        TGEParam memory tgeParam,
-        uint256 cap,
-        uint256 interestRate
-    )
+function setUpTGEForSOT(TGEParam memory tgeParam, uint256 interestRate)
 ```
 
 Before
@@ -60,11 +56,7 @@ function setUpTGEForJOT(
 After
 
 ```
-function setUpTGEForJOT(
-        TGEParam memory tgeParam,
-        uint256 initialJOTAmount,
-        uint256 cap
-    )
+ function setUpTGEForJOT(TGEParam memory tgeParam, uint256 initialJOTAmount)
 ```
 
 ## BE events update

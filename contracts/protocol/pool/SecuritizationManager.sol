@@ -178,7 +178,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         tge.setTotalCap(tgeParam.totalCap);
         tge.setMinBidAmount(tgeParam.minBidAmount);
 
-        emit SetupSot(sotToken, tgeAddress, tgeParam.pool, tgeParam, tgeParam.totalCap, interestRate);
+        emit SetupSot(sotToken, tgeAddress, tgeParam, interestRate);
     }
 
     /// @notice sets up the token generation event (TGE) for the junior tranche (JOT) of a securitization pool with additional configuration parameters
@@ -198,7 +198,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         tge.setMinBidAmount(tgeParam.minBidAmount);
         tge.setInitialAmount(initialJOTAmount);
 
-        emit SetupJot(jotToken, tgeAddress, tgeParam.pool, tgeParam, tgeParam.totalCap, initialJOTAmount);
+        emit SetupJot(jotToken, tgeAddress, tgeParam, initialJOTAmount);
     }
 
     function _initialTGEForJOT(

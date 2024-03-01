@@ -79,9 +79,11 @@ library TGELogic {
         require(_tokenAddress != address(0), 'SecuritizationPool: Address zero');
 
         if (_noteType == Configuration.NOTE_TOKEN_TYPE.SENIOR) {
+            require(_poolStorage.tgeAddress == address(0), 'SecuritizationPool: Already issue sot');
             _poolStorage.tgeAddress = _tgeAddress;
             _poolStorage.sotToken = _tokenAddress;
         } else {
+            require(_poolStorage.secondTGEAddress == address(0), 'SecuritizationPool: Already issue jot');
             _poolStorage.secondTGEAddress = _tgeAddress;
             _poolStorage.jotToken = _tokenAddress;
         }

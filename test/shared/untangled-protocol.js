@@ -191,7 +191,7 @@ async function initSOTSale(signer, saleParameters) {
             ticker: saleParameters.ticker,
         },
         saleParameters.cap,
-        saleParameters.rate
+        saleParameters.interestRate
     );
     const receiptSOTSale = await transactionSOTSale.wait();
     const [sotTokenAddress, sotTGEAddress] = receiptSOTSale.events.find((e) => e.event == 'SetupSot').args;
@@ -213,6 +213,7 @@ async function initJOTSale(signer, saleParameters) {
         saleParameters.cap
     );
     const receiptJOTSale = await transactionJOTSale.wait();
+
     const [jotTokenAddress, jotTGEAddress] = receiptJOTSale.events.find((e) => e.event == 'SetupJot').args;
 
     return { jotTGEAddress, jotTokenAddress };

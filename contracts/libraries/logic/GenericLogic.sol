@@ -25,8 +25,6 @@ import {DataTypes} from '../DataTypes.sol';
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
 
-import 'hardhat/console.sol';
-
 /**
  * @title Untangled's SecuritizaionPoolNAV contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
@@ -607,8 +605,6 @@ library GenericLogic {
             termLengthInAmortizationUnits,
             gracePeriodInDays
         ) = UnpackLoanParamtersLib.unpackParametersFromBytes(loan.termsParam);
-
-        console.log('interestRate: ', interestRate);
 
         UnpackLoanParamtersLib.AmortizationUnitType amortizationUnitType = UnpackLoanParamtersLib.AmortizationUnitType(
             rawAmortizationUnitType

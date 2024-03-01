@@ -173,7 +173,6 @@ library PoolAssetLogic {
         uint256[] calldata tokenIds,
         DataTypes.LoanEntry[] calldata loanEntries
     ) external returns (uint256) {
-        // registry().requireLoanKernel(_msgSender());
         uint256 tokenIdsLength = tokenIds.length;
         uint256 expectedAssetsValue = 0;
         for (uint256 i = 0; i < tokenIdsLength; i = UntangledMath.uncheckedInc(i)) {

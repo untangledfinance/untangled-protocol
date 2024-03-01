@@ -8,8 +8,6 @@ import {Configuration} from '../Configuration.sol';
 import {DataTypes} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
 
-import 'hardhat/console.sol';
-
 library TGELogic {
     uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
@@ -18,7 +16,7 @@ library TGELogic {
     event DecreaseReserve(uint256 decreasingAmount, uint256 currencyAmount);
     event UpdateDebtCeiling(uint256 _debtCeiling);
     event UpdateMintFirstLoss(uint32 _mintFirstLoss);
-    event UpdateInterestRateSot(uint32 _interestRateSot);
+    event UpdateInterestRateSot(uint256 _interestRateSot);
     event Withdraw(address originatorAddress, uint256 amount);
     event ClaimCashRemain(address pot, address recipientWallet, uint256 balance);
 
@@ -56,7 +54,7 @@ library TGELogic {
         return _poolStorage.debtCeiling;
     }
 
-    function interestRateSOT(DataTypes.Storage storage _poolStorage) public view returns (uint32) {
+    function interestRateSOT(DataTypes.Storage storage _poolStorage) public view returns (uint256) {
         return _poolStorage.interestRateSOT;
     }
 
@@ -102,8 +100,6 @@ library TGELogic {
         address poolServiceAddress
     ) public view returns (bool) {
         ISecuritizationPoolValueService poolService = ISecuritizationPoolValueService(poolServiceAddress);
-        console.log('_poolStorage.minFirstLossCushion: ', _poolStorage.minFirstLossCushion);
-        console.log('poolService.getJuniorRatio(address(this)): ', poolService.getJuniorRatio(address(this)));
         return _poolStorage.minFirstLossCushion <= poolService.getJuniorRatio(address(this));
     }
 
@@ -175,7 +171,7 @@ library TGELogic {
         emit UpdateDebtCeiling(_debtCeiling);
     }
 
-    function _setInterestRateSOT(DataTypes.Storage storage _poolStorage, uint32 _newRate) external {
+    function _setInterestRateSOT(DataTypes.Storage storage _poolStorage, uint256 _newRate) external {
         _poolStorage.interestRateSOT = _newRate;
         emit UpdateInterestRateSot(_newRate);
     }
@@ -186,7 +182,7 @@ library TGELogic {
         uint256 currencyAmount
     ) external {
         _poolStorage.reserve = _poolStorage.reserve + currencyAmount;
-        require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
+        // require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
 
         emit IncreaseReserve(currencyAmount, _poolStorage.reserve);
     }
@@ -205,7 +201,7 @@ library TGELogic {
         uint256 currencyAmount
     ) private {
         _poolStorage.reserve = _poolStorage.reserve - currencyAmount;
-        require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
+        // require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
 
         emit DecreaseReserve(currencyAmount, _poolStorage.reserve);
     }

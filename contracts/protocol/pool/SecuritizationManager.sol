@@ -176,7 +176,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         );
         IMintedNormalTGE tge = IMintedNormalTGE(tgeAddress);
         IPool pool = IPool(tgeParam.pool);
-        pool.setInterestRateSOT(uint32(interestRate));
+        pool.setInterestRateSOT(interestRate);
         tge.setTotalCap(cap);
         tge.setMinBidAmount(tgeParam.minBidAmount);
 

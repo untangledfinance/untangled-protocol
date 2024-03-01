@@ -5,7 +5,7 @@ import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {OWNER_ROLE, ORIGINATOR_ROLE} from '../../libraries/DataTypes.sol';
 import {PoolStorage} from './PoolStorage.sol';
-import {DataTypes, ONE} from '../../libraries/DataTypes.sol';
+import {DataTypes, ONE, ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
 import {UntangledBase} from '../../base/UntangledBase.sol';
 import {PoolNAVLogic} from '../../libraries/logic/PoolNAVLogic.sol';
 import {PoolAssetLogic} from '../../libraries/logic/PoolAssetLogic.sol';
@@ -13,8 +13,6 @@ import {TGELogic} from '../../libraries/logic/TGELogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {RebaseLogic} from '../../libraries/logic/RebaseLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-
-import 'hardhat/console.sol';
 
 /**
  * @title Untangled's SecuritizationPool contract
@@ -361,13 +359,14 @@ contract Pool is PoolStorage, UntangledBase {
     }
 
     // Annually, support 4 decimals num
-    function interestRateSOT() external view returns (uint32) {
+    function interestRateSOT() external view returns (uint256) {
         return _poolStorage.interestRateSOT;
     }
 
-    function setInterestRateSOT(uint32 _newRate) external {
+    function setInterestRateSOT(uint256 _newRate) external {
         registry.requireSecuritizationManager(_msgSender());
-        TGELogic._setInterestRateSOT(_poolStorage, _newRate);
+        uint256 convertedInterestRate = ONE + (_newRate * ONE) / (ONE_HUNDRED_PERCENT * 365 days);
+        TGELogic._setInterestRateSOT(_poolStorage, convertedInterestRate);
     }
 
     function minFirstLossCushion() external view returns (uint32) {
@@ -468,7 +467,7 @@ contract Pool is PoolStorage, UntangledBase {
     }
 
     function calcTokenPrices() external view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice) {
-        address jotTokenAddress = TGELogic.sotToken(_poolStorage);
+        address jotTokenAddress = TGELogic.jotToken(_poolStorage);
         address sotTokenAddress = TGELogic.sotToken(_poolStorage);
         uint256 noteTokenDecimal = (10 ** INoteToken(sotTokenAddress).decimals());
         (uint256 _juniorTokenPrice, uint256 _seniorTokenPrice) = RebaseLogic.calcTokenPrices(

@@ -87,7 +87,7 @@ interface IPool {
 
     function injectTGEAddress(address _tgeAddress, uint8 _noteToken) external;
 
-    function interestRateSOT() external view returns (uint32);
+    function interestRateSOT() external view returns (uint256);
 
     function isAdmin() external view returns (bool);
 
@@ -140,7 +140,7 @@ interface IPool {
 
     function setDebtCeiling(uint256 _debtCeiling) external;
 
-    function setInterestRateSOT(uint32 _newRate) external;
+    function setInterestRateSOT(uint256 _newRate) external;
 
     function setMinFirstLossCushion(uint32 _minFirstLossCushion) external;
 

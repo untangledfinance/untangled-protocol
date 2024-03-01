@@ -151,7 +151,7 @@ library DataTypes {
         address pot;
         // for base (sell-loan) operation
         uint256 paidPrincipalAmountSOT;
-        uint32 interestRateSOT; // Annually, support 4 decimals num
+        uint256 interestRateSOT; // Annually, support 4 decimals num
         uint256 totalAssetRepaidCurrency;
         mapping(address => uint256) paidPrincipalAmountSOTByInvestor;
         uint256 debtCeiling;

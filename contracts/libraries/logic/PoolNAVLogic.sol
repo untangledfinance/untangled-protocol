@@ -95,7 +95,6 @@ library PoolNAVLogic {
         }
         GenericLogic.setRate(_poolStorage, loan, _convertedInterestRate);
         GenericLogic.accrue(_poolStorage, loan);
-
         _poolStorage.balances[loan] = Math.safeAdd(_poolStorage.balances[loan], principalAmount);
         _poolStorage.balance = Math.safeAdd(_poolStorage.balance, principalAmount);
 

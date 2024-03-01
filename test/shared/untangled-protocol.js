@@ -191,7 +191,7 @@ async function initSOTSale(signer, saleParameters) {
             ticker: saleParameters.ticker,
         },
         saleParameters.cap,
-        saleParameters.rate
+        saleParameters.interestRate
     );
     const receiptSOTSale = await transactionSOTSale.wait();
     const [sotTokenAddress, sotTGEAddress] = receiptSOTSale.events.find((e) => e.event == 'SetupSot').args;

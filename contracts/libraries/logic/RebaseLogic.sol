@@ -34,7 +34,7 @@ library RebaseLogic {
             return
                 GenericLogic.chargeInterest(
                     _poolStorage.seniorDebt,
-                    uint256(_poolStorage.interestRateSOT),
+                    _poolStorage.interestRateSOT,
                     lastUpdateSeniorInterest
                 );
         }
@@ -214,7 +214,7 @@ library RebaseLogic {
         if (poolValue < seniorAssetValue) {
             seniorAssetValue = poolValue;
         }
-        return Math.rdiv(seniorAssetValue, _sotTotalSupply) / ONE;
+        return Math.rdiv(seniorAssetValue, _sotTotalSupply);
     }
 
     /// @notice internal function to calculate the junior token price
@@ -246,7 +246,7 @@ library RebaseLogic {
             return 0;
         }
 
-        return Math.rdiv(Math.safeSub(poolValue, seniorAssetValue), _jotTotalSupply) / ONE;
+        return Math.rdiv(Math.safeSub(poolValue, seniorAssetValue), _jotTotalSupply);
     }
 
     /// @notice returns the current junior ratio protection in the Tinlake

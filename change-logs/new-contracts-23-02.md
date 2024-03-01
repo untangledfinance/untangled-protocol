@@ -21,6 +21,8 @@ Removed all Pool Diamond logics, Merged into `Pool`
 
 Removed `startCycle` function, need to remove from FE side
 
+SOT/JOT now only long sale, remove `openingTime` and `ClosingTime` when issuing sot/jot, need to remove on FE side
+
 ## Function updates
 
 ### Securitization Manager

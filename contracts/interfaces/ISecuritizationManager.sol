@@ -47,6 +47,8 @@ interface ISecuritizationManager {
         address issuerTokenController;
         address pool;
         uint256 minBidAmount;
+        uint256 totalCap;
+        uint256 openingTime;
         string ticker;
         uint8 saleType;
     }

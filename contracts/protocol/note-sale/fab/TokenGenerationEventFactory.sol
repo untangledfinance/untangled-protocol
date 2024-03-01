@@ -13,7 +13,7 @@ import {INoteToken} from '../../../interfaces/INoteToken.sol';
 contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledBase, Factory {
     using ConfigHelper for Registry;
 
-    bytes4 constant TGE_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,address,address,address)'));
+    bytes4 constant TGE_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,address,address,address,uint256)'));
 
     Registry public registry;
 
@@ -52,18 +52,35 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
         address issuerTokenController,
         address token,
         address currency,
-        uint8 saleType
+        uint8 saleType,
+        uint256 openingTime
     ) external override whenNotPaused nonReentrant returns (address) {
         registry.requireSecuritizationManager(_msgSender());
 
         address pool = INoteToken(token).poolAddress();
 
         if (saleType == uint8(SaleType.NORMAL_SALE_JOT)) {
-            return _newSale(TGEImplAddress[SaleType.NORMAL_SALE_JOT], issuerTokenController, pool, token, currency);
+            return
+                _newSale(
+                    TGEImplAddress[SaleType.NORMAL_SALE_JOT],
+                    issuerTokenController,
+                    pool,
+                    token,
+                    currency,
+                    openingTime
+                );
         }
 
         if (saleType == uint8(SaleType.NORMAL_SALE_SOT)) {
-            return _newSale(TGEImplAddress[SaleType.NORMAL_SALE_SOT], issuerTokenController, pool, token, currency);
+            return
+                _newSale(
+                    TGEImplAddress[SaleType.NORMAL_SALE_SOT],
+                    issuerTokenController,
+                    pool,
+                    token,
+                    currency,
+                    openingTime
+                );
         }
 
         revert('Unknown sale type');
@@ -74,9 +91,17 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
         address issuerTokenController,
         address pool,
         address token,
-        address currency
+        address currency,
+        uint256 openingTime
     ) private returns (address) {
-        bytes memory _initialData = abi.encodeWithSelector(TGE_INIT_FUNC_SELECTOR, registry, pool, token, currency);
+        bytes memory _initialData = abi.encodeWithSelector(
+            TGE_INIT_FUNC_SELECTOR,
+            registry,
+            pool,
+            token,
+            currency,
+            openingTime
+        );
 
         address tgeAddress = _deployInstance(tgeImpl, _initialData);
         UntangledBase tge = UntangledBase(tgeAddress);

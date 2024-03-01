@@ -187,10 +187,11 @@ async function initSOTSale(signer, saleParameters) {
             issuerTokenController: saleParameters.issuerTokenController,
             pool: saleParameters.pool,
             minBidAmount: saleParameters.minBidAmount,
+            totalCap: saleParameters.cap,
+            openingTime: saleParameters.openingTime,
             saleType: saleParameters.saleType,
             ticker: saleParameters.ticker,
         },
-        saleParameters.cap,
         saleParameters.interestRate
     );
     const receiptSOTSale = await transactionSOTSale.wait();
@@ -205,12 +206,13 @@ async function initJOTSale(signer, saleParameters) {
             issuerTokenController: saleParameters.issuerTokenController,
             pool: saleParameters.pool,
             minBidAmount: saleParameters.minBidAmount,
+            totalCap: saleParameters.cap,
+            openingTime: saleParameters.openingTime,
             saleType: saleParameters.saleType,
             longSale: true,
             ticker: saleParameters.ticker,
         },
-        saleParameters.initialJOTAmount,
-        saleParameters.cap
+        saleParameters.initialJOTAmount
     );
     const receiptJOTSale = await transactionJOTSale.wait();
 

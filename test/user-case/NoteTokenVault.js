@@ -88,7 +88,7 @@ describe('NoteTokenVault', () => {
         // Init JOT sale
         const jotCap = parseEther('1000'); // $1000
         const isLongSaleTGEJOT = true;
-        const now = dayjs().unix();
+        const now = dayjs().unix() - 1;
         const initialJotAmount = stableCoinAmountToBuyJOT;
         const jotInfo = {
             issuerTokenController: untangledAdminSigner.address,

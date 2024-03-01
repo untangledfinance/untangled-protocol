@@ -18,6 +18,7 @@ interface ITokenGenerationEventFactory {
         address issuerTokenController,
         address token,
         address currency,
-        uint8 saleType
+        uint8 saleType,
+        uint256 openingTime
     ) external returns (address);
 }

@@ -14,7 +14,13 @@ interface IMintedNormalTGE {
         NORMAL_SALE
     }
 
-    function initialize(Registry _registry, address _pool, address _token, address _currency) external;
+    function initialize(
+        Registry _registry,
+        address _pool,
+        address _token,
+        address _currency,
+        uint256 _openingTime
+    ) external;
 
     ///@notice investor bids for SOT/JOT token. Paid by pool's currency
     function buyTokens(address payee, address beneficiary, uint256 currencyAmount) external returns (uint256);
@@ -38,6 +44,8 @@ interface IMintedNormalTGE {
     function onRedeem(uint256 _currencyAmount) external;
 
     function setInitialAmount(uint256 _initialAmount) external;
+
+    function setOpeningTime(uint256 _openingTime) external;
 
     function setTotalCap(uint256 _cap) external;
 }

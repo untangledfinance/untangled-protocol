@@ -128,7 +128,8 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         address issuerTokenController,
         address pool,
         uint8 saleType,
-        string memory ticker
+        string memory ticker,
+        uint256 openingTime
     ) internal whenNotPaused nonReentrant onlyPoolExisted(pool) doesSOTExist(pool) returns (address, address) {
         INoteTokenFactory noteTokenFactory = registry.getNoteTokenFactory();
         require(address(noteTokenFactory) != address(0), 'Note Token Factory was not registered');
@@ -147,7 +148,8 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             issuerTokenController,
             sotToken,
             underlyingCurrency,
-            saleType
+            saleType,
+            openingTime
         );
         noteTokenFactory.changeMinterRole(sotToken, tgeAddress);
 
@@ -161,57 +163,50 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
     /// @notice Sets up the token generation event (TGE) for the senior tranche (SOT) of a securitization pool with additional configuration parameters
     /// @param tgeParam Parameters for TGE
-    /// @param cap Cap limit can buy
     /// @param interestRate Interest rate of the token
-    function setUpTGEForSOT(
-        TGEParam memory tgeParam,
-        uint256 cap,
-        uint256 interestRate
-    ) public onlyIssuer(tgeParam.pool) {
+    function setUpTGEForSOT(TGEParam memory tgeParam, uint256 interestRate) public onlyIssuer(tgeParam.pool) {
         (address sotToken, address tgeAddress) = _initialTGEForSOT(
             tgeParam.issuerTokenController,
             tgeParam.pool,
             tgeParam.saleType,
-            tgeParam.ticker
+            tgeParam.ticker,
+            tgeParam.openingTime
         );
         IMintedNormalTGE tge = IMintedNormalTGE(tgeAddress);
         IPool pool = IPool(tgeParam.pool);
         pool.setInterestRateSOT(interestRate);
-        tge.setTotalCap(cap);
+        tge.setTotalCap(tgeParam.totalCap);
         tge.setMinBidAmount(tgeParam.minBidAmount);
 
-        emit SetupSot(sotToken, tgeAddress, tgeParam.pool, tgeParam, cap, interestRate);
+        emit SetupSot(sotToken, tgeAddress, tgeParam.pool, tgeParam, tgeParam.totalCap, interestRate);
     }
 
     /// @notice sets up the token generation event (TGE) for the junior tranche (JOT) of a securitization pool with additional configuration parameters
     /// @param tgeParam Parameters for TGE
     /// @param initialJOTAmount Minimum amount of JOT raised in currency before SOT can start
-    /// @param cap Cap limit can buy
-    function setUpTGEForJOT(
-        TGEParam memory tgeParam,
-        uint256 initialJOTAmount,
-        uint256 cap
-    ) public onlyIssuer(tgeParam.pool) {
+    function setUpTGEForJOT(TGEParam memory tgeParam, uint256 initialJOTAmount) public onlyIssuer(tgeParam.pool) {
         (address jotToken, address tgeAddress) = _initialTGEForJOT(
             tgeParam.issuerTokenController,
             tgeParam.pool,
             tgeParam.saleType,
-            tgeParam.ticker
+            tgeParam.ticker,
+            tgeParam.openingTime
         );
         IMintedNormalTGE tge = IMintedNormalTGE(tgeAddress);
-        tge.setTotalCap(cap);
+        tge.setTotalCap(tgeParam.totalCap);
         tge.setHasStarted(true);
         tge.setMinBidAmount(tgeParam.minBidAmount);
         tge.setInitialAmount(initialJOTAmount);
 
-        emit SetupJot(jotToken, tgeAddress, tgeParam.pool, tgeParam, cap, initialJOTAmount);
+        emit SetupJot(jotToken, tgeAddress, tgeParam.pool, tgeParam, tgeParam.totalCap, initialJOTAmount);
     }
 
     function _initialTGEForJOT(
         address issuerTokenController,
         address pool,
         uint8 saleType,
-        string memory ticker
+        string memory ticker,
+        uint256 openingTime
     ) public whenNotPaused nonReentrant onlyPoolExisted(pool) doesJOTExist(pool) returns (address, address) {
         INoteTokenFactory noteTokenFactory = registry.getNoteTokenFactory();
         address underlyingCurrency = IPool(pool).underlyingCurrency();
@@ -226,7 +221,8 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             issuerTokenController,
             jotToken,
             underlyingCurrency,
-            saleType
+            saleType,
+            openingTime
         );
         noteTokenFactory.changeMinterRole(jotToken, tgeAddress);
 

@@ -45,9 +45,21 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
 
     uint256 public initialAmount;
 
+    uint256 public openingTime;
+
     mapping(address => uint256) public _currencyRaisedByInvestor;
 
-    function initialize(Registry _registry, address _pool, address _token, address _currency) public initializer {
+    function isOpen() public view returns (bool) {
+        return block.timestamp >= openingTime;
+    }
+
+    function initialize(
+        Registry _registry,
+        address _pool,
+        address _token,
+        address _currency,
+        uint256 _openingTime
+    ) public initializer {
         __UntangledBase__init_unchained(_msgSender());
         require(_pool != address(0), 'Pool address cannot be empty');
         require(_token != address(0), 'Token address cannot be empty');
@@ -56,6 +68,7 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
         pool = _pool;
         token = _token;
         currency = _currency;
+        openingTime = _openingTime;
     }
 
     modifier securitizationPoolRestricted() {
@@ -95,6 +108,15 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
         hasStarted = _hasStarted;
 
         emit SetHasStarted(hasStarted);
+    }
+
+    /// @notice Set openingTime
+    function setOpeningTime(uint256 _openingTime) external {
+        require(
+            hasRole(OWNER_ROLE, _msgSender()) || _msgSender() == address(registry.getSecuritizationManager()),
+            'MintedNormalTGE: caller must be owner or manager'
+        );
+        openingTime = _openingTime;
     }
 
     /// @notice Catch event redeem token
@@ -223,6 +245,7 @@ contract MintedNormalTGE is IMintedNormalTGE, UntangledBase {
         address beneficiary,
         uint256 currencyAmount
     ) public override whenNotPaused nonReentrant smpRestricted returns (uint256) {
+        require(isOpen(), 'MintedNormalTGE: Not open to buy');
         uint256 tokenAmount = getTokenAmount(currencyAmount);
 
         _preValidatePurchase(beneficiary, currencyAmount, tokenAmount);

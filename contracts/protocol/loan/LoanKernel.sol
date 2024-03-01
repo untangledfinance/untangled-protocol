@@ -197,6 +197,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         (uint256[] memory repayAmounts, uint256[] memory previousDebts) = _pool.repayLoan(_nftIds, _amount);
 
         for (uint256 i; i < repayAmounts.length; i++) {
+            uint256 outstandingAmount = _pool.debt(uint256(_nftIds[i]));
             // repay all principal and interest
             // Burn LAT token when repay completely
             if (repayAmounts[i] == previousDebts[i]) {
@@ -204,7 +205,14 @@ contract LoanKernel is ILoanKernel, UntangledBase {
             }
             totalRepayAmount += repayAmounts[i];
             // Log event for repayment
-            emit AssetRepay(bytes32(_nftIds[i]), _payer, beneficiary, repayAmounts[i], _tokenAddress);
+            emit AssetRepay(
+                bytes32(_nftIds[i]),
+                _payer,
+                beneficiary,
+                repayAmounts[i],
+                outstandingAmount,
+                _tokenAddress
+            );
         }
 
         TransferHelper.safeTransferFrom(_tokenAddress, _payer, beneficiary, totalRepayAmount);

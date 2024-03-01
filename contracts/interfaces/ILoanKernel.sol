@@ -30,8 +30,9 @@ interface ILoanKernel {
     event AssetRepay(
         bytes32 indexed _agreementId,
         address indexed _payer,
-        address indexed _beneficiary,
+        address indexed _pool,
         uint256 _amount,
+        uint256 _outstandingAmount,
         address _token
     );
 

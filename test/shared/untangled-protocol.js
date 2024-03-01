@@ -213,6 +213,7 @@ async function initJOTSale(signer, saleParameters) {
         saleParameters.cap
     );
     const receiptJOTSale = await transactionJOTSale.wait();
+
     const [jotTokenAddress, jotTGEAddress] = receiptJOTSale.events.find((e) => e.event == 'SetupJot').args;
 
     return { jotTGEAddress, jotTokenAddress };

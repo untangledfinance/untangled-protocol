@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 
 import '@openzeppelin/contracts/utils/math/Math.sol';
+import '@openzeppelin/contracts/interfaces/IERC20.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
@@ -123,6 +124,14 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         return IPool(poolAddress).calcJuniorRatio();
     }
 
+    function getApprovedReserved(address poolAddress) public view returns (uint256 approvedReserved) {
+        address poolPot = IPool(poolAddress).pot();
+        address underlyingCurrency = IPool(poolAddress).underlyingCurrency();
+        uint256 currentAllowance = IERC20(underlyingCurrency).allowance(poolPot, poolAddress);
+
+        return currentAllowance;
+    }
+
     function getMaxAvailableReserve(
         address poolAddress,
         uint256 sotRequest
@@ -130,7 +139,17 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         IPool securitizationPool = IPool(poolAddress);
         address sotToken = securitizationPool.sotToken();
         address jotToken = securitizationPool.jotToken();
-        uint256 reserve = securitizationPool.reserve();
+        uint256 reserve = Math.min(securitizationPool.reserve(), getApprovedReserved(poolAddress));
+        uint256 maxJOTRedeem;
+        uint256 jotPrice;
+
+        if (sotRequest == 0) {
+            jotPrice = calcTokenPrice(poolAddress, jotToken);
+            uint256 jotSupply = INoteToken(jotToken).totalSupply();
+            maxJOTRedeem = Math.min(reserve, (jotSupply * 10 ** INoteToken(jotToken).decimals()) / jotPrice);
+
+            return (maxJOTRedeem, 0, maxJOTRedeem);
+        }
 
         uint256 sotPrice = calcTokenPrice(poolAddress, sotToken);
         if (sotPrice == 0) {
@@ -141,12 +160,12 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
             return (reserve, (reserve * (10 ** INoteToken(sotToken).decimals())) / sotPrice, 0);
         }
 
-        uint256 jotPrice = calcTokenPrice(poolAddress, jotToken);
+        jotPrice = calcTokenPrice(poolAddress, jotToken);
         uint256 x = solveReserveEquation(poolAddress, expectedSOTCurrencyAmount, sotRequest);
         if (jotPrice == 0) {
             return (x + expectedSOTCurrencyAmount, sotRequest, 0);
         }
-        uint256 maxJOTRedeem = (x * 10 ** INoteToken(jotToken).decimals()) / jotPrice;
+        maxJOTRedeem = (x * 10 ** INoteToken(jotToken).decimals()) / jotPrice;
 
         return (x + expectedSOTCurrencyAmount, sotRequest, maxJOTRedeem);
     }

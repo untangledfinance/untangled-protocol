@@ -32,29 +32,23 @@ $ forge test
 ```shell
 $ forge fmt
 ```
-
-### Gas Snapshots
-
+### .env
 ```shell
-$ forge snapshot
+$ cp .env.example .env
+```
+To set up, copy the .env file and populate the RPC FETCH section.
+### Anvil forge to local
+```shell
+$ source .env
+$ anvil --fork-url $FETCH_RPC
 ```
 
-### Anvil
-
+### Run update script test
+This is a script that pranks the owner's address of the contract proxy admin. It then simulates a transaction to update the contract logic.
+Have to run Anvil using the FETCH RPC initially.Then
 ```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
+$ source .env
+$ forge script script/Update.s.sol --rpc-url $ANVIL
 ```
 
 ### Help

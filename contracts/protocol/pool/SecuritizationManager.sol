@@ -164,7 +164,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
     /// @notice Sets up the token generation event (TGE) for the senior tranche (SOT) of a securitization pool with additional configuration parameters
     /// @param tgeParam Parameters for TGE
     /// @param interestRate Interest rate of the token
-    function setUpTGEForSOT(TGEParam memory tgeParam, uint256 interestRate) public onlyIssuer(tgeParam.pool) {
+    function setUpTGEForSOT(TGEParam memory tgeParam, uint32 interestRate) public onlyIssuer(tgeParam.pool) {
         (address sotToken, address tgeAddress) = _initialTGEForSOT(
             tgeParam.issuerTokenController,
             tgeParam.pool,

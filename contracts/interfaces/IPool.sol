@@ -140,7 +140,7 @@ interface IPool {
 
     function setDebtCeiling(uint256 _debtCeiling) external;
 
-    function setInterestRateSOT(uint256 _newRate) external;
+    function setInterestRateSOT(uint32 _newRate) external;
 
     function setMinFirstLossCushion(uint32 _minFirstLossCushion) external;
 

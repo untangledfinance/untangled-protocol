@@ -363,10 +363,9 @@ contract Pool is PoolStorage, UntangledBase {
         return _poolStorage.interestRateSOT;
     }
 
-    function setInterestRateSOT(uint256 _newRate) external {
+    function setInterestRateSOT(uint32 _newRate) external {
         registry.requireSecuritizationManager(_msgSender());
-        uint256 convertedInterestRate = ONE + (_newRate * ONE) / (ONE_HUNDRED_PERCENT * 365 days);
-        TGELogic._setInterestRateSOT(_poolStorage, convertedInterestRate);
+        TGELogic._setInterestRateSOT(_poolStorage, _newRate);
     }
 
     function minFirstLossCushion() external view returns (uint32) {

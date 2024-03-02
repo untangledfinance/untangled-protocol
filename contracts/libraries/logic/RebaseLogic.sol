@@ -31,12 +31,12 @@ library RebaseLogic {
     function seniorDebt(DataTypes.Storage storage _poolStorage) public view returns (uint256 _seniorDebt) {
         uint256 lastUpdateSeniorInterest = uint256(_poolStorage.lastUpdateSeniorInterest);
         if (block.timestamp >= lastUpdateSeniorInterest) {
+            uint256 convertedInterestRate = ONE +
+                (_poolStorage.interestRateSOT * ONE) /
+                (ONE_HUNDRED_PERCENT * 365 days);
+
             return
-                GenericLogic.chargeInterest(
-                    _poolStorage.seniorDebt,
-                    _poolStorage.interestRateSOT,
-                    lastUpdateSeniorInterest
-                );
+                GenericLogic.chargeInterest(_poolStorage.seniorDebt, convertedInterestRate, lastUpdateSeniorInterest);
         }
         return _poolStorage.seniorDebt;
     }

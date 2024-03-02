@@ -93,6 +93,8 @@ interface IPool {
 
     function isDebtCeilingValid() external view returns (bool);
 
+    function isMinFirstLossValid() external view returns (bool);
+
     function jotToken() external view returns (address);
 
     function maturityDate(bytes32 nft_) external view returns (uint256);

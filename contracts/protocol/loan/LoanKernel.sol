@@ -282,6 +282,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         FillDebtOrderParam calldata fillDebtOrderParam
     ) external whenNotPaused nonReentrant validFillingOrderAddresses(fillDebtOrderParam.orderAddresses) {
         address poolAddress = fillDebtOrderParam.orderAddresses[uint8(FillingAddressesIndex.SECURITIZATION_POOL)];
+        IPool pool = IPool(poolAddress);
         require(fillDebtOrderParam.termsContractParameters.length > 0, 'LoanKernel: Invalid Term Contract params');
 
         uint256[] memory salts = _saltFromOrderValues(
@@ -330,14 +331,15 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                 x = UntangledMath.uncheckedInc(x);
             }
 
-            expectedAssetsValue += IPool(poolAddress).collectAssets(fillDebtOrderParam.latInfo[i].tokenIds, loans);
+            expectedAssetsValue += pool.collectAssets(fillDebtOrderParam.latInfo[i].tokenIds, loans);
         }
 
         // Start collect asset checkpoint and withdraw
-        IPool(poolAddress).withdraw(_msgSender(), expectedAssetsValue);
+        pool.withdraw(_msgSender(), expectedAssetsValue);
 
         // rebase
-        IPool(poolAddress).rebase();
+        pool.rebase();
+        require(pool.isMinFirstLossValid(), 'LoanKernel: Exceeds MinFirstLoss');
     }
 
     /// @inheritdoc ILoanKernel

@@ -150,10 +150,11 @@ describe('NAV', () => {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
+                    totalCap: totalCapOfToken,
+                    openingTime: openingTime,
                     saleType: SaleType.MINTED_INCREASING_INTEREST,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                totalCapOfToken,
                 interestRate
             );
 
@@ -182,11 +183,12 @@ describe('NAV', () => {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
+                    totalCap: totalCapOfToken,
+                    openingTime: openingTime,
                     saleType: SaleType.NORMAL_SALE,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                initialJotAmount,
-                totalCapOfToken
+                initialJotAmount
             );
             const receipt = await transaction.wait();
 
@@ -512,7 +514,7 @@ describe('NAV', () => {
                 minBidAmount: parseEther('1'),
                 openingTime: dayjs(new Date()).unix(),
                 closingTime: dayjs(new Date()).add(7, 'days').unix(),
-                rate: 2,
+                interestRate: 2,
                 cap: parseEther('100000'),
                 initialInterest: 10000,
                 finalInterest: 10000,

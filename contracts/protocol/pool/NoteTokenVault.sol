@@ -6,13 +6,13 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
-import {ERC20BurnableUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {INoteTokenVault} from '../../interfaces/INoteTokenVault.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {BACKEND_ADMIN, SIGNER_ROLE} from '../../libraries/DataTypes.sol';
 import {IPool} from '../../interfaces/IPool.sol';
+import {Configuration} from '../../libraries/Configuration.sol';
 import '../../storage/Registry.sol';
 import '../../libraries/ConfigHelper.sol';
 
@@ -123,22 +123,32 @@ contract NoteTokenVault is
     }
 
     function preDistribute(
-        address pool,
+        address poolAddress,
         uint256 totalCurrencyAmount,
         address[] calldata noteTokenAddresses,
         uint256[] calldata totalRedeemedNoteAmounts
     ) public onlyRole(BACKEND_ADMIN) nonReentrant {
-        IPool poolTGE = IPool(pool);
+        IPool pool = IPool(poolAddress);
+
+        (, uint256 sotTokenPrice) = pool.calcTokenPrices();
+        uint256 totalSotRedeem;
+        uint256 decimals;
 
         for (uint i = 0; i < noteTokenAddresses.length; i++) {
-            ERC20BurnableUpgradeable(noteTokenAddresses[i]).burn(totalRedeemedNoteAmounts[i]);
+            INoteToken(noteTokenAddresses[i]).burn(totalRedeemedNoteAmounts[i]);
+            if (INoteToken(noteTokenAddresses[i]).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.SENIOR)) {
+                totalSotRedeem += totalRedeemedNoteAmounts[i];
+                decimals = INoteToken(noteTokenAddresses[i]).decimals();
+            }
         }
-        poolTGE.decreaseReserve(totalCurrencyAmount);
-
+        pool.decreaseReserve(totalCurrencyAmount);
         // rebase
-        IPool(pool).changeSeniorAsset(0, totalCurrencyAmount);
+        if (totalSotRedeem > 0) {
+            pool.changeSeniorAsset(0, (sotTokenPrice * totalSotRedeem) / 10 ** decimals);
+        }
+        require(pool.isMinFirstLossValid(), 'NoteTokenVault: Exceeds MinFirstLoss');
 
-        emit PreDistribute(pool, totalCurrencyAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
+        emit PreDistribute(poolAddress, totalCurrencyAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
     }
 
     /// @inheritdoc INoteTokenVault

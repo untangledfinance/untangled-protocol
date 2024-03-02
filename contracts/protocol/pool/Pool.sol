@@ -311,8 +311,7 @@ contract Pool is PoolStorage, UntangledBase {
                 _msgSender() == address(registry.getNoteTokenVault()),
             'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
-        address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
-        TGELogic.increaseReserve(_poolStorage, poolServiceAddress, currencyAmount);
+        TGELogic.increaseReserve(_poolStorage, currencyAmount);
     }
 
     /// @dev trigger update reserve
@@ -322,8 +321,7 @@ contract Pool is PoolStorage, UntangledBase {
                 _msgSender() == address(registry.getNoteTokenVault()),
             'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
         );
-        address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
-        TGELogic.decreaseReserve(_poolStorage, poolServiceAddress, currencyAmount);
+        TGELogic.decreaseReserve(_poolStorage, currencyAmount);
     }
 
     function secondTGEAddress() external view returns (address) {
@@ -428,8 +426,7 @@ contract Pool is PoolStorage, UntangledBase {
         registry.requireLoanKernel(_msgSender());
         require(hasRole(ORIGINATOR_ROLE, to), 'SecuritizationPool: Only Originator can drawdown');
         require(!registry.getNoteTokenVault().redeemDisabled(address(this)), 'SecuritizationPool: withdraw paused');
-        address poolServiceAddress = address(registry.getSecuritizationPoolValueService());
-        TGELogic.withdraw(_poolStorage, poolServiceAddress, to, amount);
+        TGELogic.withdraw(_poolStorage, to, amount);
     }
 
     function validatorRequired() external view returns (bool) {
@@ -459,6 +456,7 @@ contract Pool is PoolStorage, UntangledBase {
             _seniorSupply,
             _seniorRedeem
         );
+        if (_seniorSupply > 0) require(isMinFirstLossValid(), 'Pool: Exceeds MinFirstLoss');
     }
 
     function seniorDebtAndBalance() external view returns (uint256, uint256) {
@@ -480,7 +478,7 @@ contract Pool is PoolStorage, UntangledBase {
         return ((_juniorTokenPrice * noteTokenDecimal) / ONE, (_seniorTokenPrice * noteTokenDecimal) / ONE);
     }
 
-    function calcJuniorRatio() external view returns (uint256 juniorRatio) {
+    function calcJuniorRatio() public view returns (uint256 juniorRatio) {
         return
             RebaseLogic.calcJuniorRatio(
                 GenericLogic.currentNAV(_poolStorage),
@@ -488,5 +486,9 @@ contract Pool is PoolStorage, UntangledBase {
                 RebaseLogic.seniorDebt(_poolStorage),
                 _poolStorage.seniorBalance
             );
+    }
+
+    function isMinFirstLossValid() public view returns (bool) {
+        return _poolStorage.minFirstLossCushion <= calcJuniorRatio();
     }
 }

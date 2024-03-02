@@ -76,7 +76,7 @@ describe('MinFirstLoss', () => {
             },
         ];
 
-        const openingTime = dayjs(new Date()).unix();
+        const openingTime = dayjs(new Date()).unix() - 1;
         const closingTime = dayjs(new Date()).add(1, 'days').unix();
         const rate = 10000;
         const totalCapOfToken = parseEther('1000');
@@ -155,7 +155,7 @@ describe('MinFirstLoss', () => {
                 securitizationManager
                     .connect(lenderSigner)
                     .buyTokens(mintedIncreasingInterestTGEContract.address, amountToBuySOT)
-            ).to.be.revertedWith('MinFirstLoss is not satisfied');
+            ).to.be.revertedWith('Pool: Exceeds MinFirstLoss');
         });
         it('should buy SOT successfully if min first loss condition is satisfied', async () => {
             // Lender try to buy SOT with amount violates min first loss

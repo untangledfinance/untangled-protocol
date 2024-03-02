@@ -749,7 +749,7 @@ describe('NoteTokenVault', () => {
                             [jotContract.address],
                             [parseEther('2.83')]
                         )
-                ).to.revertedWith('MinFirstLoss is not satisfied');
+                ).to.revertedWith('NoteTokenVault: Exceeds MinFirstLoss');
             });
             it('JOT: should run successfully', async () => {
                 // Disburse $2.83 for JOT

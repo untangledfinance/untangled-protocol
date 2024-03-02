@@ -97,14 +97,6 @@ library TGELogic {
         TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, usr, currencyAmount);
     }
 
-    function checkMinFirstLost(
-        DataTypes.Storage storage _poolStorage,
-        address poolServiceAddress
-    ) public view returns (bool) {
-        ISecuritizationPoolValueService poolService = ISecuritizationPoolValueService(poolServiceAddress);
-        return _poolStorage.minFirstLossCushion <= poolService.getJuniorRatio(address(this));
-    }
-
     function isDebtCeilingValid(DataTypes.Storage storage _poolStorage) public view returns (bool) {
         uint256 totalDebt = 0;
         if (_poolStorage.tgeAddress != address(0)) {
@@ -178,33 +170,17 @@ library TGELogic {
         emit UpdateInterestRateSot(_newRate);
     }
 
-    function increaseReserve(
-        DataTypes.Storage storage _poolStorage,
-        address poolServiceAddress,
-        uint256 currencyAmount
-    ) external {
+    function increaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
         _poolStorage.reserve = _poolStorage.reserve + currencyAmount;
-        // require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
-
         emit IncreaseReserve(currencyAmount, _poolStorage.reserve);
     }
 
-    function decreaseReserve(
-        DataTypes.Storage storage _poolStorage,
-        address poolServiceAddress,
-        uint256 currencyAmount
-    ) external {
-        _decreaseReserve(_poolStorage, poolServiceAddress, currencyAmount);
+    function decreaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        _decreaseReserve(_poolStorage, currencyAmount);
     }
 
-    function _decreaseReserve(
-        DataTypes.Storage storage _poolStorage,
-        address poolServiceAddress,
-        uint256 currencyAmount
-    ) private {
+    function _decreaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) internal {
         _poolStorage.reserve = _poolStorage.reserve - currencyAmount;
-        // require(checkMinFirstLost(_poolStorage, poolServiceAddress), 'MinFirstLoss is not satisfied');
-
         emit DecreaseReserve(currencyAmount, _poolStorage.reserve);
     }
 
@@ -220,15 +196,10 @@ library TGELogic {
         emit ClaimCashRemain(_poolStorage.pot, recipientWallet, balance);
     }
 
-    function withdraw(
-        DataTypes.Storage storage _poolStorage,
-        address poolServiceAddress,
-        address to,
-        uint256 amount
-    ) public {
+    function withdraw(DataTypes.Storage storage _poolStorage, address to, uint256 amount) public {
         require(_poolStorage.reserve >= amount, 'SecuritizationPool: not enough reserve');
 
-        _decreaseReserve(_poolStorage, poolServiceAddress, amount);
+        _decreaseReserve(_poolStorage, amount);
 
         TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, to, amount);
         emit Withdraw(to, amount);

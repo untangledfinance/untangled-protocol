@@ -2,7 +2,6 @@
 pragma solidity 0.8.19;
 
 import {IAccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol';
-
 import {UntangledBase} from '../../base/UntangledBase.sol';
 import {IRequiresUID} from '../../interfaces/IRequiresUID.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
@@ -94,7 +93,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
 
         address poolAddress = _deployInstance(poolImplAddress, _initialData, salt);
 
-        IPool poolInstance = IPool(poolAddress);
+        IAccessControlUpgradeable poolInstance = IAccessControlUpgradeable(poolAddress);
 
         isExistingPools[poolAddress] = true;
         pools.push(poolAddress);
@@ -147,7 +146,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         );
         noteTokenFactory.changeMinterRole(sotToken, tgeAddress);
 
-        IPool(pool).injectTGEAddress(tgeAddress, uint8(Configuration.NOTE_TOKEN_TYPE.SENIOR));
+        IPool(pool).injectTGEAddress(tgeAddress, Configuration.NOTE_TOKEN_TYPE.SENIOR);
 
         isExistingTGEs[tgeAddress] = true;
 
@@ -220,7 +219,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         );
         noteTokenFactory.changeMinterRole(jotToken, tgeAddress);
 
-        IPool(pool).injectTGEAddress(tgeAddress, uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR));
+        IPool(pool).injectTGEAddress(tgeAddress, Configuration.NOTE_TOKEN_TYPE.JUNIOR);
 
         isExistingTGEs[tgeAddress] = true;
 
@@ -271,7 +270,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             IPool(pool).changeSeniorAsset(currencyAmount, 0);
         }
 
-        emit NoteTokenPurchased(_msgSender(), tgeAddress, address(pool), currencyAmount, tokenAmount);
+        emit NoteTokenPurchased(_msgSender(), tgeAddress, pool, currencyAmount, tokenAmount);
     }
 
     function setAllowedUIDTypes(uint256[] calldata ids) external onlyRole(DEFAULT_ADMIN_ROLE) {

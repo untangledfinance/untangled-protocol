@@ -332,12 +332,14 @@ describe('NAV', () => {
         it('Should revert if updating loan risk without having Pool Admin role', async () => {
             await expect(
                 securitizationPoolNAV.connect(originatorSigner).updateAssetRiskScore(tokenIds[0], 2)
-            ).to.be.revertedWith(`AccessControl: account ${originatorSigner.address.toLowerCase()} is missing role ${POOL_ADMIN_ROLE}`);
+            ).to.be.revertedWith(
+                `AccessControl: account ${originatorSigner.address.toLowerCase()} is missing role ${POOL_ADMIN_ROLE}`
+            );
         });
         it('Change risk score', async () => {
             const currentAsset = await securitizationPoolNAV.getAsset(tokenIds[0]);
             expect(currentAsset.interestRate.toString()).equal('120000');
-            await securitizationPoolNAV.connect(untangledAdminSigner).updateAssetRiskScore(tokenIds[0], 2);
+            await securitizationPoolNAV.connect(poolCreatorSigner).updateAssetRiskScore(tokenIds[0], 2);
             const nextAsset = await securitizationPoolNAV.getAsset(tokenIds[0]);
             expect(nextAsset.interestRate.toString()).equal('100000');
             const currentNAV = await securitizationPoolNAV.currentNAV();
@@ -346,7 +348,7 @@ describe('NAV', () => {
             expect(currentNAV).to.closeTo(parseEther('9.0221'), parseEther('0.001'));
             expect(curNAVAsset).to.closeTo(parseEther('9.0221'), parseEther('0.001'));
             expect(debtLoan).to.closeTo(parseEther('9.029'), parseEther('0.001'));
-            await securitizationPoolContract.connect(untangledAdminSigner).updateAssetRiskScore(tokenIds[0], 3);
+            await securitizationPoolContract.connect(poolCreatorSigner).updateAssetRiskScore(tokenIds[0], 3);
             expect(await securitizationPoolNAV.debt(tokenIds[0])).to.closeTo(parseEther('9.029'), parseEther('0.001'));
             expect(await securitizationPoolNAV.currentNAV()).to.closeTo(parseEther('9.02839'), parseEther('0.001'));
             expect(await securitizationPoolNAV.currentNAVAsset(tokenIds[0])).to.closeTo(
@@ -661,7 +663,7 @@ describe('NAV', () => {
       */
             uploadedLoanTime = await time.latest();
 
-            securitizationPoolContract = await ethers.getContractAt('IPool', securitizationPoolContract.address);
+            securitizationPoolContract = await ethers.getContractAt('Pool', securitizationPoolContract.address);
         });
 
         it('after upload loan successfully', async () => {

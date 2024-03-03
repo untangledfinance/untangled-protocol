@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 import {INoteToken} from '../../interfaces/INoteToken.sol';
+import {IPool} from '../../interfaces/IPool.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {OWNER_ROLE, ORIGINATOR_ROLE, POOL_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
@@ -20,7 +21,7 @@ import {Configuration} from '../../libraries/Configuration.sol';
  *  Automatically invests across borrower pools using an adjustable strategy.
  * @author Untangled Team
  */
-contract Pool is PoolStorage, UntangledBase {
+contract Pool is IPool, PoolStorage, UntangledBase {
     using ConfigHelper for Registry;
 
     Registry public registry;
@@ -323,10 +324,6 @@ contract Pool is PoolStorage, UntangledBase {
 
     function paidPrincipalAmountSOT() external view returns (uint256) {
         return _poolStorage.paidPrincipalAmountSOT;
-    }
-
-    function paidPrincipalAmountSOTByInvestor(address user) external view returns (uint256) {
-        return _poolStorage.paidPrincipalAmountSOTByInvestor[user];
     }
 
     function reserve() external view returns (uint256) {

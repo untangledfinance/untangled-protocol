@@ -154,7 +154,6 @@ library DataTypes {
         uint256 paidPrincipalAmountSOT;
         uint256 interestRateSOT; // Annually, support 4 decimals num
         uint256 totalAssetRepaidCurrency;
-        mapping(address => uint256) paidPrincipalAmountSOTByInvestor;
         uint256 debtCeiling;
         // lock distribution
         mapping(address => mapping(address => uint256)) lockedDistributeBalances;

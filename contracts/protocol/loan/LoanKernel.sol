@@ -354,10 +354,10 @@ contract LoanKernel is ILoanKernel, UntangledBase {
 
         // check all the loans must have the same owner
         address poolAddress = registry.getLoanAssetToken().ownerOf(uint256(agreementIds[0]));
-        IPool pool_ = IPool(poolAddress);
+        IPool pool = IPool(poolAddress);
 
         require(poolAddress != address(0), 'LoanRepaymentRouter: Invalid repayment request');
-        require(pool_.underlyingCurrency() == tokenAddress, 'LoanRepaymentRouter: currency mismatch');
+        require(pool.underlyingCurrency() == tokenAddress, 'LoanRepaymentRouter: currency mismatch');
 
         nftIds[0] = uint256(agreementIds[0]);
 
@@ -372,12 +372,12 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         }
 
         require(
-            _doRepay(pool_, nftIds, _msgSender(), amounts, tokenAddress),
+            _doRepay(pool, nftIds, _msgSender(), amounts, tokenAddress),
             'LoanRepaymentRouter: Repayment has failed'
         );
 
         // rebase
-        pool_.rebase();
+        pool.rebase();
 
         emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
         return true;

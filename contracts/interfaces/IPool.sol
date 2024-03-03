@@ -2,18 +2,19 @@
 pragma solidity 0.8.19;
 
 import {DataTypes} from '../libraries/DataTypes.sol';
+import {Configuration} from '../libraries/Configuration.sol';
 
 interface IPool {
-
     function calcJuniorRatio() external view returns (uint256 juniorRatio);
 
     function calcTokenPrices() external view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice);
 
     function changeSeniorAsset(uint256 _seniorSupply, uint256 _seniorRedeem) external;
 
-    function claimCashRemain(address recipientWallet) external;
-
-    function collectAssets(uint256[] memory tokenIds, DataTypes.LoanEntry[] memory loanEntries) external returns (uint256);
+    function collectAssets(
+        uint256[] memory tokenIds,
+        DataTypes.LoanEntry[] memory loanEntries
+    ) external returns (uint256);
 
     function collectERC20Asset(address tokenAddresss) external;
 
@@ -29,37 +30,11 @@ interface IPool {
 
     function disburse(address usr, uint256 currencyAmount) external;
 
-    function discountRate() external view returns (uint256);
-
-    function exportAssets(address tokenAddress, address toPoolAddress, uint256[] memory tokenIds) external;
-
-    function futureValue(bytes32 nft_) external view returns (uint256);
-
     function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory);
-
-    function getInitializedVersion() external view returns (uint256);
-
-    function getNFTAssetsLength() external view returns (uint256);
-
-    function getRepaidAmount() external view returns (uint256, uint256);
-
-    function getRiskScoresLength() external view returns (uint256);
-
-    function getRoleAdmin(bytes32 role) external view returns (bytes32);
-
-    function getRoleMember(bytes32 role, uint256 index) external view returns (address);
-
-    function getRoleMemberCount(bytes32 role) external view returns (uint256);
 
     function getTokenAssetAddresses() external view returns (address[] memory);
 
     function getTokenAssetAddressesLength() external view returns (uint256);
-
-    function grantRole(bytes32 role, address account) external;
-
-    function hasFinishedRedemption() external view returns (bool);
-
-    function hasRole(bytes32 role, address account) external view returns (bool);
 
     function increaseRepayAmount(uint256 principalRepay, uint256 interestRepay) external;
 
@@ -67,13 +42,9 @@ interface IPool {
 
     function increaseTotalAssetRepaidCurrency(uint256 amount) external;
 
-    function initialize(address _registryAddress, bytes memory params) external;
-
-    function injectTGEAddress(address _tgeAddress, uint8 _noteToken) external;
+    function injectTGEAddress(address _tgeAddress, Configuration.NOTE_TOKEN_TYPE) external;
 
     function interestRateSOT() external view returns (uint256);
-
-    function isAdmin() external view returns (bool);
 
     function isDebtCeilingValid() external view returns (bool);
 
@@ -81,31 +52,13 @@ interface IPool {
 
     function jotToken() external view returns (address);
 
-    function maturityDate(bytes32 nft_) external view returns (uint256);
-
     function minFirstLossCushion() external view returns (uint32);
 
-    function nftAssets(uint256 idx) external view returns (DataTypes.NFTAsset memory);
-
-    function onERC721Received(address, address, uint256 tokenId, bytes memory) external returns (bytes4);
-
     function openingBlockTimestamp() external view returns (uint64);
-
-    function paidPrincipalAmountSOT() external view returns (uint256);
-
-    function paidPrincipalAmountSOTByInvestor(address user) external view returns (uint256);
-
-    function pause() external;
-
-    function paused() external view returns (bool);
 
     function pot() external view returns (address);
 
     function rebase() external;
-
-    function registry() external view returns (address);
-
-    function renounceRole(bytes32 role, address account) external;
 
     function repayLoan(
         uint256[] calldata loans,
@@ -113,8 +66,6 @@ interface IPool {
     ) external returns (uint256[] memory, uint256[] memory);
 
     function reserve() external view returns (uint256);
-
-    function revokeRole(bytes32 role, address account) external;
 
     function risk(bytes32 nft_) external view returns (uint256 risk_);
 
@@ -130,21 +81,9 @@ interface IPool {
 
     function setMinFirstLossCushion(uint32 _minFirstLossCushion) external;
 
-    function setPot(address _pot) external;
-
-    function setRoleAdmin(bytes32 role, bytes32 adminRole) external;
-
     function setUpOpeningBlockTimestamp() external;
 
-    function setupRiskScores(
-        uint32[] memory _daysPastDues,
-        uint32[] memory _ratesAndDefaults,
-        uint32[] memory _periodsAndWriteOffs
-    ) external;
-
     function sotToken() external view returns (address);
-
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
     function tgeAddress() external view returns (address);
 
@@ -153,10 +92,6 @@ interface IPool {
     function totalAssetRepaidCurrency() external view returns (uint256);
 
     function underlyingCurrency() external view returns (address);
-
-    function unpause() external;
-
-    function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) external;
 
     function validatorRequired() external view returns (bool);
 
@@ -173,6 +108,4 @@ interface IPool {
         address[] memory recipients,
         uint256[] memory amounts
     ) external;
-
-    function writeOff(uint256 loan) external;
 }

@@ -57,13 +57,6 @@ library TGELogic {
         return _poolStorage.interestRateSOT;
     }
 
-    function paidPrincipalAmountSOTByInvestor(
-        DataTypes.Storage storage _poolStorage,
-        address user
-    ) public view returns (uint256) {
-        return _poolStorage.paidPrincipalAmountSOTByInvestor[user];
-    }
-
     function totalAssetRepaidCurrency(DataTypes.Storage storage _poolStorage) public view returns (uint256) {
         return _poolStorage.totalAssetRepaidCurrency;
     }

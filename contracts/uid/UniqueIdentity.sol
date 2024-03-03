@@ -5,7 +5,7 @@ import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/crypto
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import {ERC1155PresetPauserUpgradeable} from '../external/ERC1155PresetPauserUpgradeable.sol';
 import {IUniqueIdentity} from '../interfaces/IUniqueIdentity.sol';
-import {SIGNER_ROLE, SUPER_ADMIN_ROLE} from '../libraries/DataTypes.sol';
+import {OWNER_ROLE ,SIGNER_ROLE , SUPER_ADMIN_ROLE} from '../libraries/DataTypes.sol';
 /**
  * @title UniqueIdentity
  * @notice UniqueIdentity is an ERC1155-compliant contract for representing
@@ -14,8 +14,6 @@ import {SIGNER_ROLE, SUPER_ADMIN_ROLE} from '../libraries/DataTypes.sol';
  */
 
 contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
-    // bytes32 public constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
-    // bytes32 public constant SUPER_ADMIN_ROLE = keccak256('SUPER_ADMIN_ROLE');
 
     uint256 public constant ID_TYPE_0 = 0; // non-US individual
     uint256 public constant ID_TYPE_1 = 1; // US individual
@@ -201,6 +199,4 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
             );
         }
     }
-
-    uint256[48] private __gap;
 }

@@ -21,7 +21,7 @@
 
 pragma solidity 0.8.19;
 import '../UnpackLoanParamtersLib.sol';
-import {DataTypes} from '../DataTypes.sol';
+import {DataTypes, ONE_HUNDRED_PERCENT,ONE,WRITEOFF_RATE_GROUP_START} from '../DataTypes.sol';
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
 
@@ -32,12 +32,6 @@ import {Discounting} from '../Discounting.sol';
  * @author Untangled Team
  */
 library GenericLogic {
-    uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
-
-    uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
-
-    uint256 constant ONE = 10 ** 27;
-    uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
 
     event SetRate(bytes32 indexed loan, uint256 rate);
     event ChangeRate(bytes32 indexed loan, uint256 newRate);

@@ -7,7 +7,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC1155/extensions/ERC1155Paus
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-
+import {OWNER_ROLE, PAUSER_ROLE} from '../libraries/DataTypes.sol';
 /**
  * @dev {ERC1155} token, including a pauser role that allows to stop all token transfers
  * (including minting and burning).
@@ -26,8 +26,6 @@ contract ERC1155PresetPauserUpgradeable is
     AccessControlEnumerableUpgradeable,
     ERC1155PausableUpgradeable
 {
-    bytes32 public constant OWNER_ROLE = keccak256('OWNER_ROLE');
-    bytes32 public constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
     /**
      * @dev Grants `OWNER_ROLE` and `PAUSER_ROLE` to the account that

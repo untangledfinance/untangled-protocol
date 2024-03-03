@@ -41,5 +41,5 @@ abstract contract Factory2 is Initializable {
         return address(proxy);
     }
 
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 }

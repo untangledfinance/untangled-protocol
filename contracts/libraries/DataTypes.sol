@@ -5,6 +5,13 @@ pragma solidity 0.8.19;
 import './Configuration.sol';
 import './UnpackLoanParamtersLib.sol';
 
+uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
+
+uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
+
+uint256 constant ONE = 10 ** 27;
+uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
+
 bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');
 bytes32 constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
 bytes32 constant BACKEND_ADMIN_ROLE = keccak256('BACKEND_ADMIN_ROLE');
@@ -15,13 +22,9 @@ bytes32 constant POOL_ADMIN_ROLE = keccak256('POOL_ADMIN_ROLE');
 // In PoolNAV we use this
 bytes32 constant POOL = keccak256('POOL');
 
-uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
-uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
 
-uint256 constant ONE = 10 ** 27;
 uint256 constant PRICE_DECIMAL = 10 ** 18;
-uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
 
 bytes32 constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
 
@@ -30,6 +33,8 @@ bytes32 constant MINTER_ROLE = keccak256('MINTER_ROLE');
 // In Go
 bytes32 constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
 
+// in ERC1155PresetPauserUpgradeable
+bytes32 constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 library DataTypes {
     struct NoteToken {
         address poolAddress;

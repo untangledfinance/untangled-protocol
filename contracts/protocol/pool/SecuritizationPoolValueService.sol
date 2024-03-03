@@ -136,73 +136,52 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         address poolAddress,
         uint256 sotRequest
     ) public view returns (uint256, uint256, uint256) {
-        IPool securitizationPool = IPool(poolAddress);
-        address sotToken = securitizationPool.sotToken();
-        address jotToken = securitizationPool.jotToken();
-        uint256 reserve = Math.min(securitizationPool.reserve(), getApprovedReserved(poolAddress));
-        uint256 maxJOTRedeem;
-        uint256 jotPrice;
+        IPool pool = IPool(poolAddress);
 
-        if (sotRequest == 0) {
-            jotPrice = calcTokenPrice(poolAddress, jotToken);
-            uint256 jotSupply = INoteToken(jotToken).totalSupply();
-            maxJOTRedeem = Math.min(reserve, (jotSupply * 10 ** INoteToken(jotToken).decimals()) / jotPrice);
+        uint256 decimals = INoteToken(pool.sotToken()).decimals();
 
-            return (maxJOTRedeem, 0, maxJOTRedeem);
+        (uint256 jotPrice, uint256 sotPrice) = pool.calcTokenPrices();
+        uint256 reserve = pool.reserve();
+        uint256 nav = pool.currentNAV();
+        uint256 ableToWithdraw = Math.min(getApprovedReserved(poolAddress), reserve);
+        uint256 expectedSOTCurrencyAmount = (sotRequest * sotPrice) / 10 ** decimals;
+
+        // When we withdraw all SOT in reserve/approved
+        if (expectedSOTCurrencyAmount > ableToWithdraw) {
+            return (ableToWithdraw, (ableToWithdraw * 10 ** decimals) / sotPrice, 0);
         }
 
-        uint256 sotPrice = calcTokenPrice(poolAddress, sotToken);
-        if (sotPrice == 0) {
-            return (reserve, 0, 0);
-        }
-        uint256 expectedSOTCurrencyAmount = (sotRequest * sotPrice) / 10 ** INoteToken(sotToken).decimals();
-        if (reserve <= expectedSOTCurrencyAmount) {
-            return (reserve, (reserve * (10 ** INoteToken(sotToken).decimals())) / sotPrice, 0);
-        }
+        uint256 jotAllowedCurrencyAmount;
+        {
+            uint256 poolValue = reserve + nav;
+            (uint256 seniorDebt, uint256 seniorBalance) = pool.seniorDebtAndBalance();
+            uint256 seniorAsset = Math.min(seniorDebt + seniorBalance, poolValue);
+            uint256 minFirstLossCushion = pool.minFirstLossCushion();
 
-        jotPrice = calcTokenPrice(poolAddress, jotToken);
-        uint256 x = solveReserveEquation(poolAddress, expectedSOTCurrencyAmount, sotRequest);
-        if (jotPrice == 0) {
-            return (x + expectedSOTCurrencyAmount, sotRequest, 0);
-        }
-        maxJOTRedeem = (x * 10 ** INoteToken(jotToken).decimals()) / jotPrice;
-
-        return (x + expectedSOTCurrencyAmount, sotRequest, maxJOTRedeem);
-    }
-
-    function solveReserveEquation(
-        address poolAddress,
-        uint256 expectedSOTCurrencyAmount,
-        uint256 sotRequest
-    ) public view returns (uint256) {
-        IPool securitizationPool = IPool(poolAddress);
-        address sotToken = securitizationPool.sotToken();
-        uint32 minFirstLossCushion = securitizationPool.minFirstLossCushion();
-        uint64 openingBlockTimestamp = IPool(poolAddress).openingBlockTimestamp();
-
-        uint256 poolValue = getPoolValue(poolAddress) - expectedSOTCurrencyAmount;
-        uint256 nav = IPool(poolAddress).currentNAV();
-        uint256 maxSeniorRatio = ONE_HUNDRED_PERCENT - minFirstLossCushion; // a = maxSeniorRatio / ONE_HUNDRED_PERCENT
-
-        if (maxSeniorRatio == 0) {
-            return 0;
+            jotAllowedCurrencyAmount =
+                poolValue -
+                expectedSOTCurrencyAmount -
+                ((seniorAsset - expectedSOTCurrencyAmount) * RATE_SCALING_FACTOR) /
+                (RATE_SCALING_FACTOR - minFirstLossCushion);
         }
 
-        uint256 remainingSOTSupply = INoteToken(sotToken).totalSupply() - sotRequest;
+        uint256 ableToWithdrawLeft = ableToWithdraw - expectedSOTCurrencyAmount;
 
-        uint256 b = (2 * poolValue * maxSeniorRatio) / ONE_HUNDRED_PERCENT - remainingSOTSupply;
-        uint256 c = ((poolValue ** 2) * maxSeniorRatio) /
-            ONE_HUNDRED_PERCENT -
-            remainingSOTSupply *
-            poolValue -
-            (remainingSOTSupply *
-                nav *
-                IPool(poolAddress).interestRateSOT() *
-                (block.timestamp - openingBlockTimestamp)) /
-            (ONE_HUNDRED_PERCENT * 365 days);
-        uint256 delta = b ** 2 - (4 * c * maxSeniorRatio) / ONE_HUNDRED_PERCENT;
-        uint256 x = ((b - delta.sqrt()) * ONE_HUNDRED_PERCENT) / (2 * maxSeniorRatio);
-        return x;
+        // When we withdraw all JOT in reserve/approved
+        if (jotAllowedCurrencyAmount > ableToWithdrawLeft) {
+            return (
+                ableToWithdraw,
+                (expectedSOTCurrencyAmount * 10 ** decimals) / sotPrice,
+                (ableToWithdrawLeft * 10 ** decimals) / jotPrice
+            );
+        }
+
+        // When we withdraw all JOT able to
+        return (
+            expectedSOTCurrencyAmount + jotAllowedCurrencyAmount,
+            (expectedSOTCurrencyAmount * 10 ** decimals) / sotPrice,
+            (jotAllowedCurrencyAmount * 10 ** decimals) / jotPrice
+        );
     }
 
     // get current individual asset for SOT tranche

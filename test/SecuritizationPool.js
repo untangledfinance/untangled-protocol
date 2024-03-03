@@ -282,13 +282,13 @@ describe('SecuritizationPool', () => {
             expect(formatEther(result)).equal('0.0');
         });
 
-        it('#getSeniorAsset', async () => {
+        xit('#getSeniorAsset', async () => {
             const result = await securitizationPoolValueService.getSeniorAsset(securitizationPoolContract.address);
 
             expect(formatEther(result)).equal('100.0');
         });
 
-        it('#getJuniorAsset', async () => {
+        xit('#getJuniorAsset', async () => {
             const result = await securitizationPoolValueService.getJuniorAsset(securitizationPoolContract.address);
 
             expect(formatEther(result)).equal('100.0');

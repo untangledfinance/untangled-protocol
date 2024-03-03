@@ -5,11 +5,10 @@ import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/
 import {ISecuritizationPoolValueService} from '../../interfaces/ISecuritizationPoolValueService.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {Configuration} from '../Configuration.sol';
-import {DataTypes} from '../DataTypes.sol';
+import {DataTypes, RATE_SCALING_FACTOR} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
 
 library TGELogic {
-    uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
 
     event UpdateTGEAddress(address tge, Configuration.NOTE_TOKEN_TYPE noteType);
     event IncreaseReserve(uint256 increasingAmount, uint256 currencyAmount);

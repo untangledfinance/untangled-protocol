@@ -88,8 +88,6 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         address poolOwner,
         bytes memory params
     ) external whenNotPaused onlyRole(POOL_ADMIN) returns (address) {
-        // impl from eip1987
-        // _implementation
         address poolImplAddress = address(registry.getSecuritizationPool());
 
         bytes memory _initialData = abi.encodeWithSelector(POOL_INIT_FUNC_SELECTOR, registry, params);
@@ -102,6 +100,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         pools.push(poolAddress);
 
         poolInstance.grantRole(OWNER_ROLE, poolOwner);
+        poolInstance.grantRole(POOL_ADMIN_ROLE, _msgSender());
         poolInstance.renounceRole(DEFAULT_ADMIN_ROLE, address(this));
 
         emit NewPoolCreated(poolAddress);

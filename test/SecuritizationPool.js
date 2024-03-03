@@ -282,18 +282,6 @@ describe('SecuritizationPool', () => {
             expect(formatEther(result)).equal('0.0');
         });
 
-        xit('#getSeniorAsset', async () => {
-            const result = await securitizationPoolValueService.getSeniorAsset(securitizationPoolContract.address);
-
-            expect(formatEther(result)).equal('100.0');
-        });
-
-        xit('#getJuniorAsset', async () => {
-            const result = await securitizationPoolValueService.getJuniorAsset(securitizationPoolContract.address);
-
-            expect(formatEther(result)).equal('100.0');
-        });
-
         it('#getJuniorRatio', async () => {
             const result = await securitizationPoolValueService.getJuniorRatio(securitizationPoolContract.address);
 
@@ -404,11 +392,17 @@ describe('SecuritizationPool', () => {
                 const TGELogic = await ethers.getContractFactory('TGELogic');
                 const tgeLogic = await TGELogic.deploy();
                 await tgeLogic.deployed();
+
+                const RebaseLogic = await ethers.getContractFactory('RebaseLogic');
+                const rebaseLogic = await RebaseLogic.deploy();
+                await rebaseLogic.deployed();
+
                 SecuritizationPoolV2 = await ethers.getContractFactory('SecuritizationPoolV2', {
                     libraries: {
                         PoolAssetLogic: poolAssetLogic.address,
                         PoolNAVLogic: poolNAVLogic.address,
                         TGELogic: tgeLogic.address,
+                        RebaseLogic: rebaseLogic.address,
                     },
                 });
                 // const securitizationPoolImpl = await SecuritizationPool.deploy();

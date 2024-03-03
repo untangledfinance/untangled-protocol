@@ -38,6 +38,14 @@ contract Pool is PoolStorage, UntangledBase {
         _;
     }
 
+    modifier requirePoolAdminOrOwner() {
+        require(
+            hasRole(POOL_ADMIN_ROLE, _msgSender()) || hasRole(OWNER_ROLE, _msgSender()),
+            'Pool: Not an pool admin or pool owner'
+        );
+        _;
+    }
+
     /** CONSTRUCTOR */
     function initialize(address _registryAddress, bytes memory params) public initializer {
         __UntangledBase__init(_msgSender());
@@ -114,8 +122,7 @@ contract Pool is PoolStorage, UntangledBase {
         uint32[] calldata _daysPastDues,
         uint32[] calldata _ratesAndDefaults,
         uint32[] calldata _periodsAndWriteOffs
-    ) external whenNotPaused notClosingStage {
-        registry.requirePoolAdmin(_msgSender());
+    ) external whenNotPaused notClosingStage onlyRole(POOL_ADMIN_ROLE) {
         PoolAssetLogic.setupRiskScores(_poolStorage, _daysPastDues, _ratesAndDefaults, _periodsAndWriteOffs);
         // rebase
         rebase();
@@ -126,8 +133,7 @@ contract Pool is PoolStorage, UntangledBase {
         address tokenAddress,
         address toPoolAddress,
         uint256[] calldata tokenIds
-    ) external whenNotPaused nonReentrant notClosingStage {
-        registry.requirePoolAdminOrOwner(address(this), _msgSender());
+    ) external whenNotPaused nonReentrant notClosingStage requirePoolAdminOrOwner {
         PoolAssetLogic.exportAssets(_poolStorage.nftAssets, tokenAddress, toPoolAddress, tokenIds);
     }
 
@@ -160,8 +166,7 @@ contract Pool is PoolStorage, UntangledBase {
         address[] calldata tokenAddresses,
         address[] calldata recipients,
         uint256[] calldata amounts
-    ) external whenNotPaused nonReentrant {
-        registry.requirePoolAdminOrOwner(address(this), _msgSender());
+    ) external whenNotPaused nonReentrant requirePoolAdminOrOwner {
         PoolAssetLogic.withdrawERC20Assets(_poolStorage.existsTokenAssetAddress, tokenAddresses, recipients, amounts);
     }
 
@@ -271,8 +276,7 @@ contract Pool is PoolStorage, UntangledBase {
         return uint256(_poolStorage.discountRate);
     }
 
-    function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) external {
-        registry.requirePoolAdmin(_msgSender());
+    function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) external onlyRole(POOL_ADMIN_ROLE) {
         PoolNAVLogic.updateAssetRiskScore(_poolStorage, nftID_, risk_);
     }
 
@@ -282,21 +286,20 @@ contract Pool is PoolStorage, UntangledBase {
     }
 
     /*==================== TGE ====================*/
-    function setPot(address _pot) external whenNotPaused nonReentrant notClosingStage {
-        registry.requirePoolAdminOrOwner(address(this), _msgSender());
+    function setPot(address _pot) external whenNotPaused nonReentrant notClosingStage requirePoolAdminOrOwner {
         TGELogic.setPot(_poolStorage, _pot);
         registry.getSecuritizationManager().registerPot(_pot);
     }
 
     /// @notice sets debt ceiling value
-    function setDebtCeiling(uint256 _debtCeiling) external whenNotPaused notClosingStage {
-        registry.requirePoolAdminOrOwner(address(this), _msgSender());
+    function setDebtCeiling(uint256 _debtCeiling) external whenNotPaused notClosingStage requirePoolAdminOrOwner {
         TGELogic.setDebtCeiling(_poolStorage, _debtCeiling);
     }
 
     /// @notice sets mint first loss value
-    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external whenNotPaused notClosingStage {
-        registry.requirePoolAdminOrOwner(address(this), _msgSender());
+    function setMinFirstLossCushion(
+        uint32 _minFirstLossCushion
+    ) external whenNotPaused notClosingStage requirePoolAdminOrOwner {
         TGELogic.setMinFirstLossCushion(_poolStorage, _minFirstLossCushion);
     }
 

@@ -76,21 +76,6 @@ library ConfigHelper {
         return INoteTokenVault(getAddress(registry, Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT));
     }
 
-    function requirePoolAdmin(Registry registry, address account) internal view {
-        require(
-            IAccessControlUpgradeable(address(getSecuritizationManager(registry))).hasRole(POOL_ADMIN, account),
-            'Registry: Not an pool admin'
-        );
-    }
-
-    function requirePoolAdminOrOwner(Registry registry, address pool, address account) internal view {
-        require(
-            IAccessControlUpgradeable(address(getSecuritizationManager(registry))).hasRole(POOL_ADMIN, account) ||
-                IAccessControlUpgradeable(pool).hasRole(OWNER_ROLE, account),
-            'Registry: Not an pool admin or pool owner'
-        );
-    }
-
     function requireSecuritizationManager(Registry registry, address account) internal view {
         require(account == address(getSecuritizationManager(registry)), 'Registry: Only SecuritizationManager');
     }

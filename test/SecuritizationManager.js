@@ -96,7 +96,7 @@ describe('SecuritizationManager', () => {
         let sotTokenAddress;
 
         it('Should set up TGE for SOT successfully', async () => {
-            const openingTime = dayjs(new Date()).unix();
+            const openingTime = dayjs(new Date()).unix() - 1;
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');

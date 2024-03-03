@@ -40,10 +40,6 @@ library ConfigHelper {
         return INoteTokenFactory(getAddress(registry, Configuration.CONTRACT_TYPE.NOTE_TOKEN_FACTORY));
     }
 
-    // function getNoteToken(Registry registry) internal view returns (INoteToken) {
-    //     return INoteToken(getAddress(registry, Configuration.CONTRACT_TYPE.NOTE_TOKEN));
-    // }
-
     function getTokenGenerationEventFactory(Registry registry) internal view returns (ITokenGenerationEventFactory) {
         return
             ITokenGenerationEventFactory(

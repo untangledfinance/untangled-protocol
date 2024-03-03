@@ -11,7 +11,7 @@ const { unlimitedAllowance, genSalt, getPoolByAddress, getPoolAbi } = require('.
 const { setup } = require('./setup.js');
 const { SaleType } = require('./shared/constants.js');
 
-const { OWNER_ROLE,POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants.js');
+const { OWNER_ROLE, POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants.js');
 const { utils, Contract } = require('ethers');
 const { ASSET_PURPOSE } = require('./shared/constants');
 

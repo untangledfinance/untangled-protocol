@@ -4,19 +4,6 @@ pragma solidity 0.8.19;
 import {DataTypes} from '../libraries/DataTypes.sol';
 
 interface IPool {
-    function BACKEND_ADMIN() external view returns (bytes32);
-
-    function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
-
-    function ORIGINATOR_ROLE() external view returns (bytes32);
-
-    function OWNER_ROLE() external view returns (bytes32);
-
-    function POOL_ADMIN_ROLE() external view returns (bytes32);
-
-    function SIGNER_ROLE() external view returns (bytes32);
-
-    function SUPER_ADMIN() external view returns (bytes32);
 
     function calcJuniorRatio() external view returns (uint256 juniorRatio);
 
@@ -26,10 +13,7 @@ interface IPool {
 
     function claimCashRemain(address recipientWallet) external;
 
-    function collectAssets(
-        uint256[] memory tokenIds,
-        DataTypes.LoanEntry[] memory loanEntries
-    ) external returns (uint256);
+    function collectAssets(uint256[] memory tokenIds, DataTypes.LoanEntry[] memory loanEntries) external returns (uint256);
 
     function collectERC20Asset(address tokenAddresss) external;
 
@@ -159,8 +143,6 @@ interface IPool {
     ) external;
 
     function sotToken() external view returns (address);
-
-    function state() external view returns (uint8);
 
     function supportsInterface(bytes4 interfaceId) external view returns (bool);
 

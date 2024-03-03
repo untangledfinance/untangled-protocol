@@ -25,7 +25,7 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
             _checkNonceValid(info);
 
             require(_checkValidator(info), 'LATValidator: invalid validator signature');
-            require(isValidator(info.validator), 'LATValidator: invalid validator');
+            require(isValidator(creditor, info.validator), 'LATValidator: invalid validator');
         }
         _;
     }
@@ -58,7 +58,7 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
 
     function __LATValidator_init_unchained() internal onlyInitializing {}
 
-    function isValidator(address sender) public view virtual returns (bool);
+    function isValidator(address pool, address sender) public view virtual returns (bool);
 
     function nonce(uint256 tokenId) external view override returns (uint256) {
         return _nonces[tokenId];

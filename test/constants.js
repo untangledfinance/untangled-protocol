@@ -8,7 +8,7 @@ const BACKEND_ADMIN = utils.keccak256(Buffer.from('BACKEND_ADMIN_ROLE'));
 const SIGNER_ROLE = utils.keccak256(Buffer.from('SIGNER_ROLE'));
 const SUPER_ADMIN = utils.keccak256(Buffer.from('SUPER_ADMIN_ROLE'));
 
-const VALIDATOR_ADMIN_ROLE = utils.keccak256(Buffer.from('VALIDATOR_ADMIN_ROLE'));
+const VALIDATOR_ROLE = utils.keccak256(Buffer.from('VALIDATOR_ROLE'));
 const ZAPPER_ROLE = utils.keccak256(Buffer.from('ZAPPER_ROLE'));
 
 module.exports = {
@@ -18,6 +18,6 @@ module.exports = {
     SUPER_ADMIN,
     OWNER_ROLE,
     ORIGINATOR_ROLE,
-    VALIDATOR_ADMIN_ROLE,
+    VALIDATOR_ROLE,
     ZAPPER_ROLE,
 };

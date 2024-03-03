@@ -32,5 +32,5 @@ abstract contract Factory is Initializable, ContextUpgradeable {
         return address(proxy);
     }
 
-    uint256[50] private __gap;
+    uint256[49] private __gap;
 }

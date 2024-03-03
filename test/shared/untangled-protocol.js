@@ -4,7 +4,7 @@ const { getChainId } = require('hardhat');
 const { BigNumber } = ethers;
 const { parseEther, formatEther } = ethers.utils;
 const { RATE_SCALING_FACTOR } = require('../shared/constants.js');
-
+const { VALIDATOR_ROLE } = require('../constants.js');
 const {
     genLoanAgreementIds,
     saltFromOrderValues,
@@ -85,6 +85,8 @@ async function createSecuritizationPool(
 
     const receipt = await transaction.wait();
     const [securitizationPoolAddress] = receipt.events.find((e) => e.event == 'NewPoolCreated').args;
+    let pool = await getPoolByAddress(securitizationPoolAddress);
+    await pool.connect(signer).grantRole(VALIDATOR_ROLE, signer.address);
     return securitizationPoolAddress;
 }
 

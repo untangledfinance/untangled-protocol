@@ -5,8 +5,9 @@ import {UntangledERC721} from './UntangledERC721.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {LATValidator} from './LATValidator.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {DataTypes, VALIDATOR_ROLE, VALIDATOR_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
+import {DataTypes, VALIDATOR_ROLE} from '../../libraries/DataTypes.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
+import {IAccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol';
 
 /**
  * LoanAssetToken: The representative for ownership of a Loan
@@ -33,9 +34,6 @@ contract LoanAssetToken is UntangledERC721, LATValidator {
             'SECURITIZATION_MANAGER is zero address.'
         );
 
-        _setupRole(VALIDATOR_ADMIN_ROLE, address(registry.getSecuritizationManager()));
-        _setRoleAdmin(VALIDATOR_ROLE, VALIDATOR_ADMIN_ROLE);
-
         require(address(registry.getLoanKernel()) != address(0x0), 'LOAN_KERNEL is zero address.');
 
         _setupRole(MINTER_ROLE, address(registry.getLoanKernel()));
@@ -51,7 +49,7 @@ contract LoanAssetToken is UntangledERC721, LATValidator {
         }
     }
 
-    function isValidator(address sender) public view virtual override returns (bool) {
-        return hasRole(VALIDATOR_ROLE, sender);
+    function isValidator(address pool, address sender) public view virtual override returns (bool) {
+        return IAccessControlUpgradeable(pool).hasRole(VALIDATOR_ROLE, sender);
     }
 }

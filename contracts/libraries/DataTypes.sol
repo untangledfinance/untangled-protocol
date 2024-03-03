@@ -24,20 +24,13 @@ uint256 constant PRICE_DECIMAL = 10 ** 18;
 uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
 
 bytes32 constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
-bytes32 constant VALIDATOR_ADMIN_ROLE = keccak256('VALIDATOR_ADMIN_ROLE');
 
 bytes32 constant MINTER_ROLE = keccak256('MINTER_ROLE');
 
-
-// In Go 
+// In Go
 bytes32 constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
-library DataTypes {
-    enum CycleState {
-        INITIATED,
-        CROWDSALE,
-        CLOSED
-    }
 
+library DataTypes {
     struct NoteToken {
         address poolAddress;
         address noteTokenAddress;
@@ -158,7 +151,6 @@ library DataTypes {
         uint256 totalAssetRepaidCurrency;
         mapping(address => uint256) paidPrincipalAmountSOTByInvestor;
         uint256 debtCeiling;
-        CycleState state;
         // lock distribution
         mapping(address => mapping(address => uint256)) lockedDistributeBalances;
         uint256 totalLockedDistributeBalance;

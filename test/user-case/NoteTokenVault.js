@@ -333,7 +333,7 @@ describe('NoteTokenVault', () => {
                 await expect(
                     noteTokenVault.connect(lenderSignerA).setRedeemDisabled(securitizationPoolContract.address, true)
                 ).to.be.revertedWith(
-                    `AccessControl: account ${lenderSignerA.address.toLowerCase()} is missing role 0x48c56c0d6590b6240b1a1005717522dced5c82a200c197c7d7ad7bf3660f4194`
+                    `AccessControl: account ${lenderSignerA.address.toLowerCase()} is missing role ${BACKEND_ADMIN}`
                 );
                 await noteTokenVault.connect(untangledAdminSigner).grantRole(BACKEND_ADMIN, backendAdminSigner.address);
                 await noteTokenVault
@@ -629,7 +629,7 @@ describe('NoteTokenVault', () => {
                             [parseEther('0.5'), parseEther('1')]
                         )
                 ).to.be.revertedWith(
-                    `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role 0x48c56c0d6590b6240b1a1005717522dced5c82a200c197c7d7ad7bf3660f4194`
+                    `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role ${BACKEND_ADMIN}`
                 );
             });
             it('should return max available reserve', async () => {
@@ -702,7 +702,7 @@ describe('NoteTokenVault', () => {
                             [parseEther('0.5'), parseEther('1')]
                         )
                 ).to.be.revertedWith(
-                    `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role 0x48c56c0d6590b6240b1a1005717522dced5c82a200c197c7d7ad7bf3660f4194`
+                    `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role ${BACKEND_ADMIN}`
                 );
             });
 

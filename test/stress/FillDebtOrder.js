@@ -22,7 +22,7 @@ const {
 } = require('../utils.js');
 const { setup } = require('../setup.js');
 
-const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('../constants.js');
+const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE, VALIDATOR_ROLE } = require('../constants.js');
 const { utils } = require('ethers');
 const { presignedMintMessage } = require('../shared/uid-helper.js');
 const { SaleType } = require('../shared/constants.js');
@@ -254,7 +254,7 @@ describe('FillDebtOrder - Stress test', () => {
 
     describe('Raise fund for pool', async () => {
         it('Set up TGE for SOT', async () => {
-            const openingTime = dayjs(new Date()).unix();
+            const openingTime = dayjs(new Date()).unix() - 1000;
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
@@ -270,11 +270,12 @@ describe('FillDebtOrder - Stress test', () => {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
+                    totalCap: totalCapOfToken,
+                    openingTime: openingTime,
                     saleType: SaleType.MINTED_INCREASING_INTEREST,
                     longSale: true,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                totalCapOfToken,
                 interestRate
             );
 
@@ -304,11 +305,12 @@ describe('FillDebtOrder - Stress test', () => {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
+                    totalCap: totalCapOfToken,
+                    openingTime: openingTime,
                     saleType: SaleType.NORMAL_SALE,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                initialJotAmount,
-                totalCapOfToken
+                initialJotAmount
             );
             const receipt = await transaction.wait();
 
@@ -356,9 +358,11 @@ describe('FillDebtOrder - Stress test', () => {
             const snap = await snapshot();
 
             // grant AA as Validator
-            const [, , , , newValidatorSigner] = await ethers.getSigners();
+            const [, poolAdmin, , , newValidatorSigner] = await ethers.getSigners();
             const aa = await upgrades.deployProxy(await ethers.getContractFactory('AAWallet'), []);
-            await securitizationManager.registerValidator(aa.address);
+            // await securitizationManager.registerValidator(aa.address);
+            securitizationPoolContract.connect(poolAdmin).grantRole(VALIDATOR_ROLE, aa.address);
+            securitizationPoolContract.connect(poolAdmin).grantRole(VALIDATOR_ROLE, poolAdmin.address);
 
             /*
             const loans = [
@@ -401,6 +405,10 @@ describe('FillDebtOrder - Stress test', () => {
         });
 
         it(`Upload 100 loans`, async () => {
+            // grant AA as Validator
+            const [, poolAdmin, , , newValidatorSigner] = await ethers.getSigners();
+            securitizationPoolContract.connect(poolAdmin).grantRole(VALIDATOR_ROLE, poolAdmin.address);
+
             const loans = new Array(30).fill({
                 principalAmount,
                 expirationTimestamp: dayjs(new Date()).add(7, 'days').unix(),

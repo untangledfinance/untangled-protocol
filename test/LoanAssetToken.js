@@ -10,7 +10,7 @@ const { parseEther, formatEther } = ethers.utils;
 const { unlimitedAllowance, getPoolByAddress } = require('./utils.js');
 const { setup } = require('./setup.js');
 
-const { OWNER_ROLE, POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants.js');
+const { OWNER_ROLE, POOL_ADMIN_ROLE, ORIGINATOR_ROLE, VALIDATOR_ROLE } = require('./constants.js');
 const { presignedMintMessage } = require('./shared/uid-helper.js');
 const { SaleType, ASSET_PURPOSE } = require('./shared/constants.js');
 const { LAT_BASE_URI } = require('./shared/constants');
@@ -260,7 +260,7 @@ describe('LoanAssetToken', () => {
             // grant AA as Validator
             const [, , , , newValidatorSigner] = await ethers.getSigners();
             const aa = await upgrades.deployProxy(await ethers.getContractFactory('AAWallet'), []);
-            await securitizationManager.registerValidator(aa.address);
+            await securitizationPoolContract.connect(poolCreatorSigner).grantRole(VALIDATOR_ROLE, aa.address);
 
             const loans = [
                 {

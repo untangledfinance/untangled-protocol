@@ -27,9 +27,6 @@ interface ISecuritizationManager {
 
     event UpdateTGEInfo(TGEInfoParam[] tgeInfos);
 
-    event ValidatorRegistered(address validator);
-    event ValidatorUnRegistered(address validator);
-
     struct TGEParam {
         address issuerTokenController;
         address pool;

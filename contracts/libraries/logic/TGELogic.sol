@@ -88,8 +88,6 @@ library TGELogic {
             _poolStorage.jotToken = _tokenAddress;
         }
 
-        _poolStorage.state = DataTypes.CycleState.CROWDSALE;
-
         emit UpdateTGEAddress(_tgeAddress, _noteType);
     }
 

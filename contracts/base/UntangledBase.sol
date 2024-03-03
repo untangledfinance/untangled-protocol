@@ -7,7 +7,7 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '../libraries/Configuration.sol';
-import {OWNER_ROLE,ORIGINATOR_ROLE} from '../libraries/DataTypes.sol';
+import {OWNER_ROLE, ORIGINATOR_ROLE, VALIDATOR_ROLE, POOL_ADMIN_ROLE} from '../libraries/DataTypes.sol';
 /**
  * @title Untangled's SecuritizationPool contract
  * @notice Abstract contract that serves as a base contract for other contracts in the Untangled system.
@@ -20,7 +20,6 @@ abstract contract UntangledBase is
     ReentrancyGuardUpgradeable,
     AccessControlEnumerableUpgradeable
 {
-
     function isAdmin() public view virtual returns (bool) {
         return hasRole(OWNER_ROLE, _msgSender()) || hasRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
@@ -44,6 +43,7 @@ abstract contract UntangledBase is
         _setupRole(OWNER_ROLE, owner);
 
         _setRoleAdmin(ORIGINATOR_ROLE, OWNER_ROLE);
+        _setRoleAdmin(VALIDATOR_ROLE, POOL_ADMIN_ROLE);
     }
 
     function getInitializedVersion() public view virtual returns (uint256) {

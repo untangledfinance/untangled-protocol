@@ -360,10 +360,8 @@ describe('LoanKernel', () => {
 
             const debtAmount = await securitizationPoolContract.debt(tokenIds[1]);
             // expect(debtAmount).equal(principalAmount);
-            console.log('debtAmount: ', debtAmount);
 
             stablecoinBalanceOfAdmin = await stableCoin.balanceOf(untangledAdminSigner.address);
-            console.log('stablecoinBalanceOfAdmin: ', stablecoinBalanceOfAdmin);
             expect(stablecoinBalanceOfAdmin).to.closeTo(parseEther('99019.000'), parseEther('0.01'));
         });
     });

@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {OWNER_ROLE, ORIGINATOR_ROLE,POOL_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
+import {OWNER_ROLE, ORIGINATOR_ROLE, POOL_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
 import {PoolStorage} from './PoolStorage.sol';
 import {DataTypes, ONE, ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
 import {UntangledBase} from '../../base/UntangledBase.sol';
@@ -27,17 +27,6 @@ contract Pool is PoolStorage, UntangledBase {
 
     event InsertNFTAsset(address token, uint256 tokenId);
 
-    modifier onlyIssuingTokenStage() {
-        DataTypes.CycleState _state = _poolStorage.state;
-        require(_state != DataTypes.CycleState.CLOSED, 'Not in issuing token stage');
-        _;
-    }
-
-    modifier notClosingStage() {
-        require(!isClosedState(), 'SecuritizationPool: Pool in closed state');
-        _;
-    }
-
     modifier requirePoolAdminOrOwner() {
         require(
             hasRole(POOL_ADMIN_ROLE, _msgSender()) || hasRole(OWNER_ROLE, _msgSender()),
@@ -60,7 +49,6 @@ contract Pool is PoolStorage, UntangledBase {
         _poolStorage.underlyingCurrency = newPoolParams.currency;
         _poolStorage.validatorRequired = newPoolParams.validatorRequired;
         _poolStorage.pot = address(this);
-        _poolStorage.state = DataTypes.CycleState.INITIATED;
 
         TGELogic._setMinFirstLossCushion(_poolStorage, newPoolParams.minFirstLossCushion);
         TGELogic._setDebtCeiling(_poolStorage, newPoolParams.debtCeiling);
@@ -71,14 +59,6 @@ contract Pool is PoolStorage, UntangledBase {
         );
 
         registry.getLoanAssetToken().setApprovalForAll(address(registry.getLoanKernel()), true);
-    }
-
-    function state() external view returns (DataTypes.CycleState) {
-        return _poolStorage.state;
-    }
-
-    function isClosedState() internal view returns (bool) {
-        return _poolStorage.state == DataTypes.CycleState.CLOSED;
     }
 
     function tgeAddress() public view returns (address) {
@@ -122,7 +102,7 @@ contract Pool is PoolStorage, UntangledBase {
         uint32[] calldata _daysPastDues,
         uint32[] calldata _ratesAndDefaults,
         uint32[] calldata _periodsAndWriteOffs
-    ) external whenNotPaused notClosingStage onlyRole(POOL_ADMIN_ROLE) {
+    ) external whenNotPaused onlyRole(POOL_ADMIN_ROLE) {
         PoolAssetLogic.setupRiskScores(_poolStorage, _daysPastDues, _ratesAndDefaults, _periodsAndWriteOffs);
         // rebase
         rebase();
@@ -133,7 +113,7 @@ contract Pool is PoolStorage, UntangledBase {
         address tokenAddress,
         address toPoolAddress,
         uint256[] calldata tokenIds
-    ) external whenNotPaused nonReentrant notClosingStage requirePoolAdminOrOwner {
+    ) external whenNotPaused nonReentrant requirePoolAdminOrOwner {
         PoolAssetLogic.exportAssets(_poolStorage.nftAssets, tokenAddress, toPoolAddress, tokenIds);
     }
 
@@ -156,7 +136,7 @@ contract Pool is PoolStorage, UntangledBase {
     }
 
     /// @notice collects ERC20 assets from specified senders
-    function collectERC20Asset(address tokenAddresss) external whenNotPaused notClosingStage {
+    function collectERC20Asset(address tokenAddresss) external whenNotPaused {
         registry.requireSecuritizationManager(_msgSender());
         PoolAssetLogic.collectERC20Asset(_poolStorage, tokenAddresss);
     }
@@ -286,20 +266,18 @@ contract Pool is PoolStorage, UntangledBase {
     }
 
     /*==================== TGE ====================*/
-    function setPot(address _pot) external whenNotPaused nonReentrant notClosingStage requirePoolAdminOrOwner {
+    function setPot(address _pot) external whenNotPaused nonReentrant requirePoolAdminOrOwner {
         TGELogic.setPot(_poolStorage, _pot);
         registry.getSecuritizationManager().registerPot(_pot);
     }
 
     /// @notice sets debt ceiling value
-    function setDebtCeiling(uint256 _debtCeiling) external whenNotPaused notClosingStage requirePoolAdminOrOwner {
+    function setDebtCeiling(uint256 _debtCeiling) external whenNotPaused requirePoolAdminOrOwner {
         TGELogic.setDebtCeiling(_poolStorage, _debtCeiling);
     }
 
     /// @notice sets mint first loss value
-    function setMinFirstLossCushion(
-        uint32 _minFirstLossCushion
-    ) external whenNotPaused notClosingStage requirePoolAdminOrOwner {
+    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external whenNotPaused requirePoolAdminOrOwner {
         TGELogic.setMinFirstLossCushion(_poolStorage, _minFirstLossCushion);
     }
 
@@ -383,7 +361,7 @@ contract Pool is PoolStorage, UntangledBase {
         address _tgeAddress,
         // address _tokenAddress,
         Configuration.NOTE_TOKEN_TYPE _noteToken
-    ) external whenNotPaused onlyIssuingTokenStage {
+    ) external whenNotPaused {
         registry.requireSecuritizationManager(_msgSender());
         TGELogic.injectTGEAddress(_poolStorage, _tgeAddress, _noteToken);
     }

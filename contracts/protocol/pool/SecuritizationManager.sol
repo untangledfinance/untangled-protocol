@@ -13,7 +13,7 @@ import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.so
 import {IPool} from '../../interfaces/IPool.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-import {POOL_ADMIN_ROLE, VALIDATOR_ROLE,OWNER_ROLE} from '../../libraries/DataTypes.sol';
+import {POOL_ADMIN_ROLE, VALIDATOR_ROLE, OWNER_ROLE} from '../../libraries/DataTypes.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
@@ -298,18 +298,5 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         }
 
         emit UpdateTGEInfo(tgeInfos);
-    }
-
-    function registerValidator(address validator) public onlyRole(POOL_ADMIN_ROLE) {
-        require(validator != address(0), 'SecuritizationManager: Invalid validator address');
-        IAccessControlUpgradeable(address(registry.getLoanAssetToken())).grantRole(VALIDATOR_ROLE, validator);
-
-        emit ValidatorRegistered(validator);
-    }
-
-    function unregisterValidator(address validator) public onlyRole(POOL_ADMIN_ROLE) {
-        require(validator != address(0), 'SecuritizationManager: Invalid validator address');
-        IAccessControlUpgradeable(address(registry.getLoanAssetToken())).revokeRole(VALIDATOR_ROLE, validator);
-        emit ValidatorUnRegistered(validator);
     }
 }

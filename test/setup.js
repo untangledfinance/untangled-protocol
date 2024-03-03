@@ -1,6 +1,6 @@
 const { ethers, upgrades } = require('hardhat');
 const { deployments } = require('hardhat');
-const { OWNER_ROLE, POOL_ADMIN_ROLE, VALIDATOR_ADMIN_ROLE } = require('./constants');
+const { OWNER_ROLE, POOL_ADMIN_ROLE } = require('./constants');
 const { LAT_BASE_URI } = require('./shared/constants');
 
 const { parseEther } = ethers.utils;
@@ -18,10 +18,7 @@ const setUpLoanAssetToken = async (registry, securitizationManager) => {
 
     const [poolAdmin, defaultLoanAssetTokenValidator] = await ethers.getSigners();
 
-    await loanAssetTokenContract.grantRole(VALIDATOR_ADMIN_ROLE, securitizationManager.address);
     await securitizationManager.grantRole(OWNER_ROLE, poolAdmin.address);
-
-    await securitizationManager.connect(poolAdmin).registerValidator(defaultLoanAssetTokenValidator.address);
 
     return {
         loanAssetTokenContract,

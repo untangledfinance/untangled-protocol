@@ -11,7 +11,7 @@ const { unlimitedAllowance, genSalt, getPoolByAddress, getPoolAbi } = require('.
 const { setup } = require('./setup.js');
 const { SaleType } = require('./shared/constants.js');
 
-const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants.js');
+const { OWNER_ROLE,POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants.js');
 const { utils, Contract } = require('ethers');
 const { ASSET_PURPOSE } = require('./shared/constants');
 
@@ -73,7 +73,7 @@ describe('SecuritizationPool', () => {
 
     describe('#security pool', async () => {
         it('Create pool', async () => {
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);

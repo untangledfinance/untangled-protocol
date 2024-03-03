@@ -6,11 +6,11 @@ import './Configuration.sol';
 import './UnpackLoanParamtersLib.sol';
 
 bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');
-bytes32 constant POOL_ADMIN = keccak256('POOL_CREATOR');
 bytes32 constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
-
-bytes32 constant BACKEND_ADMIN = keccak256('BACKEND_ADMIN');
+bytes32 constant BACKEND_ADMIN_ROLE = keccak256('BACKEND_ADMIN_ROLE');
 bytes32 constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
+bytes32 constant SUPER_ADMIN_ROLE = keccak256('SUPER_ADMIN_ROLE');
+bytes32 constant POOL_ADMIN_ROLE = keccak256('POOL_ADMIN_ROLE');
 
 // In PoolNAV we use this
 bytes32 constant POOL = keccak256('POOL');
@@ -28,6 +28,9 @@ bytes32 constant VALIDATOR_ADMIN_ROLE = keccak256('VALIDATOR_ADMIN_ROLE');
 
 bytes32 constant MINTER_ROLE = keccak256('MINTER_ROLE');
 
+
+// In Go 
+bytes32 constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
 library DataTypes {
     enum CycleState {
         INITIATED,

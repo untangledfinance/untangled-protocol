@@ -25,7 +25,7 @@ const {
     stopImpersonatingAccount,
     setBalance,
 } = require('@nomicfoundation/hardhat-network-helpers');
-const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('../constants.js');
+const { OWNER_ROLE, POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('../constants.js');
 const { RISK_SCORES, SaleType } = require('../shared/constants');
 const { parse } = require('dotenv');
 const { setup } = require('../setup');
@@ -116,7 +116,7 @@ describe('NAV', () => {
             // Gain UID
             await untangledProtocol.mintUID(lenderSigner);
 
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);
@@ -332,7 +332,7 @@ describe('NAV', () => {
         it('Should revert if updating loan risk without having Pool Admin role', async () => {
             await expect(
                 securitizationPoolNAV.connect(originatorSigner).updateAssetRiskScore(tokenIds[0], 2)
-            ).to.be.revertedWith('Registry: Not an pool admin');
+            ).to.be.revertedWith(`AccessControl: account ${originatorSigner.address.toLowerCase()} is missing role ${POOL_ADMIN_ROLE}`);
         });
         it('Change risk score', async () => {
             const currentAsset = await securitizationPoolNAV.getAsset(tokenIds[0]);
@@ -470,7 +470,7 @@ describe('NAV', () => {
             // Gain UID
             await untangledProtocol.mintUID(lenderSigner);
 
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);

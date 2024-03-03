@@ -144,7 +144,7 @@ describe('UniqueIdentity', () => {
             await expect(
                 uniqueIdentity.connect(lenderSigner).burnFrom(borrowerSigner.address, UID_TYPE)
             ).to.be.revertedWith(
-                `AccessControl: account ${lenderSigner.address.toLowerCase()} is missing role 0xd980155b32cf66e6af51e0972d64b9d5efe0e6f237dfaa4bdc83f990dd79e9c8`
+                `AccessControl: account ${lenderSigner.address.toLowerCase()} is missing role ${SUPER_ADMIN}`
             );
         });
 

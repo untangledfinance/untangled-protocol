@@ -1,14 +1,15 @@
 const { utils } = require('ethers');
 
-const POOL_ADMIN_ROLE = utils.keccak256(Buffer.from('POOL_CREATOR'));
+const POOL_ADMIN_ROLE = utils.keccak256(Buffer.from('POOL_ADMIN_ROLE'));
 const OWNER_ROLE = utils.keccak256(Buffer.from('OWNER_ROLE'));
 const ORIGINATOR_ROLE = utils.keccak256(Buffer.from('ORIGINATOR_ROLE'));
 
-const BACKEND_ADMIN = utils.keccak256(Buffer.from('BACKEND_ADMIN'));
+const BACKEND_ADMIN = utils.keccak256(Buffer.from('BACKEND_ADMIN_ROLE'));
 const SIGNER_ROLE = utils.keccak256(Buffer.from('SIGNER_ROLE'));
-const SUPER_ADMIN = utils.keccak256(Buffer.from('SUPER_ADMIN'));
+const SUPER_ADMIN = utils.keccak256(Buffer.from('SUPER_ADMIN_ROLE'));
 
 const VALIDATOR_ADMIN_ROLE = utils.keccak256(Buffer.from('VALIDATOR_ADMIN_ROLE'));
+const ZAPPER_ROLE = utils.keccak256(Buffer.from('ZAPPER_ROLE'));
 
 module.exports = {
     POOL_ADMIN_ROLE,
@@ -18,4 +19,5 @@ module.exports = {
     OWNER_ROLE,
     ORIGINATOR_ROLE,
     VALIDATOR_ADMIN_ROLE,
+    ZAPPER_ROLE,
 };

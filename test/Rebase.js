@@ -24,7 +24,7 @@ const {
 const { setup } = require('./setup.js');
 const { SaleType, ASSET_PURPOSE } = require('./shared/constants.js');
 
-const { POOL_ADMIN_ROLE, BACKEND_ADMIN, ORIGINATOR_ROLE } = require('./constants.js');
+const { OWNER_ROLE,POOL_ADMIN_ROLE, BACKEND_ADMIN, ORIGINATOR_ROLE } = require('./constants.js');
 const { utils, BigNumber } = require('ethers');
 
 describe('Rebase Logic', () => {
@@ -93,7 +93,7 @@ describe('Rebase Logic', () => {
 
     describe('#Initialize suit', async () => {
         it('Create pool & TGEs', async () => {
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);

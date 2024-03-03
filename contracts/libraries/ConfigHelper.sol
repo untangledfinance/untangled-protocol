@@ -14,7 +14,7 @@ import {LoanAssetToken} from '../tokens/ERC721/LoanAssetToken.sol';
 import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPoolValueService.sol';
 import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPoolValueService.sol';
 import {IGo} from '../interfaces/IGo.sol';
-import {POOL_ADMIN, OWNER_ROLE} from './DataTypes.sol';
+import {OWNER_ROLE} from './DataTypes.sol';
 import {INoteTokenVault} from '../interfaces/INoteTokenVault.sol';
 
 /**

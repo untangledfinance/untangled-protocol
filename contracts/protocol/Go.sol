@@ -12,7 +12,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import {IGo} from '../interfaces/IGo.sol';
 import {IUniqueIdentity} from '../interfaces/IUniqueIdentity.sol';
-
+import {OWNER_ROLE, ZAPPER_ROLE} from '../libraries/DataTypes.sol';
 /// @title Go
 /// @author Untangled Team
 /// @dev Provides functions with UID
@@ -29,8 +29,8 @@ contract Go is IGo, AccessControlEnumerableUpgradeable {
     uint256 public constant ID_TYPE_9 = 9;
     uint256 public constant ID_TYPE_10 = 10;
 
-    bytes32 public constant OWNER_ROLE = keccak256('OWNER_ROLE');
-    bytes32 public constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
+    // bytes32 public constant OWNER_ROLE = keccak256('OWNER_ROLE');
+    // bytes32 public constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
 
     IUniqueIdentity public override uniqueIdentity;
 

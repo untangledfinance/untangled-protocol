@@ -24,7 +24,7 @@ const {
 const { setup } = require('./setup.js');
 const { SaleType } = require('./shared/constants.js');
 
-const { POOL_ADMIN_ROLE } = require('./constants.js');
+const { OWNER_ROLE ,POOL_ADMIN_ROLE } = require('./constants.js');
 const { utils } = require('ethers');
 const { ORIGINATOR_ROLE } = require('./constants');
 const { ASSET_PURPOSE } = require('./shared/constants');
@@ -85,7 +85,7 @@ describe('LoanKernel', () => {
 
     describe('#Initialize suit', async () => {
         it('Create pool & TGEs', async () => {
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);

@@ -13,7 +13,7 @@ import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.so
 import {IPool} from '../../interfaces/IPool.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-import {POOL_ADMIN, VALIDATOR_ROLE} from '../../libraries/DataTypes.sol';
+import {POOL_ADMIN_ROLE, VALIDATOR_ROLE,OWNER_ROLE} from '../../libraries/DataTypes.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
@@ -44,7 +44,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
     function initialize(Registry _registry, address _factoryAdmin) public initializer {
         __UntangledBase__init(_msgSender());
         __Factory__init(_factoryAdmin);
-        _setRoleAdmin(POOL_ADMIN, OWNER_ROLE);
+        _setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
         registry = _registry;
     }
@@ -87,7 +87,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         bytes32 salt,
         address poolOwner,
         bytes memory params
-    ) external whenNotPaused onlyRole(POOL_ADMIN) returns (address) {
+    ) external whenNotPaused onlyRole(POOL_ADMIN_ROLE) returns (address) {
         address poolImplAddress = address(registry.getSecuritizationPool());
 
         bytes memory _initialData = abi.encodeWithSelector(POOL_INIT_FUNC_SELECTOR, registry, params);
@@ -300,14 +300,14 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         emit UpdateTGEInfo(tgeInfos);
     }
 
-    function registerValidator(address validator) public onlyRole(POOL_ADMIN) {
+    function registerValidator(address validator) public onlyRole(POOL_ADMIN_ROLE) {
         require(validator != address(0), 'SecuritizationManager: Invalid validator address');
         IAccessControlUpgradeable(address(registry.getLoanAssetToken())).grantRole(VALIDATOR_ROLE, validator);
 
         emit ValidatorRegistered(validator);
     }
 
-    function unregisterValidator(address validator) public onlyRole(POOL_ADMIN) {
+    function unregisterValidator(address validator) public onlyRole(POOL_ADMIN_ROLE) {
         require(validator != address(0), 'SecuritizationManager: Invalid validator address');
         IAccessControlUpgradeable(address(registry.getLoanAssetToken())).revokeRole(VALIDATOR_ROLE, validator);
         emit ValidatorUnRegistered(validator);

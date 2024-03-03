@@ -9,7 +9,7 @@ import {Registry} from '../../../storage/Registry.sol';
 import {UntangledMath} from '../../../libraries/UntangledMath.sol';
 import {Registry} from '../../../storage/Registry.sol';
 import {INoteToken} from '../../../interfaces/INoteToken.sol';
-
+import {OWNER_ROLE} from '../../../libraries/DataTypes.sol';
 contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledBase, Factory {
     using ConfigHelper for Registry;
 
@@ -106,8 +106,8 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
         address tgeAddress = _deployInstance(tgeImpl, _initialData);
         UntangledBase tge = UntangledBase(tgeAddress);
 
-        tge.grantRole(tge.OWNER_ROLE(), issuerTokenController);
-        tge.renounceRole(tge.OWNER_ROLE(), address(this));
+        tge.grantRole(OWNER_ROLE, issuerTokenController);
+        tge.renounceRole(OWNER_ROLE, address(this));
 
         tgeAddresses.push(tgeAddress);
         isExistingTge[tgeAddress] = true;

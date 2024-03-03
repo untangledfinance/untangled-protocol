@@ -87,7 +87,7 @@ describe('SecuritizationManager', () => {
                     true
                 )
             ).to.be.revertedWith(
-                `AccessControl: account ${lenderSigner.address.toLowerCase()} is missing role 0x3e9c05fb0f9da4414e033bb9bf190a6e2072adf7e3077394fce683220513b8d7`
+                `AccessControl: account ${lenderSigner.address.toLowerCase()} is missing role ${POOL_ADMIN_ROLE}`
             );
         });
     });

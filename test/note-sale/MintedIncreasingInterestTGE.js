@@ -3,7 +3,7 @@ const { ethers } = require('hardhat');
 const { setup } = require('../setup');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { BigNumber } = require('ethers');
-const { POOL_ADMIN_ROLE } = require('../constants');
+const { OWNER_ROLE, POOL_ADMIN_ROLE } = require('../constants');
 const { getPoolByAddress, unlimitedAllowance } = require('../utils');
 const dayjs = require('dayjs');
 const { SaleType } = require('../shared/constants');
@@ -54,7 +54,7 @@ describe('MintedIncreasingInterestTGE', function () {
         [untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, ...accounts] =
             await ethers.getSigners();
 
-        const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+        // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
         await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);
         await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
         await securitizationManager.connect(borrowerSigner).grantRole(POOL_ADMIN_ROLE, poolCreatorSigner.address);
@@ -204,7 +204,7 @@ describe('Increasing Interest TGE', () => {
 
     describe('#Initialize suit', async () => {
         it('Create pool & TGEs', async () => {
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);

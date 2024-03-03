@@ -5,7 +5,7 @@ const _ = require('lodash');
 const dayjs = require('dayjs');
 const { expect } = require('chai');
 
-const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants');
+const { OWNER_ROLE,POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('./constants');
 
 const { parseEther, formatEther } = ethers.utils;
 
@@ -65,7 +65,6 @@ describe('Distribution', () => {
 
     describe('#Initialize suit', async () => {
         it('Create pool & TGEs', async () => {
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);

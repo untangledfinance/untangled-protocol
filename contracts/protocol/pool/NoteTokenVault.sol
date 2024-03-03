@@ -10,7 +10,7 @@ import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {INoteTokenVault} from '../../interfaces/INoteTokenVault.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
-import {BACKEND_ADMIN, SIGNER_ROLE} from '../../libraries/DataTypes.sol';
+import {BACKEND_ADMIN_ROLE, SIGNER_ROLE} from '../../libraries/DataTypes.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
 import '../../storage/Registry.sol';
@@ -127,7 +127,7 @@ contract NoteTokenVault is
         uint256 totalCurrencyAmount,
         address[] calldata noteTokenAddresses,
         uint256[] calldata totalRedeemedNoteAmounts
-    ) public onlyRole(BACKEND_ADMIN) nonReentrant {
+    ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
         IPool pool = IPool(poolAddress);
 
         (, uint256 sotTokenPrice) = pool.calcTokenPrices();
@@ -158,7 +158,7 @@ contract NoteTokenVault is
         address[] memory toAddresses,
         uint256[] memory currencyAmounts,
         uint256[] memory redeemedNoteAmounts
-    ) public onlyRole(BACKEND_ADMIN) nonReentrant {
+    ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
         IPool poolTGE = IPool(pool);
         address jotTokenAddress = poolTGE.jotToken();
         address sotTokenAddress = poolTGE.sotToken();
@@ -252,7 +252,7 @@ contract NoteTokenVault is
     }
 
     /// @inheritdoc INoteTokenVault
-    function setRedeemDisabled(address pool, bool _redeemDisabled) public onlyRole(BACKEND_ADMIN) {
+    function setRedeemDisabled(address pool, bool _redeemDisabled) public onlyRole(BACKEND_ADMIN_ROLE) {
         poolRedeemDisabled[pool] = _redeemDisabled;
         emit SetRedeemDisabled(pool, _redeemDisabled);
     }

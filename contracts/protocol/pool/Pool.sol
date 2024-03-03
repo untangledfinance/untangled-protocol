@@ -3,7 +3,7 @@ pragma solidity 0.8.19;
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
-import {OWNER_ROLE, ORIGINATOR_ROLE} from '../../libraries/DataTypes.sol';
+import {OWNER_ROLE, ORIGINATOR_ROLE,POOL_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
 import {PoolStorage} from './PoolStorage.sol';
 import {DataTypes, ONE, ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
 import {UntangledBase} from '../../base/UntangledBase.sol';

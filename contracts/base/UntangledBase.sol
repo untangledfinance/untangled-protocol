@@ -49,7 +49,6 @@ abstract contract UntangledBase is
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         _setupRole(OWNER_ROLE, owner);
 
-        _setRoleAdmin(OWNER_ROLE, OWNER_ROLE);
         _setRoleAdmin(ORIGINATOR_ROLE, OWNER_ROLE);
     }
 

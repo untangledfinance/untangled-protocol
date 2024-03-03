@@ -49,6 +49,8 @@ describe('TokenGenerationEventFactory', () => {
                 issuerTokenController: untangledAdminSigner.address,
                 pool: poolAddress,
                 minBidAmount: parseEther('50'),
+                totalCap: totalCapOfToken,
+                openingTime: openingTime,
                 saleType: SaleType.MINTED_INCREASING_INTEREST,
                 longSale: true,
                 ticker: prefixOfNoteTokenSaleName,
@@ -65,7 +67,6 @@ describe('TokenGenerationEventFactory', () => {
             //     timeInterval: timeInterval,
             //     amountChangeEachInterval: amountChangeEachInterval,
             // }
-            totalCapOfToken,
             interestRate
         );
         const receiptSOTSale = await transactionSOTSale.wait();

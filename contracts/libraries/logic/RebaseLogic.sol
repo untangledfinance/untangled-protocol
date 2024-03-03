@@ -9,7 +9,6 @@ import {TransferHelper} from '../TransferHelper.sol';
 import {GenericLogic} from './GenericLogic.sol';
 import {TGELogic} from './TGELogic.sol';
 import {Math} from '../Math.sol';
-import './PoolNAVLogic.sol';
 
 /**
  * @title Untangled's Rebase Logic

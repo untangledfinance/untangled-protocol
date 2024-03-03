@@ -10,8 +10,6 @@ import {DataTypes} from '../../libraries/DataTypes.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import '../../libraries/TransferHelper.sol';
 
-import 'hardhat/console.sol';
-
 /// @title LoanKernel
 /// @author Untangled Team
 /// @notice Upload loan, Repay Loan and conclude loan

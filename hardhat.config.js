@@ -60,7 +60,7 @@ module.exports = {
             // forking: {
             //     url: 'https://alfajores-forno.celo-testnet.org',
             //     // url: 'https://rpc.ankr.com/polygon',
-            //     blockNumber: 22827392,
+            //     blockNumber: 22829184,
             // },
             // chainId: 44787,
         },

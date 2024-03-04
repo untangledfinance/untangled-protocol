@@ -12,7 +12,7 @@ import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.so
 import {IPool} from '../../interfaces/IPool.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-import {POOL_ADMIN_ROLE, VALIDATOR_ROLE, OWNER_ROLE} from '../../libraries/DataTypes.sol';
+import {POOL_ADMIN_ROLE, OWNER_ROLE} from '../../libraries/DataTypes.sol';
 import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {TokenGenerationEventFactory} from '../note-sale/fab/TokenGenerationEventFactory.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';

@@ -14,15 +14,13 @@ uint256 constant WRITEOFF_RATE_GROUP_START = 1000 * ONE;
 
 bytes32 constant OWNER_ROLE = keccak256('OWNER_ROLE');
 bytes32 constant ORIGINATOR_ROLE = keccak256('ORIGINATOR_ROLE');
-bytes32 constant BACKEND_ADMIN_ROLE = keccak256('BACKEND_ADMIN_ROLE');
+bytes32 constant BACKEND_ADMIN_ROLE = keccak256('BACKEND_ADMIN');
 bytes32 constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
-bytes32 constant SUPER_ADMIN_ROLE = keccak256('SUPER_ADMIN_ROLE');
-bytes32 constant POOL_ADMIN_ROLE = keccak256('POOL_ADMIN_ROLE');
+bytes32 constant SUPER_ADMIN_ROLE = keccak256('SUPER_ADMIN');
+bytes32 constant POOL_ADMIN_ROLE = keccak256('POOL_CREATOR');
 
 // In PoolNAV we use this
 bytes32 constant POOL = keccak256('POOL');
-
-
 
 uint256 constant PRICE_DECIMAL = 10 ** 18;
 
@@ -35,6 +33,7 @@ bytes32 constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
 
 // in ERC1155PresetPauserUpgradeable
 bytes32 constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
+
 library DataTypes {
     struct NoteToken {
         address poolAddress;

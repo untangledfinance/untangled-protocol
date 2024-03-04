@@ -8,7 +8,7 @@ import {ERC165CheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/util
 import {IPool} from '../../interfaces/IPool.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {IERC5008} from '../../interfaces/IERC5008.sol';
-import {VALIDATOR_ROLE, DataTypes} from '../../libraries/DataTypes.sol';
+import {DataTypes} from '../../libraries/DataTypes.sol';
 
 abstract contract LATValidator is IERC5008, EIP712Upgradeable {
     using SignatureCheckerUpgradeable for address;

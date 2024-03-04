@@ -25,29 +25,29 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const beSigner = network.config.beSigner;
     const beAdmin = network.config.beAdmin;
 
-    const SIGNER_ROLE = utils.keccak256(Buffer.from('SIGNER_ROLE'));
-    await execute(
-        'NoteTokenVault',
-        {
-            from: deployer,
-            log: true,
-        },
-        'grantRole',
-        SIGNER_ROLE,
-        beSigner
-    );
+    // const SIGNER_ROLE = utils.keccak256(Buffer.from('SIGNER_ROLE'));
+    // await execute(
+    //     'NoteTokenVault',
+    //     {
+    //         from: deployer,
+    //         log: true,
+    //     },
+    //     'grantRole',
+    //     SIGNER_ROLE,
+    //     beSigner
+    // );
 
-    const BACKEND_ADMIN = utils.keccak256(Buffer.from('BACKEND_ADMIN'));
-    await execute(
-        'NoteTokenVault',
-        {
-            from: deployer,
-            log: true,
-        },
-        'grantRole',
-        SIGNER_ROLE,
-        beAdmin
-    );
+    // const BACKEND_ADMIN = utils.keccak256(Buffer.from('BACKEND_ADMIN'));
+    // await execute(
+    //     'NoteTokenVault',
+    //     {
+    //         from: deployer,
+    //         log: true,
+    //     },
+    //     'grantRole',
+    //     SIGNER_ROLE,
+    //     beAdmin
+    // );
 };
 
 module.exports.dependencies = ['Registry'];

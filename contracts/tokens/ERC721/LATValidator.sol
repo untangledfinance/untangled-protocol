@@ -83,5 +83,5 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
         return _domainSeparatorV4();
     }
 
-    uint256[49] private __gap;
+    uint256[50] private __gap;
 }

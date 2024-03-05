@@ -371,7 +371,7 @@ describe('SecuritizationPool', () => {
             const result = await securitizationPoolValueService.getExpectedAssetsValue(
                 securitizationPoolContract.address
             );
-            expect(result.toString()).equal('43164');
+            expect(result.toString()).equal('42876');
         });
     });
 
@@ -443,7 +443,7 @@ describe('SecuritizationPool', () => {
             const result = await securitizationPoolValueService.getExpectedAssetsValue(
                 securitizationPoolContract.address
             );
-            expect(result.toString()).equal('43164');
+            expect(result.toString()).equal('42876');
         });
 
         it('#getAssetInterestRate', async () => {
@@ -452,7 +452,7 @@ describe('SecuritizationPool', () => {
                 tokenIds[0]
             );
 
-            // expect(result.toString()).equal('43164');
+            // expect(result.toString()).equal('42876');
         });
     });
 

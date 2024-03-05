@@ -5,7 +5,7 @@ const { setup, initPool } = require('../setup');
 const { impersonateAccount, setBalance } = require('@nomicfoundation/hardhat-network-helpers');
 const { parseEther } = ethers.utils;
 const { utils } = require('ethers');
-const { POOL_ADMIN_ROLE } = require('../constants');
+const { OWNER_ROLE, POOL_ADMIN_ROLE } = require('../constants');
 const { getPoolByAddress } = require('../utils');
 const UntangledProtocol = require('../shared/untangled-protocol');
 
@@ -27,7 +27,7 @@ describe('FinalizableCrowdsaleMock', () => {
     untangledProtocol = UntangledProtocol.bind(contracts);
     ({ registry, stableCoin, securitizationManager } = contracts);
 
-    const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+    // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
     await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);
     await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
     await securitizationManager.connect(borrowerSigner).grantRole(POOL_ADMIN_ROLE, poolCreatorSigner.address);

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {IPauseable} from '../../../base/IPauseable.sol';
+import {IPauseable} from '../../../interfaces/IPauseable.sol';
 import '../../../base/UntangledBase.sol';
 import '../../../base/Factory.sol';
 import '../../../interfaces/INoteTokenFactory.sol';
 import '../../../libraries/ConfigHelper.sol';
 import '../../../libraries/UntangledMath.sol';
-import {MINTER_ROLE} from '../../../tokens/ERC20/types.sol';
+import {MINTER_ROLE} from '../../../libraries/DataTypes.sol';
 
 contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
     using ConfigHelper for Registry;
@@ -18,9 +18,9 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
 
     INoteToken[] public override tokens;
 
-    mapping(address => bool) public override isExistingTokens;
-
     address public override noteTokenImplementation;
+
+    mapping(address => bool) public override isExistingTokens;
 
     modifier onlySecuritizationManager() {
         require(
@@ -112,7 +112,4 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
             if (tokens[i].paused()) tokens[i].unpause();
         }
     }
-
-    uint256[46] private __gap0;
-    uint256[50] private __gap;
 }

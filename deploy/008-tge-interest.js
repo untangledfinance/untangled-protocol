@@ -1,25 +1,27 @@
-module.exports = async ({ getNamedAccounts, deployments }) => {
-    const { get, execute, deploy } = deployments;
-    const { deployer } = await getNamedAccounts();
+// Temporarily removed
 
-    const tgeInterest = await deploy('MintedIncreasingInterestTGE', {
-        from: deployer,
-        log: true,
-    });
+// module.exports = async ({ getNamedAccounts, deployments }) => {
+//     const { get, execute, deploy } = deployments;
+//     const { deployer } = await getNamedAccounts();
 
-    // // if (tgeInterest.newlyDeployed) {
-    await execute(
-        'TokenGenerationEventFactory',
-        {
-            from: deployer,
-            log: true,
-        },
-        'setTGEImplAddress',
-        0,
-        tgeInterest.address
-    );
-    // // }
-};
+//     const tgeInterest = await deploy('MintedIncreasingInterestTGE', {
+//         from: deployer,
+//         log: true,
+//     });
 
-module.exports.dependencies = ['Registry'];
-module.exports.tags = ['next', 'mainnet', 'MintedIncreasingInterestTGE'];
+//     // // if (tgeInterest.newlyDeployed) {
+//     await execute(
+//         'TokenGenerationEventFactory',
+//         {
+//             from: deployer,
+//             log: true,
+//         },
+//         'setTGEImplAddress',
+//         0,
+//         tgeInterest.address
+//     );
+//     // // }
+// };
+
+// module.exports.dependencies = ['Registry'];
+// module.exports.tags = ['next', 'mainnet', 'MintedIncreasingInterestTGE'];

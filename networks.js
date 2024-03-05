@@ -83,6 +83,29 @@ const networks = {
         bnmToken: '',
         kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
     },
+    polygon_v2: {
+        url: 'https://polygon-rpc.com',
+        gasPrice: 100_000_000_000, //wei
+        blockGasLimit: 100000000429720,
+        accounts: PRIVATEKEY !== undefined ? [PRIVATEKEY] : [],
+        // verifyApiKey: "THIS HAS NOT BEEN SET",
+        chainId: 137,
+        // confirmations: DEFAULT_VERIFICATION_BLOCK_CONFIRMATIONS,
+        nativeCurrencySymbol: 'MATIC',
+
+        // https://docs.chain.link/ccip/supported-networks/
+        router: '0x3C3D92629A02a8D95D5CB9650fe49C3544f69B43',
+        chainSelector: '4051577828743386545',
+        linkToken: '0xb0897686c545045aFc77CF20eC7A532E3120E0F1',
+        bnmToken: '',
+
+        saveDeployments: true,
+        loggingEnabled: true,
+        kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
+        superAdmin: '0x1E4c30A03d332201d1b9fe8c2CE8eDc69B0D391F',
+        beSigner: '0xC2bC8E795a59f8aba539C847D8Cf5ed3651327a6',
+        beAdmin: '0xC2bC8E795a59f8aba539C847D8Cf5ed3651327a6',
+    },
 };
 
 module.exports = {

@@ -4,8 +4,8 @@ pragma solidity 0.8.19;
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import {ERC1155PresetPauserUpgradeable} from '../external/ERC1155PresetPauserUpgradeable.sol';
-import {IUniqueIdentity} from './IUniqueIdentity.sol';
-
+import {IUniqueIdentity} from '../interfaces/IUniqueIdentity.sol';
+import {OWNER_ROLE ,SIGNER_ROLE , SUPER_ADMIN_ROLE} from '../libraries/DataTypes.sol';
 /**
  * @title UniqueIdentity
  * @notice UniqueIdentity is an ERC1155-compliant contract for representing
@@ -14,14 +14,12 @@ import {IUniqueIdentity} from './IUniqueIdentity.sol';
  */
 
 contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
-    bytes32 public constant SIGNER_ROLE = keccak256('SIGNER_ROLE');
-    bytes32 public constant SUPER_ADMIN = keccak256('SUPER_ADMIN');
 
     uint256 public constant ID_TYPE_0 = 0; // non-US individual
-    uint256 public constant ID_TYPE_1 = 1; // US accredited individual
-    uint256 public constant ID_TYPE_2 = 2; // US non accredited individual
+    uint256 public constant ID_TYPE_1 = 1; // US individual
+    uint256 public constant ID_TYPE_2 = 2; // non-US entity
     uint256 public constant ID_TYPE_3 = 3; // US entity
-    uint256 public constant ID_TYPE_4 = 4; // non-US entity
+    uint256 public constant ID_TYPE_4 = 4;
     uint256 public constant ID_TYPE_5 = 5;
     uint256 public constant ID_TYPE_6 = 6;
     uint256 public constant ID_TYPE_7 = 7;
@@ -52,12 +50,12 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
     function __UniqueIdentity_init_unchained(address owner) internal onlyInitializing {
         _setupRole(SIGNER_ROLE, owner);
         _setRoleAdmin(SIGNER_ROLE, OWNER_ROLE);
-        _setupRole(SUPER_ADMIN, owner);
-        _setRoleAdmin(SUPER_ADMIN, OWNER_ROLE);
+        _setupRole(SUPER_ADMIN_ROLE, owner);
+        _setRoleAdmin(SUPER_ADMIN_ROLE, OWNER_ROLE);
     }
 
     function addSuperAdmin(address account) public onlyAdmin {
-        _setupRole(SUPER_ADMIN, account);
+        _setupRole(SUPER_ADMIN_ROLE, account);
     }
 
     function setSupportedUIDTypes(uint256[] calldata ids, bool[] calldata values) public onlyAdmin {
@@ -121,7 +119,7 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
         require(accountBalance == 0, 'Balance after burn must be 0');
     }
 
-    function burnFrom(address account, uint256 id) public override onlyRole(SUPER_ADMIN) {
+    function burnFrom(address account, uint256 id) public override onlyRole(SUPER_ADMIN_ROLE) {
         _burn(account, id, 1);
 
         uint256 accountBalance = balanceOf(account, id);
@@ -201,6 +199,4 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
             );
         }
     }
-
-    uint256[48] private __gap;
 }

@@ -2,23 +2,26 @@
 pragma solidity 0.8.19;
 
 import {UntangledBase} from '../../../base/UntangledBase.sol';
-import {ITokenGenerationEventFactory} from './ITokenGenerationEventFactory.sol';
+import {ITokenGenerationEventFactory} from '../../../interfaces/ITokenGenerationEventFactory.sol';
 import {ConfigHelper} from '../../../libraries/ConfigHelper.sol';
 import {Factory} from '../../../base/Factory.sol';
 import {Registry} from '../../../storage/Registry.sol';
 import {UntangledMath} from '../../../libraries/UntangledMath.sol';
-import {MintedIncreasingInterestTGE} from '../MintedIncreasingInterestTGE.sol';
-import {MintedNormalTGE} from '../MintedNormalTGE.sol';
 import {Registry} from '../../../storage/Registry.sol';
-
-interface INoteTokenLike {
-    function poolAddress() external view returns (address);
-}
-
+import {INoteToken} from '../../../interfaces/INoteToken.sol';
+import {OWNER_ROLE} from '../../../libraries/DataTypes.sol';
 contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledBase, Factory {
     using ConfigHelper for Registry;
 
-    bytes4 constant TGE_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,address,address,address,bool)'));
+    bytes4 constant TGE_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(address,address,address,address,uint256)'));
+
+    Registry public registry;
+
+    address[] public tgeAddresses;
+
+    mapping(address => bool) public isExistingTge;
+    
+    mapping(SaleType => address) public TGEImplAddress;
 
     function __TokenGenerationEventFactory_init(Registry _registry, address _factoryAdmin) internal onlyInitializing {
         __UntangledBase__init(_msgSender());
@@ -50,23 +53,11 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
         address token,
         address currency,
         uint8 saleType,
-        bool longSale
+        uint256 openingTime
     ) external override whenNotPaused nonReentrant returns (address) {
         registry.requireSecuritizationManager(_msgSender());
 
-        address pool = INoteTokenLike(token).poolAddress();
-
-        if (saleType == uint8(SaleType.MINTED_INCREASING_INTEREST_SOT)) {
-            return
-                _newSale(
-                    TGEImplAddress[SaleType.MINTED_INCREASING_INTEREST_SOT],
-                    issuerTokenController,
-                    pool,
-                    token,
-                    currency,
-                    longSale
-                );
-        }
+        address pool = INoteToken(token).poolAddress();
 
         if (saleType == uint8(SaleType.NORMAL_SALE_JOT)) {
             return
@@ -76,7 +67,7 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
                     pool,
                     token,
                     currency,
-                    longSale
+                    openingTime
                 );
         }
 
@@ -88,7 +79,7 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
                     pool,
                     token,
                     currency,
-                    longSale
+                    openingTime
                 );
         }
 
@@ -101,7 +92,7 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
         address pool,
         address token,
         address currency,
-        bool longSale
+        uint256 openingTime
     ) private returns (address) {
         bytes memory _initialData = abi.encodeWithSelector(
             TGE_INIT_FUNC_SELECTOR,
@@ -109,14 +100,14 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
             pool,
             token,
             currency,
-            longSale
+            openingTime
         );
 
         address tgeAddress = _deployInstance(tgeImpl, _initialData);
         UntangledBase tge = UntangledBase(tgeAddress);
 
-        tge.grantRole(tge.OWNER_ROLE(), issuerTokenController);
-        tge.renounceRole(tge.OWNER_ROLE(), address(this));
+        tge.grantRole(OWNER_ROLE, issuerTokenController);
+        tge.renounceRole(OWNER_ROLE, address(this));
 
         tgeAddresses.push(tgeAddress);
         isExistingTge[tgeAddress] = true;
@@ -128,7 +119,7 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
 
     function pauseUnpauseTge(address tgeAdress) external whenNotPaused onlyRole(DEFAULT_ADMIN_ROLE) {
         require(isExistingTge[tgeAdress], 'TokenGenerationEventFactory: tge does not exist');
-        MintedIncreasingInterestTGE tge = MintedIncreasingInterestTGE(tgeAdress);
+        INoteToken tge = INoteToken(tgeAdress);
         if (tge.paused()) {
             tge.unpause();
         } else {
@@ -139,7 +130,7 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
     function pauseUnpauseAllTges() external whenNotPaused nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
         uint256 tgeAddressesLength = tgeAddresses.length;
         for (uint256 i = 0; i < tgeAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            MintedIncreasingInterestTGE tge = MintedIncreasingInterestTGE(tgeAddresses[i]);
+            INoteToken tge = INoteToken(tgeAddresses[i]);
             if (tge.paused()) {
                 tge.unpause();
             } else {
@@ -147,6 +138,4 @@ contract TokenGenerationEventFactory is ITokenGenerationEventFactory, UntangledB
             }
         }
     }
-
-    uint256[50] private __gap;
 }

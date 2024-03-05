@@ -25,7 +25,7 @@ const {
     stopImpersonatingAccount,
     setBalance,
 } = require('@nomicfoundation/hardhat-network-helpers');
-const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('../constants.js');
+const { OWNER_ROLE, POOL_ADMIN_ROLE, ORIGINATOR_ROLE } = require('../constants.js');
 const { RISK_SCORES, SaleType } = require('../shared/constants');
 const { parse } = require('dotenv');
 const { setup } = require('../setup');
@@ -116,7 +116,7 @@ describe('NAV', () => {
             // Gain UID
             await untangledProtocol.mintUID(lenderSigner);
 
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);
@@ -140,8 +140,7 @@ describe('NAV', () => {
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 10000;
-            const finalInterest = 10000;
+            const interestRate = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'SOT_';
@@ -151,17 +150,12 @@ describe('NAV', () => {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
+                    totalCap: totalCapOfToken,
+                    openingTime: openingTime,
                     saleType: SaleType.MINTED_INCREASING_INTEREST,
-                    longSale: true,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                { openingTime: openingTime, closingTime: closingTime, rate: rate, cap: totalCapOfToken },
-                {
-                    initialInterest,
-                    finalInterest,
-                    timeInterval,
-                    amountChangeEachInterval,
-                }
+                interestRate
             );
 
             const receipt = await transaction.wait();
@@ -169,7 +163,7 @@ describe('NAV', () => {
             const [sotTokenAddress, tgeAddress] = receipt.events.find((e) => e.event == 'SetupSot').args;
             expect(tgeAddress).to.be.properAddress;
 
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', tgeAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', tgeAddress);
             expect(sotTokenAddress).to.be.properAddress;
 
             sotToken = await ethers.getContractAt('NoteToken', sotTokenAddress);
@@ -189,11 +183,11 @@ describe('NAV', () => {
                     issuerTokenController: untangledAdminSigner.address,
                     pool: securitizationPoolContract.address,
                     minBidAmount: parseEther('1'),
+                    totalCap: totalCapOfToken,
+                    openingTime: openingTime,
                     saleType: SaleType.NORMAL_SALE,
-                    longSale: true,
                     ticker: prefixOfNoteTokenSaleName,
                 },
-                { openingTime: openingTime, closingTime: closingTime, rate: rate, cap: totalCapOfToken },
                 initialJotAmount
             );
             const receipt = await transaction.wait();
@@ -201,7 +195,7 @@ describe('NAV', () => {
             const [jotTokenAddress, tgeAddress] = receipt.events.find((e) => e.event == 'SetupJot').args;
             expect(tgeAddress).to.be.properAddress;
 
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', tgeAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', tgeAddress);
 
             expect(jotTokenAddress).to.be.properAddress;
 
@@ -303,10 +297,7 @@ describe('NAV', () => {
       */
 
             // PoolNAV contract
-            securitizationPoolNAV = await ethers.getContractAt(
-                'SecuritizationPoolNAV',
-                securitizationPoolContract.address
-            );
+            securitizationPoolNAV = await ethers.getContractAt('Pool', securitizationPoolContract.address);
         });
 
         it('after upload loan successfully', async () => {
@@ -341,12 +332,14 @@ describe('NAV', () => {
         it('Should revert if updating loan risk without having Pool Admin role', async () => {
             await expect(
                 securitizationPoolNAV.connect(originatorSigner).updateAssetRiskScore(tokenIds[0], 2)
-            ).to.be.revertedWith('Registry: Not an pool admin');
+            ).to.be.revertedWith(
+                `AccessControl: account ${originatorSigner.address.toLowerCase()} is missing role ${POOL_ADMIN_ROLE}`
+            );
         });
         it('Change risk score', async () => {
             const currentAsset = await securitizationPoolNAV.getAsset(tokenIds[0]);
             expect(currentAsset.interestRate.toString()).equal('120000');
-            await securitizationPoolNAV.connect(untangledAdminSigner).updateAssetRiskScore(tokenIds[0], 2);
+            await securitizationPoolNAV.connect(poolCreatorSigner).updateAssetRiskScore(tokenIds[0], 2);
             const nextAsset = await securitizationPoolNAV.getAsset(tokenIds[0]);
             expect(nextAsset.interestRate.toString()).equal('100000');
             const currentNAV = await securitizationPoolNAV.currentNAV();
@@ -355,7 +348,7 @@ describe('NAV', () => {
             expect(currentNAV).to.closeTo(parseEther('9.0221'), parseEther('0.001'));
             expect(curNAVAsset).to.closeTo(parseEther('9.0221'), parseEther('0.001'));
             expect(debtLoan).to.closeTo(parseEther('9.029'), parseEther('0.001'));
-            await securitizationPoolContract.connect(untangledAdminSigner).updateAssetRiskScore(tokenIds[0], 3);
+            await securitizationPoolContract.connect(poolCreatorSigner).updateAssetRiskScore(tokenIds[0], 3);
             expect(await securitizationPoolNAV.debt(tokenIds[0])).to.closeTo(parseEther('9.029'), parseEther('0.001'));
             expect(await securitizationPoolNAV.currentNAV()).to.closeTo(parseEther('9.02839'), parseEther('0.001'));
             expect(await securitizationPoolNAV.currentNAVAsset(tokenIds[0])).to.closeTo(
@@ -479,7 +472,7 @@ describe('NAV', () => {
             // Gain UID
             await untangledProtocol.mintUID(lenderSigner);
 
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);
@@ -523,7 +516,7 @@ describe('NAV', () => {
                 minBidAmount: parseEther('1'),
                 openingTime: dayjs(new Date()).unix(),
                 closingTime: dayjs(new Date()).add(7, 'days').unix(),
-                rate: 2,
+                interestRate: 2,
                 cap: parseEther('100000'),
                 initialInterest: 10000,
                 finalInterest: 10000,
@@ -532,7 +525,7 @@ describe('NAV', () => {
                 ticker: 'Ticker',
             });
 
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', sotTGEAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotTGEAddress);
 
             expect(sotTokenAddress).to.be.properAddress;
 
@@ -555,7 +548,7 @@ describe('NAV', () => {
                 initialJOTAmount: parseEther('100'),
             });
 
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', jotTGEAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotTGEAddress);
 
             expect(jotTokenAddress).to.be.properAddress;
 
@@ -670,10 +663,7 @@ describe('NAV', () => {
       */
             uploadedLoanTime = await time.latest();
 
-            securitizationPoolContract = await ethers.getContractAt(
-                'SecuritizationPoolNAV',
-                securitizationPoolContract.address
-            );
+            securitizationPoolContract = await ethers.getContractAt('Pool', securitizationPoolContract.address);
         });
 
         it('after upload loan successfully', async () => {

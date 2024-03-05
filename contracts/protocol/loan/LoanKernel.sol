@@ -2,19 +2,17 @@
 pragma solidity 0.8.19;
 
 import {ERC165CheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol';
-
 import '../../interfaces/ILoanKernel.sol';
 import '../../base/UntangledBase.sol';
 import '../../libraries/ConfigHelper.sol';
 import '../../libraries/UntangledMath.sol';
-import '../../tokens/ERC721/types.sol';
-import {LoanEntry} from '../../protocol/pool/base/types.sol';
-import {ISecuritizationPool} from '../../interfaces/ISecuritizationPool.sol';
-import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
+import {DataTypes} from '../../libraries/DataTypes.sol';
+import {IPool} from '../../interfaces/IPool.sol';
+import '../../libraries/TransferHelper.sol';
 
 /// @title LoanKernel
 /// @author Untangled Team
-/// @notice Upload loan and conclude loan
+/// @notice Upload loan, Repay Loan and conclude loan
 contract LoanKernel is ILoanKernel, UntangledBase {
     using ConfigHelper for Registry;
     using ERC165CheckerUpgradeable for address;
@@ -172,13 +170,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return riskScores;
     }
 
-    function _getAssetPurposeAndRiskScore(uint8 assetPurpose, uint8 riskScore) private pure returns (uint8[] memory) {
-        uint8[] memory assetPurposeAndRiskScore = new uint8[](2);
-        assetPurposeAndRiskScore[0] = assetPurpose;
-        assetPurposeAndRiskScore[1] = riskScore;
-        return assetPurposeAndRiskScore;
-    }
-
     function _burnLoanAssetToken(bytes32 agreementId) private {
         registry.getLoanAssetToken().burn(uint256(agreementId));
     }
@@ -187,10 +178,49 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return registry.getLoanAssetToken().ownerOf(uint256(agreementId)) != address(0);
     }
 
-    /// @inheritdoc ILoanKernel
+    /// @dev executes the loan repayment by notifying the terms contract about the repayment,
+    /// transferring the repayment amount to the creditor, and handling additional logic related to securitization pools
+    /// and completed repayments
+    function _doRepay(
+        IPool _pool,
+        uint256[] memory _nftIds,
+        address _payer,
+        uint256[] memory _amount,
+        address _tokenAddress
+    ) private returns (bool) {
+        address beneficiary = address(_pool);
+        if (registry.getSecuritizationManager().isExistingPools(beneficiary)) beneficiary = _pool.pot();
+
+        uint256 totalRepayAmount;
+        (uint256[] memory repayAmounts, uint256[] memory previousDebts) = _pool.repayLoan(_nftIds, _amount);
+
+        for (uint256 i; i < repayAmounts.length; i++) {
+            uint256 outstandingAmount = _pool.debt(uint256(_nftIds[i]));
+            // repay all principal and interest
+            // Burn LAT token when repay completely
+            if (repayAmounts[i] == previousDebts[i]) {
+                _concludeLoan(beneficiary, bytes32(_nftIds[i]));
+            }
+            totalRepayAmount += repayAmounts[i];
+            // Log event for repayment
+            emit AssetRepay(
+                bytes32(_nftIds[i]),
+                _payer,
+                beneficiary,
+                repayAmounts[i],
+                outstandingAmount,
+                _tokenAddress
+            );
+        }
+
+        TransferHelper.safeTransferFrom(_tokenAddress, _payer, beneficiary, totalRepayAmount);
+        _pool.increaseTotalAssetRepaidCurrency(totalRepayAmount);
+
+        return true;
+    }
+
     /// @dev A loan, stop lending/loan terms or allow the loan loss
-    function concludeLoan(address creditor, bytes32 agreementId) public override whenNotPaused {
-        require(_msgSender() == address(registry.getLoanRepaymentRouter()), 'LoanKernel: Only LoanRepaymentRouter');
+    function _concludeLoan(address creditor, bytes32 agreementId) internal {
         require(creditor != address(0), 'Invalid creditor account.');
         require(agreementId != bytes32(0), 'Invalid agreement id.');
 
@@ -199,78 +229,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         }
 
         _burnLoanAssetToken(agreementId);
-    }
-
-    /*********************** */
-    // EXTERNAL FUNCTIONS
-    /*********************** */
-
-    /**
-     * Filling new Debt Order
-     * Notice:
-     * - All Debt Order must to have same:
-     *   + TermContract
-     *   + Creditor Fee
-     *   + Debtor Fee
-     */
-    function fillDebtOrder(
-        FillDebtOrderParam calldata fillDebtOrderParam
-    ) external whenNotPaused nonReentrant validFillingOrderAddresses(fillDebtOrderParam.orderAddresses) {
-        address poolAddress = fillDebtOrderParam.orderAddresses[uint8(FillingAddressesIndex.SECURITIZATION_POOL)];
-        require(fillDebtOrderParam.termsContractParameters.length > 0, 'LoanKernel: Invalid Term Contract params');
-
-        uint256[] memory salts = _saltFromOrderValues(
-            fillDebtOrderParam.orderValues,
-            fillDebtOrderParam.termsContractParameters.length
-        );
-        LoanOrder memory debtOrder = _getLoanOrder(
-            _debtorsFromOrderAddresses(
-                fillDebtOrderParam.orderAddresses,
-                fillDebtOrderParam.termsContractParameters.length
-            ),
-            fillDebtOrderParam.orderAddresses,
-            fillDebtOrderParam.orderValues,
-            fillDebtOrderParam.termsContractParameters,
-            salts
-        );
-
-        uint x = 0;
-        uint256 expectedAssetsValue = 0;
-
-        // Mint to pool
-        for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
-            registry.getLoanAssetToken().safeMint(poolAddress, fillDebtOrderParam.latInfo[i]);
-            LoanEntry[] memory loans = new LoanEntry[](fillDebtOrderParam.latInfo[i].tokenIds.length);
-
-            for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
-                require(
-                    debtOrder.issuance.agreementIds[x] == bytes32(fillDebtOrderParam.latInfo[i].tokenIds[j]),
-                    'LoanKernel: Invalid LAT Token Id'
-                );
-
-                LoanEntry memory newLoan = LoanEntry({
-                    debtor: debtOrder.issuance.debtors[x],
-                    principalTokenAddress: debtOrder.principalTokenAddress,
-                    termsParam: fillDebtOrderParam.termsContractParameters[x],
-                    salt: salts[x], //solium-disable-next-line security
-                    issuanceBlockTimestamp: block.timestamp,
-                    expirationTimestamp: debtOrder.expirationTimestampInSecs[x],
-                    assetPurpose: Configuration.ASSET_PURPOSE(debtOrder.assetPurpose),
-                    riskScore: debtOrder.riskScores[x]
-                });
-                loans[j] = newLoan;
-
-                x = UntangledMath.uncheckedInc(x);
-            }
-
-            expectedAssetsValue += ISecuritizationPool(poolAddress).collectAssets(
-                fillDebtOrderParam.latInfo[i].tokenIds,
-                loans
-            );
-        }
-
-        // Start collect asset checkpoint and withdraw
-        ISecuritizationTGE(poolAddress).withdraw(_msgSender(), expectedAssetsValue);
     }
 
     function _getDebtOrderHash(
@@ -306,5 +264,177 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         return agreementIds;
     }
 
-    uint256[50] private __gap;
+    /*********************** */
+    // EXTERNAL FUNCTIONS
+    /*********************** */
+
+    function getLoansValue(FillDebtOrderParam calldata fillDebtOrderParam) public view returns (uint256) {
+        address poolAddress = fillDebtOrderParam.orderAddresses[uint8(FillingAddressesIndex.SECURITIZATION_POOL)];
+        IPool pool = IPool(poolAddress);
+        require(fillDebtOrderParam.termsContractParameters.length > 0, 'LoanKernel: Invalid Term Contract params');
+
+        uint256[] memory salts = _saltFromOrderValues(
+            fillDebtOrderParam.orderValues,
+            fillDebtOrderParam.termsContractParameters.length
+        );
+        LoanOrder memory debtOrder = _getLoanOrder(
+            _debtorsFromOrderAddresses(
+                fillDebtOrderParam.orderAddresses,
+                fillDebtOrderParam.termsContractParameters.length
+            ),
+            fillDebtOrderParam.orderAddresses,
+            fillDebtOrderParam.orderValues,
+            fillDebtOrderParam.termsContractParameters,
+            salts
+        );
+
+        uint x = 0;
+        uint256 expectedAssetsValue = 0;
+
+        for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
+            DataTypes.LoanEntry[] memory loans = new DataTypes.LoanEntry[](
+                fillDebtOrderParam.latInfo[i].tokenIds.length
+            );
+
+            for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
+                require(
+                    debtOrder.issuance.agreementIds[x] == bytes32(fillDebtOrderParam.latInfo[i].tokenIds[j]),
+                    'LoanKernel: Invalid LAT Token Id'
+                );
+
+                DataTypes.LoanEntry memory newLoan = DataTypes.LoanEntry({
+                    debtor: debtOrder.issuance.debtors[x],
+                    principalTokenAddress: debtOrder.principalTokenAddress,
+                    termsParam: fillDebtOrderParam.termsContractParameters[x],
+                    salt: salts[x],
+                    issuanceBlockTimestamp: block.timestamp,
+                    expirationTimestamp: debtOrder.expirationTimestampInSecs[x],
+                    assetPurpose: Configuration.ASSET_PURPOSE(debtOrder.assetPurpose),
+                    riskScore: debtOrder.riskScores[x]
+                });
+                loans[j] = newLoan;
+
+                x = UntangledMath.uncheckedInc(x);
+            }
+
+            expectedAssetsValue += pool.getLoansValue(fillDebtOrderParam.latInfo[i].tokenIds, loans);
+        }
+
+        return expectedAssetsValue;
+    }
+
+    /**
+     * Filling new Debt Order
+     * Notice:
+     * - All Debt Order must to have same:
+     *   + TermContract
+     *   + Creditor Fee
+     *   + Debtor Fee
+     */
+    function fillDebtOrder(
+        FillDebtOrderParam calldata fillDebtOrderParam
+    ) external whenNotPaused nonReentrant validFillingOrderAddresses(fillDebtOrderParam.orderAddresses) {
+        address poolAddress = fillDebtOrderParam.orderAddresses[uint8(FillingAddressesIndex.SECURITIZATION_POOL)];
+        IPool pool = IPool(poolAddress);
+        require(fillDebtOrderParam.termsContractParameters.length > 0, 'LoanKernel: Invalid Term Contract params');
+
+        uint256[] memory salts = _saltFromOrderValues(
+            fillDebtOrderParam.orderValues,
+            fillDebtOrderParam.termsContractParameters.length
+        );
+        LoanOrder memory debtOrder = _getLoanOrder(
+            _debtorsFromOrderAddresses(
+                fillDebtOrderParam.orderAddresses,
+                fillDebtOrderParam.termsContractParameters.length
+            ),
+            fillDebtOrderParam.orderAddresses,
+            fillDebtOrderParam.orderValues,
+            fillDebtOrderParam.termsContractParameters,
+            salts
+        );
+
+        uint x = 0;
+        uint256 expectedAssetsValue = 0;
+
+        // Mint to pool
+        for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
+            registry.getLoanAssetToken().safeMint(poolAddress, fillDebtOrderParam.latInfo[i]);
+            DataTypes.LoanEntry[] memory loans = new DataTypes.LoanEntry[](
+                fillDebtOrderParam.latInfo[i].tokenIds.length
+            );
+
+            for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
+                require(
+                    debtOrder.issuance.agreementIds[x] == bytes32(fillDebtOrderParam.latInfo[i].tokenIds[j]),
+                    'LoanKernel: Invalid LAT Token Id'
+                );
+
+                DataTypes.LoanEntry memory newLoan = DataTypes.LoanEntry({
+                    debtor: debtOrder.issuance.debtors[x],
+                    principalTokenAddress: debtOrder.principalTokenAddress,
+                    termsParam: fillDebtOrderParam.termsContractParameters[x],
+                    salt: salts[x],
+                    issuanceBlockTimestamp: block.timestamp,
+                    expirationTimestamp: debtOrder.expirationTimestampInSecs[x],
+                    assetPurpose: Configuration.ASSET_PURPOSE(debtOrder.assetPurpose),
+                    riskScore: debtOrder.riskScores[x]
+                });
+                loans[j] = newLoan;
+
+                x = UntangledMath.uncheckedInc(x);
+            }
+
+            expectedAssetsValue += pool.collectAssets(fillDebtOrderParam.latInfo[i].tokenIds, loans);
+        }
+
+        // Start collect asset checkpoint and withdraw
+        pool.withdraw(_msgSender(), expectedAssetsValue);
+
+        // rebase
+        pool.rebase();
+        require(pool.isMinFirstLossValid(), 'LoanKernel: Exceeds MinFirstLoss');
+    }
+
+    /// @inheritdoc ILoanKernel
+    function repayInBatch(
+        bytes32[] calldata agreementIds,
+        uint256[] calldata amounts,
+        address tokenAddress
+    ) external override whenNotPaused nonReentrant returns (bool) {
+        uint256 agreementIdsLength = agreementIds.length;
+        require(agreementIdsLength == amounts.length, 'LoanRepaymentRouter: Invalid length');
+        require(tokenAddress != address(0), 'LoanRepaymentRouter: Token address must different with NULL');
+
+        uint256[] memory nftIds = new uint256[](agreementIdsLength);
+
+        // check all the loans must have the same owner
+        address poolAddress = registry.getLoanAssetToken().ownerOf(uint256(agreementIds[0]));
+        IPool pool = IPool(poolAddress);
+
+        require(poolAddress != address(0), 'LoanRepaymentRouter: Invalid repayment request');
+        require(pool.underlyingCurrency() == tokenAddress, 'LoanRepaymentRouter: currency mismatch');
+
+        nftIds[0] = uint256(agreementIds[0]);
+
+        if (agreementIdsLength > 1) {
+            for (uint256 i = 1; i < agreementIdsLength; i++) {
+                nftIds[i] = uint256(agreementIds[i]);
+                require(
+                    registry.getLoanAssetToken().ownerOf(nftIds[i]) == poolAddress,
+                    'LoanRepaymentRouter: Invalid repayment request'
+                );
+            }
+        }
+
+        require(
+            _doRepay(pool, nftIds, _msgSender(), amounts, tokenAddress),
+            'LoanRepaymentRouter: Repayment has failed'
+        );
+
+        // rebase
+        pool.rebase();
+
+        emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
+        return true;
+    }
 }

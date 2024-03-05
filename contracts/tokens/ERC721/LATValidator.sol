@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
-import {AccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/AccessControlUpgradeable.sol';
 import {EIP712Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol';
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import {SignatureCheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/SignatureCheckerUpgradeable.sol';
 import {ERC165CheckerUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/ERC165CheckerUpgradeable.sol';
-import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
-import {IERC165Upgradeable} from '@openzeppelin/contracts-upgradeable/utils/introspection/IERC165Upgradeable.sol';
+import {IPool} from '../../interfaces/IPool.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
-import {IERC5008} from './IERC5008.sol';
-import {VALIDATOR_ROLE, LoanAssetInfo} from './types.sol';
+import {IERC5008} from '../../interfaces/IERC5008.sol';
+import {DataTypes} from '../../libraries/DataTypes.sol';
 
 abstract contract LATValidator is IERC5008, EIP712Upgradeable {
     using SignatureCheckerUpgradeable for address;
@@ -22,27 +20,27 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
 
     mapping(uint256 => uint256) internal _nonces;
 
-    modifier validateCreditor(address creditor, LoanAssetInfo calldata info) {
-        if (ISecuritizationPoolStorage(creditor).validatorRequired()) {
+    modifier validateCreditor(address creditor, DataTypes.LoanAssetInfo calldata info) {
+        if (IPool(creditor).validatorRequired()) {
             _checkNonceValid(info);
 
             require(_checkValidator(info), 'LATValidator: invalid validator signature');
-            require(isValidator(info.validator), 'LATValidator: invalid validator');
+            require(isValidator(creditor, info.validator), 'LATValidator: invalid validator');
         }
         _;
     }
 
-    modifier requireValidator(LoanAssetInfo calldata info) {
+    modifier requireValidator(DataTypes.LoanAssetInfo calldata info) {
         require(_checkValidator(info), 'LATValidator: invalid validator signature');
         _;
     }
 
-    modifier requireNonceValid(LoanAssetInfo calldata info) {
+    modifier requireNonceValid(DataTypes.LoanAssetInfo calldata info) {
         _checkNonceValid(info);
         _;
     }
 
-    function _checkNonceValid(LoanAssetInfo calldata info) internal {
+    function _checkNonceValid(DataTypes.LoanAssetInfo calldata info) internal {
         for (uint256 i = 0; i < info.tokenIds.length; i = UntangledMath.uncheckedInc(i)) {
             require(_nonces[info.tokenIds[i]] == info.nonces[i], 'LATValidator: invalid nonce');
             unchecked {
@@ -60,13 +58,13 @@ abstract contract LATValidator is IERC5008, EIP712Upgradeable {
 
     function __LATValidator_init_unchained() internal onlyInitializing {}
 
-    function isValidator(address sender) public view virtual returns (bool);
+    function isValidator(address pool, address sender) public view virtual returns (bool);
 
     function nonce(uint256 tokenId) external view override returns (uint256) {
         return _nonces[tokenId];
     }
 
-    function _checkValidator(LoanAssetInfo calldata latInfo) internal view returns (bool) {
+    function _checkValidator(DataTypes.LoanAssetInfo calldata latInfo) internal view returns (bool) {
         bytes32 digest = _hashTypedDataV4(
             keccak256(
                 abi.encode(

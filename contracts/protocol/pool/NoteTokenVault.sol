@@ -6,16 +6,13 @@ import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
-import {ERC20BurnableUpgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol';
-import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
-
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {INoteTokenVault} from '../../interfaces/INoteTokenVault.sol';
-import {ICrowdSale} from '../note-sale/crowdsale/ICrowdSale.sol';
-import {ISecuritizationPoolStorage} from '../../interfaces/ISecuritizationPoolStorage.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
-import {ISecuritizationTGE} from '../../interfaces/ISecuritizationTGE.sol';
-import {BACKEND_ADMIN, SIGNER_ROLE} from './types.sol';
+import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
+import {BACKEND_ADMIN_ROLE, SIGNER_ROLE} from '../../libraries/DataTypes.sol';
+import {IPool} from '../../interfaces/IPool.sol';
+import {Configuration} from '../../libraries/Configuration.sol';
 import '../../storage/Registry.sol';
 import '../../libraries/ConfigHelper.sol';
 
@@ -48,7 +45,7 @@ contract NoteTokenVault is
     /// @dev Checks if redeeming is allowed for a given pool.
     /// @param pool The address of the pool to check.
     modifier orderAllowed(address pool) {
-        require(poolRedeemDisabled[pool] == false, 'redeem-not-allowed');
+        require(!poolRedeemDisabled[pool], 'redeem-not-allowed');
         _;
     }
 
@@ -94,8 +91,8 @@ contract NoteTokenVault is
         address noteTokenAddress = redeemParam.noteTokenAddress;
         uint256 noteTokenRedeemAmount = redeemParam.noteTokenRedeemAmount;
 
-        address jotTokenAddress = ISecuritizationTGE(pool).jotToken();
-        address sotTokenAddress = ISecuritizationTGE(pool).sotToken();
+        address jotTokenAddress = IPool(pool).jotToken();
+        address sotTokenAddress = IPool(pool).sotToken();
         require(
             _isJotToken(noteTokenAddress, jotTokenAddress) || _isSotToken(noteTokenAddress, sotTokenAddress),
             'NoteTokenVault: Invalid token address'
@@ -109,13 +106,13 @@ contract NoteTokenVault is
             require(currentRedeemAmount == 0, 'NoteTokenVault: User already created redeem order');
             poolUserRedeems[pool][usr].redeemJOTAmount = noteTokenRedeemAmount;
             poolTotalJOTRedeem[pool] = poolTotalJOTRedeem[pool] + noteTokenRedeemAmount;
-            noteTokenPrice = registry.getDistributionAssessor().getJOTTokenPrice(pool);
+            noteTokenPrice = registry.getSecuritizationPoolValueService().getJOTTokenPrice(pool);
         } else {
             uint256 currentRedeemAmount = poolUserRedeems[pool][usr].redeemSOTAmount;
             require(currentRedeemAmount == 0, 'NoteTokenVault: User already created redeem order');
             poolUserRedeems[pool][usr].redeemSOTAmount = noteTokenRedeemAmount;
             poolTotalSOTRedeem[pool] = poolTotalSOTRedeem[pool] + noteTokenRedeemAmount;
-            noteTokenPrice = registry.getDistributionAssessor().getSOTTokenPrice(pool);
+            noteTokenPrice = registry.getSecuritizationPoolValueService().getSOTTokenPrice(pool);
         }
 
         require(
@@ -126,19 +123,32 @@ contract NoteTokenVault is
     }
 
     function preDistribute(
-        address pool,
+        address poolAddress,
         uint256 totalCurrencyAmount,
         address[] calldata noteTokenAddresses,
         uint256[] calldata totalRedeemedNoteAmounts
-    ) public onlyRole(BACKEND_ADMIN) nonReentrant {
-        ISecuritizationTGE poolTGE = ISecuritizationTGE(pool);
+    ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
+        IPool pool = IPool(poolAddress);
+
+        (, uint256 sotTokenPrice) = pool.calcTokenPrices();
+        uint256 totalSotRedeem;
+        uint256 decimals;
 
         for (uint i = 0; i < noteTokenAddresses.length; i++) {
-            ERC20BurnableUpgradeable(noteTokenAddresses[i]).burn(totalRedeemedNoteAmounts[i]);
+            INoteToken(noteTokenAddresses[i]).burn(totalRedeemedNoteAmounts[i]);
+            if (INoteToken(noteTokenAddresses[i]).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.SENIOR)) {
+                totalSotRedeem += totalRedeemedNoteAmounts[i];
+                decimals = INoteToken(noteTokenAddresses[i]).decimals();
+            }
         }
-        poolTGE.decreaseReserve(totalCurrencyAmount);
+        pool.decreaseReserve(totalCurrencyAmount);
+        // rebase
+        if (totalSotRedeem > 0) {
+            pool.changeSeniorAsset(0, (sotTokenPrice * totalSotRedeem) / 10 ** decimals);
+        }
+        require(pool.isMinFirstLossValid(), 'NoteTokenVault: Exceeds MinFirstLoss');
 
-        emit PreDistribute(pool, totalCurrencyAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
+        emit PreDistribute(poolAddress, totalCurrencyAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
     }
 
     /// @inheritdoc INoteTokenVault
@@ -148,8 +158,8 @@ contract NoteTokenVault is
         address[] memory toAddresses,
         uint256[] memory currencyAmounts,
         uint256[] memory redeemedNoteAmounts
-    ) public onlyRole(BACKEND_ADMIN) nonReentrant {
-        ISecuritizationTGE poolTGE = ISecuritizationTGE(pool);
+    ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
+        IPool poolTGE = IPool(pool);
         address jotTokenAddress = poolTGE.jotToken();
         address sotTokenAddress = poolTGE.sotToken();
         require(
@@ -175,16 +185,16 @@ contract NoteTokenVault is
             // Update pot pool reserve in P2P investment
             address poolOfPot = registry.getSecuritizationManager().potToPool(toAddresses[i]);
             if (poolOfPot != address(0)) {
-                ISecuritizationTGE(poolOfPot).increaseReserve(currencyAmounts[i]);
+                IPool(poolOfPot).increaseReserve(currencyAmounts[i]);
             }
         }
 
         if (_isJotToken(noteTokenAddress, jotTokenAddress)) {
             poolTotalJOTRedeem[pool] -= totalNoteRedeemed;
-            ICrowdSale(ISecuritizationPoolStorage(pool).secondTGEAddress()).onRedeem(totalCurrencyAmount);
+            IMintedNormalTGE(IPool(pool).secondTGEAddress()).onRedeem(totalCurrencyAmount);
         } else {
             poolTotalSOTRedeem[pool] -= totalNoteRedeemed;
-            ICrowdSale(ISecuritizationPoolStorage(pool).tgeAddress()).onRedeem(totalCurrencyAmount);
+            IMintedNormalTGE(IPool(pool).tgeAddress()).onRedeem(totalCurrencyAmount);
         }
 
         emit DisburseOrder(pool, noteTokenAddress, toAddresses, currencyAmounts, redeemedNoteAmounts);
@@ -214,8 +224,8 @@ contract NoteTokenVault is
         _incrementNonce(usr);
 
         address pool = cancelParam.pool;
-        address jotTokenAddress = ISecuritizationTGE(pool).jotToken();
-        address sotTokenAddress = ISecuritizationTGE(pool).sotToken();
+        address jotTokenAddress = IPool(pool).jotToken();
+        address sotTokenAddress = IPool(pool).sotToken();
         address noteTokenAddress = cancelParam.noteTokenAddress;
 
         require(
@@ -242,7 +252,7 @@ contract NoteTokenVault is
     }
 
     /// @inheritdoc INoteTokenVault
-    function setRedeemDisabled(address pool, bool _redeemDisabled) public onlyRole(BACKEND_ADMIN) {
+    function setRedeemDisabled(address pool, bool _redeemDisabled) public onlyRole(BACKEND_ADMIN_ROLE) {
         poolRedeemDisabled[pool] = _redeemDisabled;
         emit SetRedeemDisabled(pool, _redeemDisabled);
     }
@@ -279,6 +289,4 @@ contract NoteTokenVault is
     function _isSotToken(address noteToken, address sotToken) internal pure returns (bool) {
         return noteToken == sotToken;
     }
-
-    uint256[49] private __gap;
 }

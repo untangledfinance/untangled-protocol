@@ -43,6 +43,7 @@
     "eth-gas-reporter": "0.2.25",
     "hardhat-abi-exporter": "^2.10.1",
     "hardhat-gas-reporter": "^1.0.9",
+    "hardhat-if-gen": "^0.0.3",
     "lodash": "4.17.21",
     "solidity-coverage": "0.8.4",
     "truffle-contract-size": "2.0.1"

@@ -11,6 +11,7 @@ const { parseEther, parseUnits, formatEther, formatBytes32String, keccak256, sol
 const { unlimitedAllowance, ZERO_ADDRESS } = require('./utils.js');
 const { setup } = require('./setup.js');
 const { presignedMintMessage } = require('./shared/uid-helper.js');
+const {ZAPPER_ROLE} = require('./constants')
 
 describe('Go', () => {
   let go;
@@ -86,7 +87,7 @@ describe('Go', () => {
 
   describe('#goOnlyIdTypes', async () => {
     it('should admin return true', async () => {
-      const ZAPPER_ROLE = await go.ZAPPER_ROLE();
+      // const ZAPPER_ROLE = await go.ZAPPER_ROLE();
       await go.grantRole(ZAPPER_ROLE, untangledAdminSigner.address);
       const result = await go.goOnlyIdTypes(untangledAdminSigner.address, []);
 

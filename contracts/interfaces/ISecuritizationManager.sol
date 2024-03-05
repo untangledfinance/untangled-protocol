@@ -2,36 +2,18 @@
 pragma solidity 0.8.19;
 
 import '../storage/Registry.sol';
-import './ISecuritizationPool.sol';
-import {ISecuritizationPoolStorage} from './ISecuritizationPoolStorage.sol';
+import './IPool.sol';
+import {DataTypes} from '../libraries/DataTypes.sol';
 
 interface ISecuritizationManager {
     event NewPoolCreated(address indexed instanceAddress);
-    event NewPoolDeployed(
-        address indexed instanceAddress,
-        address poolOwner,
-        ISecuritizationPoolStorage.NewPoolParams newPoolParams
-    );
+    event NewPoolDeployed(address indexed instanceAddress, address poolOwner, DataTypes.NewPoolParams newPoolParams);
     event UpdatePotToPool(address indexed pot, address indexed pool);
     event SotDeployed(address indexed sotAddress, address tgeAddress, address poolAddress);
     event JotDeployed(address indexed jotAddress, address tgeAddress, address poolAddress);
 
-    event SetupSot(
-        address indexed sotAddress,
-        address tgeAddress,
-        address poolAddress,
-        TGEParam tgeParam,
-        NewRoundSaleParam saleParam,
-        IncreasingInterestParam increasingInterestParam
-    );
-    event SetupJot(
-        address indexed jotAddress,
-        address tgeAddress,
-        address poolAddress,
-        TGEParam tgeParam,
-        NewRoundSaleParam saleParam,
-        uint256 initialJOTAmount
-    );
+    event SetupSot(address indexed sotAddress, address tgeAddress, TGEParam tgeParam, uint256 interestRate);
+    event SetupJot(address indexed jotAddress, address tgeAddress, TGEParam tgeParam, uint256 initialJOTAmount);
 
     event UpdateAllowedUIDTypes(uint256[] uids);
     event TokensPurchased(address indexed investor, address indexed tgeAddress, uint256 amount, uint256 tokenAmount);
@@ -45,29 +27,14 @@ interface ISecuritizationManager {
 
     event UpdateTGEInfo(TGEInfoParam[] tgeInfos);
 
-    event ValidatorRegistered(address validator);
-    event ValidatorUnRegistered(address validator);
-
-    struct NewRoundSaleParam {
-        uint256 openingTime;
-        uint256 closingTime;
-        uint256 rate;
-        uint256 cap;
-    }
     struct TGEParam {
         address issuerTokenController;
         address pool;
         uint256 minBidAmount;
-        bool longSale;
+        uint256 totalCap;
+        uint256 openingTime;
         string ticker;
         uint8 saleType;
-    }
-
-    struct IncreasingInterestParam {
-        uint32 initialInterest;
-        uint32 finalInterest;
-        uint32 timeInterval;
-        uint32 amountChangeEachInterval;
     }
 
     struct TGEInfoParam {

@@ -1,3 +1,5 @@
+const { utils } = require('ethers');
+
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, read, get, execute } = deployments;
     const { deployer } = await getNamedAccounts();
@@ -20,21 +22,20 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         log: true,
     });
 
-    // const currentVersion = await read('SecuritizationManager', {}, 'getInitializedVersion');
-    // if (currentVersion.toNumber() < 2) {
-    //     await execute(
-    //         'SecuritizationManager',
-    //         {
-    //             from: deployer,
-    //             log: true,
-    //         },
-    //         'initialize',
-    //         registry.address,
-    //         proxyAdmin.address
-    //     );
-    // }
-
     await execute('Registry', { from: deployer, log: true }, 'setSecuritizationManager', SecuritizationManager.address);
+    // const superAdmin = network.config.superAdmin;
+
+    // const OWNER_ROLE = utils.keccak256(Buffer.from('OWNER_ROLE'));
+    // await execute(
+    //     'SecuritizationManager',
+    //     {
+    //         from: deployer,
+    //         log: true,
+    //     },
+    //     'grantRole',
+    //     OWNER_ROLE,
+    //     superAdmin
+    // );
 };
 
 module.exports.dependencies = ['Registry'];

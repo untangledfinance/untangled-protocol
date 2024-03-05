@@ -10,18 +10,27 @@ pragma solidity 0.8.19;
 
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-
-import {IGo} from './IGo.sol';
-import {IUniqueIdentity} from '../uid/IUniqueIdentity.sol';
-import {Registry} from '../storage/Registry.sol';
-import {ConfigHelper} from '../libraries/ConfigHelper.sol';
-
+import {IGo} from '../interfaces/IGo.sol';
+import {IUniqueIdentity} from '../interfaces/IUniqueIdentity.sol';
+import {OWNER_ROLE, ZAPPER_ROLE} from '../libraries/DataTypes.sol';
 /// @title Go
 /// @author Untangled Team
 /// @dev Provides functions with UID
 contract Go is IGo, AccessControlEnumerableUpgradeable {
-    bytes32 public constant OWNER_ROLE = keccak256('OWNER_ROLE');
-    bytes32 public constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
+    uint256 public constant ID_TYPE_0 = 0; // non-US individual
+    uint256 public constant ID_TYPE_1 = 1; // US accredited individual
+    uint256 public constant ID_TYPE_2 = 2; // US non accredited individual
+    uint256 public constant ID_TYPE_3 = 3; // US entity
+    uint256 public constant ID_TYPE_4 = 4; // non-US entity
+    uint256 public constant ID_TYPE_5 = 5;
+    uint256 public constant ID_TYPE_6 = 6;
+    uint256 public constant ID_TYPE_7 = 7;
+    uint256 public constant ID_TYPE_8 = 8;
+    uint256 public constant ID_TYPE_9 = 9;
+    uint256 public constant ID_TYPE_10 = 10;
+
+    // bytes32 public constant OWNER_ROLE = keccak256('OWNER_ROLE');
+    // bytes32 public constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
 
     IUniqueIdentity public override uniqueIdentity;
 
@@ -116,7 +125,7 @@ contract Go is IGo, AccessControlEnumerableUpgradeable {
     function getAllIdTypes() public view returns (uint256[] memory) {
         // create a dynamic array and copy the fixed array over so we return a dynamic array
         uint256[] memory _allIdTypes = new uint256[](allIdTypes.length);
-        for (uint256 i = 0; i < allIdTypes.length; i++) {
+        for (uint256 i = 0; i < _allIdTypes.length; i++) {
             _allIdTypes[i] = allIdTypes[i];
         }
 
@@ -135,6 +144,4 @@ contract Go is IGo, AccessControlEnumerableUpgradeable {
     function initZapperRole() external onlyAdmin {
         _setRoleAdmin(ZAPPER_ROLE, OWNER_ROLE);
     }
-
-    uint256[48] private __gap;
 }

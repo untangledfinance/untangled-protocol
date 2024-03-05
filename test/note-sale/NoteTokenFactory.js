@@ -6,59 +6,83 @@ const { BigNumber } = require('ethers');
 // const ONE_DAY = 86400;
 // const DECIMAL = BigNumber.from(10).pow(18);
 describe('NoteTokenFactory', () => {
-  let registry;
-  let noteTokenFactory;
-  let SecuritizationPool;
+    let registry;
+    let noteTokenFactory;
+    let SecuritizationPool;
 
-  before('create fixture', async () => {
-    await setup();
-    SecuritizationPool = await ethers.getContractFactory('SecuritizationPool');
-    const MintedNormalTGE = await ethers.getContractFactory('MintedNormalTGE');
-    const NoteToken = await ethers.getContractFactory('NoteToken');
-    const NoteTokenFactory = await ethers.getContractFactory('NoteTokenFactory');
-    const Registry = await ethers.getContractFactory('Registry');
+    before('create fixture', async () => {
+        await setup();
+        const PoolNAVLogic = await ethers.getContractFactory('PoolNAVLogic');
+        const poolNAVLogic = await PoolNAVLogic.deploy();
+        await poolNAVLogic.deployed();
+        const PoolAssetLogic = await ethers.getContractFactory('PoolAssetLogic', {
+            libraries: {
+                PoolNAVLogic: poolNAVLogic.address,
+            },
+        });
+        const poolAssetLogic = await PoolAssetLogic.deploy();
+        await poolAssetLogic.deployed();
+        const TGELogic = await ethers.getContractFactory('TGELogic');
+        const tgeLogic = await TGELogic.deploy();
+        await tgeLogic.deployed();
 
-    registry = await upgrades.deployProxy(Registry, []);
+        const RebaseLogic = await ethers.getContractFactory('RebaseLogic');
+        const rebaseLogic = await RebaseLogic.deploy();
+        await rebaseLogic.deployed();
 
-    const admin = await upgrades.admin.getInstance();
-    noteTokenFactory = await upgrades.deployProxy(NoteTokenFactory, [
-      registry.address, admin.address
-    ]);
+        SecuritizationPool = await ethers.getContractFactory('Pool', {
+            libraries: {
+                PoolAssetLogic: poolAssetLogic.address,
+                PoolNAVLogic: poolNAVLogic.address,
+                TGELogic: tgeLogic.address,
+                RebaseLogic: rebaseLogic.address,
+            },
+        });
 
-    const noteTokenImpl = await NoteToken.deploy();
-    await noteTokenFactory.setNoteTokenImplementation(noteTokenImpl.address);
-    // await registry.setNoteToken(noteTokenImpl.address);
+        const MintedNormalTGE = await ethers.getContractFactory('MintedNormalTGE');
+        const NoteToken = await ethers.getContractFactory('NoteToken');
+        const NoteTokenFactory = await ethers.getContractFactory('NoteTokenFactory');
+        const Registry = await ethers.getContractFactory('Registry');
 
-    // await noteTokenFactory.initialize(registry.address, admin.address);
-  });
+        registry = await upgrades.deployProxy(Registry, []);
 
-  it('#createToken', async () => {
-    const pool = await SecuritizationPool.deploy();
+        const admin = await upgrades.admin.getInstance();
+        noteTokenFactory = await upgrades.deployProxy(NoteTokenFactory, [registry.address, admin.address]);
 
-    const [deployer] = await ethers.getSigners();
-    await registry.setSecuritizationManager(deployer.address);
-    await noteTokenFactory.createToken(pool.address, 0, 2, 'TOKEN'); // SENIOR
-  });
+        const noteTokenImpl = await NoteToken.deploy();
+        await noteTokenFactory.setNoteTokenImplementation(noteTokenImpl.address);
+        // await registry.setNoteToken(noteTokenImpl.address);
 
-  it('#pauseUnpauseToken', async () => {
-    const pool = await SecuritizationPool.deploy();
-    const tx = await noteTokenFactory.createToken(pool.address, 0, 2, 'TOKEN'); // SENIOR
-    const receipt = await tx.wait();
+        // await noteTokenFactory.initialize(registry.address, admin.address);
+    });
 
-    const tokenAddress = receipt.events.find((x) => x.event == 'TokenCreated').args.token;
+    it('#createToken', async () => {
+        const pool = await SecuritizationPool.deploy();
 
-    await expect(noteTokenFactory.pauseUnpauseToken(tokenAddress)).to.not.be.reverted;
-  });
+        const [deployer] = await ethers.getSigners();
+        await registry.setSecuritizationManager(deployer.address);
+        await noteTokenFactory.createToken(pool.address, 0, 2, 'TOKEN'); // SENIOR
+    });
 
-  it('#pauseAllToken', async () => {
-    const pool = await SecuritizationPool.deploy();
-    await noteTokenFactory.createToken(pool.address, 0, 2, 'TOKEN'); // SENIOR
-    await expect(noteTokenFactory.pauseAllTokens()).to.not.be.reverted;
-  });
+    it('#pauseUnpauseToken', async () => {
+        const pool = await SecuritizationPool.deploy();
+        const tx = await noteTokenFactory.createToken(pool.address, 0, 2, 'TOKEN'); // SENIOR
+        const receipt = await tx.wait();
 
-  it('#unPauseAllTokens', async () => {
-    const pool = await SecuritizationPool.deploy();
-    await noteTokenFactory.createToken(pool.address, 0, 2, 'TOKEN'); // SENIOR
-    await expect(noteTokenFactory.unPauseAllTokens()).to.not.be.reverted;
-  });
+        const tokenAddress = receipt.events.find((x) => x.event == 'TokenCreated').args.token;
+
+        await expect(noteTokenFactory.pauseUnpauseToken(tokenAddress)).to.not.be.reverted;
+    });
+
+    it('#pauseAllToken', async () => {
+        const pool = await SecuritizationPool.deploy();
+        await noteTokenFactory.createToken(pool.address, 0, 2, 'TOKEN'); // SENIOR
+        await expect(noteTokenFactory.pauseAllTokens()).to.not.be.reverted;
+    });
+
+    it('#unPauseAllTokens', async () => {
+        const pool = await SecuritizationPool.deploy();
+        await noteTokenFactory.createToken(pool.address, 0, 2, 'TOKEN'); // SENIOR
+        await expect(noteTokenFactory.unPauseAllTokens()).to.not.be.reverted;
+    });
 });

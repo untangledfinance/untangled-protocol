@@ -37,8 +37,9 @@ describe('TokenGenerationEventFactory', () => {
         const closingTime = dayjs(new Date()).add(7, 'days').unix();
         const rate = 2;
         const totalCapOfToken = parseEther('100000');
-        const initialInterest = 10000;
-        const finalInterest = 10000;
+        const interestRate = 10000;
+        // const initialInterest = 10000;
+        // const finalInterest = 10000;
         const timeInterval = 1 * 24 * 3600; // seconds
         const amountChangeEachInterval = 0;
         const prefixOfNoteTokenSaleName = 'SOT_';
@@ -48,22 +49,25 @@ describe('TokenGenerationEventFactory', () => {
                 issuerTokenController: untangledAdminSigner.address,
                 pool: poolAddress,
                 minBidAmount: parseEther('50'),
+                totalCap: totalCapOfToken,
+                openingTime: openingTime,
                 saleType: SaleType.MINTED_INCREASING_INTEREST,
                 longSale: true,
                 ticker: prefixOfNoteTokenSaleName,
             },
-            {
-                openingTime: openingTime,
-                closingTime: closingTime,
-                rate: rate,
-                cap: totalCapOfToken,
-            },
-            {
-                initialInterest: initialInterest,
-                finalInterest: finalInterest,
-                timeInterval: timeInterval,
-                amountChangeEachInterval: amountChangeEachInterval,
-            }
+            // {
+            //     openingTime: openingTime,
+            //     closingTime: closingTime,
+            //     rate: rate,
+            //     cap: totalCapOfToken,
+            // },
+            // {
+            //     initialInterest: initialInterest,
+            //     finalInterest: finalInterest,
+            //     timeInterval: timeInterval,
+            //     amountChangeEachInterval: amountChangeEachInterval,
+            // }
+            interestRate
         );
         const receiptSOTSale = await transactionSOTSale.wait();
         const [sotTokenAddress, sotTGEAddress] = receiptSOTSale.events.find((e) => e.event == 'SetupSot').args;

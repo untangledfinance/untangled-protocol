@@ -43,7 +43,7 @@ Run `npm test` to run tests for all contracts.
 
 ### Stress test
 
-Run `REPORT_GAS=true hardhat test stress/FillDebtOrder.js` to stress test fillDebtOrder function with gas report 
+Run `REPORT_GAS=true hardhat test stress/FillDebtOrder.js` to stress test fillDebtOrder function with gas report
 shown in console
 
 ### Compiling Smart Contracts
@@ -61,6 +61,12 @@ yarn deploy --tags [..] --network [..]
 ```
 
 `truffle migrate --reset --compile-all --network development`
+
+### Verify contract
+
+```
+npx hardhat verify --network [network_name] [contract_address]
+```
 
 ## To run Slither, in project folder run
 

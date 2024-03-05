@@ -25,14 +25,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         'setTokenGenerationEventFactory',
         TokenGenerationEventFactory.address
     );
-
-    // if (currentVersion.toNumber() < 94) {
-
-    // await execute('TokenGenerationEventFactory', {
-    //     from: deployer,
-    //     log: true,
-    //   }, 'initialize', registry.address, proxyAdmin.address);
-    //   // }
 };
 
 module.exports.dependencies = ['Registry'];

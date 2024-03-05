@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol';
-import './INoteToken.sol';
+import '../../interfaces/INoteToken.sol';
 
 /// @title NoteToken
 /// @author Untangled Team

@@ -6,10 +6,7 @@ const { parseEther } = ethers.utils;
 const dayjs = require('dayjs');
 const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { setup } = require('../setup');
-const {
-    presignedCancelRedeemOrderMessage,
-    presignedRedeemOrderMessage,
-} = require('../shared/uid-helper');
+const { presignedCancelRedeemOrderMessage, presignedRedeemOrderMessage } = require('../shared/uid-helper');
 const { POOL_ADMIN_ROLE, ORIGINATOR_ROLE, BACKEND_ADMIN, SIGNER_ROLE } = require('../constants.js');
 const { impersonateAccount, setBalance } = require('@nomicfoundation/hardhat-network-helpers');
 const { getPoolByAddress, unlimitedAllowance } = require('../utils');
@@ -91,7 +88,7 @@ describe('NoteTokenVault', () => {
         // Init JOT sale
         const jotCap = parseEther('1000'); // $1000
         const isLongSaleTGEJOT = true;
-        const now = dayjs().unix();
+        const now = dayjs().unix() - 1;
         const initialJotAmount = stableCoinAmountToBuyJOT;
         const jotInfo = {
             issuerTokenController: untangledAdminSigner.address,
@@ -113,18 +110,23 @@ describe('NoteTokenVault', () => {
             saleType: SaleType.MINTED_INCREASING_INTEREST,
             minBidAmount: parseEther('1'),
             openingTime: now,
-            closingTime: now + 2* ONE_DAY_IN_SECONDS,
+            closingTime: now + 2 * ONE_DAY_IN_SECONDS,
             rate: 10000,
             cap: sotCap,
-            initialInterest: 10000,
-            finalInterest: 90000,
+            interestRate: 90000,
             timeInterval: 86400,
             amountChangeEachInterval: 10000,
             ticker: 'Ticker',
         };
-        const [poolAddress, sotCreated, jotCreated] = await untangledProtocol.createFullPool(poolCreatorSigner, poolParams, riskScores, sotInfo, jotInfo);
+        const [poolAddress, sotCreated, jotCreated] = await untangledProtocol.createFullPool(
+            poolCreatorSigner,
+            poolParams,
+            riskScores,
+            sotInfo,
+            jotInfo
+        );
         securitizationPoolContract = await getPoolByAddress(poolAddress);
-        mintedIncreasingInterestTGEContract = await ethers.getContractAt('MintedIncreasingInterestTGE', sotCreated.sotTGEAddress);
+        mintedIncreasingInterestTGEContract = await ethers.getContractAt('MintedNormalTGE', sotCreated.sotTGEAddress);
         mintedNormalTGEContract = await ethers.getContractAt('MintedNormalTGE', jotCreated.jotTGEAddress);
         sotContract = await ethers.getContractAt('NoteToken', sotCreated.sotTokenAddress);
         jotContract = await ethers.getContractAt('NoteToken', jotCreated.jotTokenAddress);
@@ -133,7 +135,6 @@ describe('NoteTokenVault', () => {
         await securitizationPoolContract
             .connect(poolCreatorSigner)
             .grantRole(ORIGINATOR_ROLE, originatorSigner.address);
-
 
         // Lender gain UID
         chainId = await getChainId();
@@ -151,13 +152,21 @@ describe('NoteTokenVault', () => {
             // Lender buys JOT Token
             await untangledProtocol.buyToken(lenderSignerA, mintedNormalTGEContract.address, stableCoinAmountToBuyJOT);
             // Lender try to buy SOT with amount violates min first loss
-            await untangledProtocol.buyToken(lenderSignerA, mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT);
+            await untangledProtocol.buyToken(
+                lenderSignerA,
+                mintedIncreasingInterestTGEContract.address,
+                stableCoinAmountToBuySOT
+            );
         });
         before('Lender B buy JOT and SOT', async () => {
             // Lender buys JOT Token
             await untangledProtocol.buyToken(lenderSignerB, mintedNormalTGEContract.address, stableCoinAmountToBuyJOT);
             // Lender try to buy SOT with amount violates min first loss
-            await untangledProtocol.buyToken(lenderSignerB, mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT);
+            await untangledProtocol.buyToken(
+                lenderSignerB,
+                mintedIncreasingInterestTGEContract.address,
+                stableCoinAmountToBuySOT
+            );
         });
         describe('Redeem Order', () => {
             it('Investor A should make redeem order for 1 JOT', async () => {
@@ -324,7 +333,7 @@ describe('NoteTokenVault', () => {
                 await expect(
                     noteTokenVault.connect(lenderSignerA).setRedeemDisabled(securitizationPoolContract.address, true)
                 ).to.be.revertedWith(
-                    `AccessControl: account ${lenderSignerA.address.toLowerCase()} is missing role 0x48c56c0d6590b6240b1a1005717522dced5c82a200c197c7d7ad7bf3660f4194`
+                    `AccessControl: account ${lenderSignerA.address.toLowerCase()} is missing role ${BACKEND_ADMIN}`
                 );
                 await noteTokenVault.connect(untangledAdminSigner).grantRole(BACKEND_ADMIN, backendAdminSigner.address);
                 await noteTokenVault
@@ -373,7 +382,11 @@ describe('NoteTokenVault', () => {
                 ).to.be.revertedWith('SM: Buy token paused');
                 // Lender try to buy SOT with amount violates min first loss
                 expect(
-                    untangledProtocol.buyToken(lenderSignerA, mintedIncreasingInterestTGEContract.address, stableCoinAmountToBuySOT)
+                    untangledProtocol.buyToken(
+                        lenderSignerA,
+                        mintedIncreasingInterestTGEContract.address,
+                        stableCoinAmountToBuySOT
+                    )
                 ).to.be.revertedWith('SM: Buy token paused');
             });
             it('should revert if drawdown when redeem disabled', async () => {
@@ -430,7 +443,11 @@ describe('NoteTokenVault', () => {
         describe('Cancel Order', () => {
             before('Lender C buy JOT and SOT', async () => {
                 // Lender buys JOT Token
-                await  untangledProtocol.buyToken(lenderSignerC, mintedNormalTGEContract.address, stableCoinAmountToBuyJOT)
+                await untangledProtocol.buyToken(
+                    lenderSignerC,
+                    mintedNormalTGEContract.address,
+                    stableCoinAmountToBuyJOT
+                );
                 // Lender try to buy SOT with amount violates min first loss
                 await untangledProtocol.buyToken(
                     lenderSignerC,
@@ -612,7 +629,7 @@ describe('NoteTokenVault', () => {
                             [parseEther('0.5'), parseEther('1')]
                         )
                 ).to.be.revertedWith(
-                    `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role 0x48c56c0d6590b6240b1a1005717522dced5c82a200c197c7d7ad7bf3660f4194`
+                    `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role ${BACKEND_ADMIN}`
                 );
             });
             it('should return max available reserve', async () => {
@@ -685,7 +702,7 @@ describe('NoteTokenVault', () => {
                             [parseEther('0.5'), parseEther('1')]
                         )
                 ).to.be.revertedWith(
-                    `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role 0x48c56c0d6590b6240b1a1005717522dced5c82a200c197c7d7ad7bf3660f4194`
+                    `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role ${BACKEND_ADMIN}`
                 );
             });
 
@@ -732,7 +749,7 @@ describe('NoteTokenVault', () => {
                             [jotContract.address],
                             [parseEther('2.83')]
                         )
-                ).to.revertedWith('MinFirstLoss is not satisfied');
+                ).to.revertedWith('NoteTokenVault: Exceeds MinFirstLoss');
             });
             it('JOT: should run successfully', async () => {
                 // Disburse $2.83 for JOT

@@ -2,7 +2,7 @@ const { ethers, artifacts } = require('hardhat');
 const _ = require('lodash');
 const dayjs = require('dayjs');
 const { expect } = require('chai');
-const { impersonateAccount, setBalance } = require('@nomicfoundation/hardhat-network-helpers');
+const { impersonateAccount, setBalance, time } = require('@nomicfoundation/hardhat-network-helpers');
 
 const { parseEther, formatEther, formatBytes32String } = ethers.utils;
 const { presignedMintMessage } = require('./shared/uid-helper.js');
@@ -24,7 +24,7 @@ const {
 const { setup } = require('./setup.js');
 const { SaleType } = require('./shared/constants.js');
 
-const { POOL_ADMIN_ROLE } = require('./constants.js');
+const { OWNER_ROLE, POOL_ADMIN_ROLE } = require('./constants.js');
 const { utils } = require('ethers');
 const { ORIGINATOR_ROLE } = require('./constants');
 const { ASSET_PURPOSE } = require('./shared/constants');
@@ -85,7 +85,7 @@ describe('LoanKernel', () => {
 
     describe('#Initialize suit', async () => {
         it('Create pool & TGEs', async () => {
-            const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
+            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
 
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);
@@ -120,8 +120,9 @@ describe('LoanKernel', () => {
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 10000;
-            const finalInterest = 10000;
+            const interestRate = 10000;
+            // const initialInterest = 10000;
+            // const finalInterest = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'Ticker_';
@@ -133,11 +134,10 @@ describe('LoanKernel', () => {
                 closingTime,
                 rate,
                 cap: totalCapOfToken,
-                initialInterest,
-                finalInterest,
                 timeInterval,
                 amountChangeEachInterval,
                 ticker: prefixOfNoteTokenSaleName,
+                interestRate,
             };
 
             const initialJOTAmount = parseEther('1');
@@ -161,17 +161,15 @@ describe('LoanKernel', () => {
                 jotInfo
             );
             securitizationPoolContract = await getPoolByAddress(poolAddress);
-            mintedIncreasingInterestTGE = await ethers.getContractAt(
-                'MintedIncreasingInterestTGE',
-                sotCreated.sotTGEAddress
-            );
-            jotMintedIncreasingInterestTGE = await ethers.getContractAt(
-                'MintedIncreasingInterestTGE',
-                jotCreated.jotTGEAddress
-            );
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotCreated.sotTGEAddress);
+            jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotCreated.jotTGEAddress);
         });
 
         it('Should buy tokens successfully', async () => {
+            let tokenPrice = await securitizationPoolContract.calcTokenPrices();
+            console.log('Jot price: ', tokenPrice[0]);
+            console.log('Sot price: ', tokenPrice[1]);
+
             await untangledProtocol.buyToken(lenderSigner, jotMintedIncreasingInterestTGE.address, parseEther('100'));
 
             await untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'));
@@ -189,7 +187,7 @@ describe('LoanKernel', () => {
     const ASSET_PURPOSE_INVOICE = '1';
     const inputAmount = 10;
     const inputPrice = 15;
-    const principalAmount = 10000000000000000000;
+    const principalAmount = 10000000000000000000n;
 
     describe('#LoanKernel', async () => {
         it('No one than LoanKernel can mint', async () => {
@@ -344,6 +342,16 @@ describe('LoanKernel', () => {
             let stablecoinBalanceOfAdmin = await stableCoin.balanceOf(untangledAdminSigner.address);
             expect(formatEther(stablecoinBalanceOfAdmin)).equal('99000.0');
 
+            const { expectedLoansValue } = await untangledProtocol.getLoansValue(
+                untangledAdminSigner,
+                securitizationPoolContract,
+                borrowerSigner,
+                ASSET_PURPOSE.LOAN,
+                loans
+            );
+
+            expect(formatEther(expectedLoansValue)).equal('19.0');
+
             tokenIds = await untangledProtocol.uploadLoans(
                 untangledAdminSigner,
                 securitizationPoolContract,
@@ -357,6 +365,9 @@ describe('LoanKernel', () => {
 
             const balanceOfPool = await loanAssetTokenContract.balanceOf(securitizationPoolContract.address);
             expect(balanceOfPool).equal(tokenIds.length);
+
+            const debtAmount = await securitizationPoolContract.debt(tokenIds[1]);
+            // expect(debtAmount).equal(principalAmount);
 
             stablecoinBalanceOfAdmin = await stableCoin.balanceOf(untangledAdminSigner.address);
             expect(stablecoinBalanceOfAdmin).to.closeTo(parseEther('99019.000'), parseEther('0.01'));
@@ -399,9 +410,24 @@ describe('LoanKernel', () => {
 
             await loanRepaymentRouter
                 .connect(untangledAdminSigner)
-                .repayInBatch([tokenIds[0]], [parseEther('100')], stableCoin.address);
+                .repayInBatch([tokenIds[0]], [parseEther('3')], stableCoin.address);
+
+            let amount = await securitizationPoolContract.getRepaidAmount();
+            console.log('principal amount: ', amount[0]);
+            console.log('interest amount: ', amount[1]);
+
+            time.increase(100);
+
+            await loanRepaymentRouter
+                .connect(untangledAdminSigner)
+                .repayInBatch([tokenIds[0]], [parseEther('10')], stableCoin.address);
+
+            amount = await securitizationPoolContract.getRepaidAmount();
+            console.log('principal amount: ', amount[0]);
+            console.log('interest amount: ', amount[1]);
 
             await expect(loanAssetTokenContract.ownerOf(tokenIds[0])).to.be.revertedWith(`ERC721: invalid token ID`);
+            expect(await loanAssetTokenContract.ownerOf(tokenIds[1])).to.be.equal(securitizationPoolContract.address);
 
             const balanceOfPool = await loanAssetTokenContract.balanceOf(securitizationPoolContract.address);
             expect(balanceOfPool).equal(tokenIds.length - 1);
@@ -412,6 +438,5 @@ describe('LoanKernel', () => {
             const stablecoinBalanceOfPoolAfter = await stableCoin.balanceOf(securitizationPoolContract.address);
             expect(stablecoinBalanceOfPoolAfter).to.closeTo(parseEther('190.5'), parseEther('0.01'));
         });
-
     });
 });

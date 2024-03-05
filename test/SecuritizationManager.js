@@ -44,19 +44,21 @@ describe('SecuritizationManager', () => {
     });
     describe('#newPoolInstance', async () => {
         it('Should create new pool instance', async function () {
-            const minFirstLossCushion = 10 // 10%
+            const minFirstLossCushion = 10; // 10%
             const securitizationPoolAddress = await untangledProtocol.createSecuritizationPool(
                 poolCreatorSigner,
                 10,
                 parseEther('1000').toString(),
-                "cUSD",
+                'cUSD',
                 true
             );
             expect(securitizationPoolAddress).to.be.properAddress;
 
             securitizationPoolContract = await getPoolByAddress(securitizationPoolAddress);
             expect(await securitizationPoolContract.underlyingCurrency()).to.equal(stableCoin.address);
-            expect(await securitizationPoolContract.minFirstLossCushion()).to.equal(minFirstLossCushion * RATE_SCALING_FACTOR);
+            expect(await securitizationPoolContract.minFirstLossCushion()).to.equal(
+                minFirstLossCushion * RATE_SCALING_FACTOR
+            );
             expect(await securitizationManager.isExistingPools(securitizationPoolAddress)).to.equal(true);
             expect(await securitizationPoolContract.hasRole(OWNER_ROLE, poolCreatorSigner.address)).to.equal(true);
         });
@@ -65,15 +67,27 @@ describe('SecuritizationManager', () => {
             const minFirstLostCushion = 101; // 101%
 
             await expect(
-                untangledProtocol.createSecuritizationPool(poolCreatorSigner, minFirstLostCushion, parseEther('1000').toString(), "cUSD", true)
+                untangledProtocol.createSecuritizationPool(
+                    poolCreatorSigner,
+                    minFirstLostCushion,
+                    parseEther('1000').toString(),
+                    'cUSD',
+                    true
+                )
             ).to.be.revertedWith(`SecuritizationPool: minFirstLossCushion is greater than 100`);
         });
 
         it('only pool creator role can create pool', async () => {
             await expect(
-                untangledProtocol.createSecuritizationPool(lenderSigner, 10, parseEther('1000').toString(), "cUSD", true)
+                untangledProtocol.createSecuritizationPool(
+                    lenderSigner,
+                    10,
+                    parseEther('1000').toString(),
+                    'cUSD',
+                    true
+                )
             ).to.be.revertedWith(
-                `AccessControl: account ${lenderSigner.address.toLowerCase()} is missing role 0x3e9c05fb0f9da4414e033bb9bf190a6e2072adf7e3077394fce683220513b8d7`
+                `AccessControl: account ${lenderSigner.address.toLowerCase()} is missing role ${POOL_ADMIN_ROLE}`
             );
         });
     });
@@ -82,12 +96,11 @@ describe('SecuritizationManager', () => {
         let sotTokenAddress;
 
         it('Should set up TGE for SOT successfully', async () => {
-            const openingTime = dayjs(new Date()).unix();
+            const openingTime = dayjs(new Date()).unix() - 1;
             const closingTime = dayjs(new Date()).add(7, 'days').unix();
             const rate = 2;
             const totalCapOfToken = parseEther('100000');
-            const initialInterest = 100000;
-            const finalInterest = 100000;
+            const interestRate = 10000;
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'SOT_';
@@ -102,16 +115,15 @@ describe('SecuritizationManager', () => {
                 closingTime,
                 rate,
                 cap: totalCapOfToken,
-                initialInterest,
-                finalInterest,
                 timeInterval,
                 amountChangeEachInterval,
                 ticker: prefixOfNoteTokenSaleName,
+                interestRate,
             }));
 
             expect(sotTGEAddress).to.be.properAddress;
 
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', sotTGEAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotTGEAddress);
 
             expect(sotTokenAddress).to.be.properAddress;
         });
@@ -135,7 +147,7 @@ describe('SecuritizationManager', () => {
 
         it('Can not buy token if not has valid UUID', async () => {
             await expect(
-              untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'))
+                untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'))
             ).to.be.revertedWith('Unauthorized. Must have correct UID');
         });
         it('Register UID', async () => {
@@ -144,8 +156,8 @@ describe('SecuritizationManager', () => {
 
         it('Should buy tokens failed if buy sot first', async () => {
             await expect(
-                    untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'))
-            ).to.be.revertedWith(`Crowdsale: sale not started`);
+                untangledProtocol.buyToken(lenderSigner, mintedIncreasingInterestTGE.address, parseEther('100'))
+            ).to.be.revertedWith(`MintedNormalTGE: sale not started`);
         });
     });
 
@@ -180,7 +192,7 @@ describe('SecuritizationManager', () => {
 
             expect(jotTGEAddress).to.be.properAddress;
 
-            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedIncreasingInterestTGE', jotTGEAddress);
+            mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotTGEAddress);
 
             expect(jotTokenAddress).to.be.properAddress;
         });

@@ -108,7 +108,7 @@ describe('Pool to Pool', () => {
                 minBidAmount: parseEther('1'),
                 saleType: SaleType.NORMAL_SALE,
                 longSale: true,
-                ticker: "Ticker",
+                ticker: 'Ticker',
                 openingTime: now,
                 closingTime: now + ONE_DAY,
                 rate: 10000,
@@ -128,16 +128,12 @@ describe('Pool to Pool', () => {
                 closingTime: now + 2 * ONE_DAY,
                 rate: 10000,
                 cap: parseEther('10'),
-                initialInterest: 10000,
-                finalInterest: 90000,
                 timeInterval: 86400,
                 amountChangeEachInterval: 10000,
-                ticker: "Ticker",
+                ticker: 'Ticker',
+                interestRate: 90000,
             });
-            mintedIncreasingInterestTGEPoolBContract = await ethers.getContractAt(
-                'MintedIncreasingInterestTGE',
-                sotTGEAddress
-            );
+            mintedIncreasingInterestTGEPoolBContract = await ethers.getContractAt('MintedNormalTGE', sotTGEAddress);
 
             // Create investor pool
             await securitizationManager.grantRole(POOL_ADMIN_ROLE, poolACreator.address);
@@ -147,13 +143,13 @@ describe('Pool to Pool', () => {
 
             // Init JOT sale PoolA
             const nowPoolA = dayjs().unix();
-            const { jotTGEAddress: jotTGEAddressPoolA  } = await untangledProtocol.initJOTSale(poolACreator, {
+            const { jotTGEAddress: jotTGEAddressPoolA } = await untangledProtocol.initJOTSale(poolACreator, {
                 issuerTokenController: untangledAdminSigner.address,
                 pool: poolAContract.address,
                 minBidAmount: parseEther('1'),
                 saleType: SaleType.NORMAL_SALE,
                 longSale: true,
-                ticker: "Ticker",
+                ticker: 'Ticker',
                 openingTime: nowPoolA,
                 closingTime: nowPoolA + ONE_DAY,
                 rate: 10000,
@@ -176,17 +172,21 @@ describe('Pool to Pool', () => {
                 finalInterest: 90000,
                 timeInterval: 86400,
                 amountChangeEachInterval: 10000,
-                ticker: "Ticker",
+                ticker: 'Ticker',
             });
             mintedIncreasingInterestTGEPoolAContract = await ethers.getContractAt(
-                'MintedIncreasingInterestTGE',
+                'MintedNormalTGE',
                 sotTGEAddressPoolA
             );
 
             // Anonymous investor gain UID
             await untangledProtocol.mintUID(anonymousInvestorSigner);
             await stableCoin.connect(untangledAdminSigner).transfer(anonymousInvestorSigner.address, parseEther('1'));
-            await untangledProtocol.buyToken(anonymousInvestorSigner, mintedNormalTGEPoolAContract.address, parseEther('1'));
+            await untangledProtocol.buyToken(
+                anonymousInvestorSigner,
+                mintedNormalTGEPoolAContract.address,
+                parseEther('1')
+            );
 
             // Pool A pot gain UID
             await untangledProtocol.mintUID(poolAPot);
@@ -197,7 +197,7 @@ describe('Pool to Pool', () => {
 
         it('Pool A pot invests into pool B for JOT', async () => {
             // Invest into main pool (buy JOT token)
-            await untangledProtocol.buyToken(poolAPot, mintedNormalTGEPoolBContract.address, stableCoinAmountToBuyJOT)
+            await untangledProtocol.buyToken(poolAPot, mintedNormalTGEPoolBContract.address, stableCoinAmountToBuyJOT);
             expect(await stableCoin.balanceOf(poolAPot.address)).equal('0');
         });
         it('Pool A originator can transfer JOT from pool A pot to pool A', async () => {
@@ -266,12 +266,20 @@ describe('Pool to Pool', () => {
 
         it('Pool A pot invests into pool B for SOT', async () => {
             await stableCoin.connect(untangledAdminSigner).transfer(anonymousInvestorSigner.address, parseEther('2'));
-            await untangledProtocol.buyToken(anonymousInvestorSigner, mintedNormalTGEPoolAContract.address, parseEther('2'))
+            await untangledProtocol.buyToken(
+                anonymousInvestorSigner,
+                mintedNormalTGEPoolAContract.address,
+                parseEther('2')
+            );
             // Invest into main pool (buy JOT token)
             await untangledProtocol.buyToken(poolAPot, mintedNormalTGEPoolBContract.address, stableCoinAmountToBuyJOT);
             const value = await mintedIncreasingInterestTGEPoolBContract.hasStarted();
             // Invest into main pool (buy SOT token)
-            await untangledProtocol.buyToken(poolAPot, mintedIncreasingInterestTGEPoolBContract.address, stableCoinAmountToBuySOT)
+            await untangledProtocol.buyToken(
+                poolAPot,
+                mintedIncreasingInterestTGEPoolBContract.address,
+                stableCoinAmountToBuySOT
+            );
             expect(await stableCoin.balanceOf(poolAPot.address)).equal('0');
         });
         it('Pool A originator can transfer SOT from pool A pot to pool A', async () => {
@@ -448,13 +456,13 @@ describe('Pool to Pool', () => {
             await stableCoin.connect(poolCPotSigner).approve(poolCContract.address, ethers.constants.MaxUint256);
 
             // Init JOT sale pool C
-            const { jotTGEAddress: jotTGEPoolCAddress  } = await untangledProtocol.initJOTSale(poolCCreatorSigner, {
+            const { jotTGEAddress: jotTGEPoolCAddress } = await untangledProtocol.initJOTSale(poolCCreatorSigner, {
                 issuerTokenController: untangledAdminSigner.address,
                 pool: poolCContract.address,
                 minBidAmount: parseEther('1'),
                 saleType: SaleType.NORMAL_SALE,
                 longSale: true,
-                ticker: "Ticker",
+                ticker: 'Ticker',
                 openingTime: NOW,
                 closingTime: NOW + ONE_DAY,
                 rate: 10000,
@@ -479,10 +487,10 @@ describe('Pool to Pool', () => {
                 finalInterest: 90000,
                 timeInterval: 86400,
                 amountChangeEachInterval: 10000,
-                ticker: "Ticker",
+                ticker: 'Ticker',
             });
             mintedIncreasingInterestTGEPoolCContract = await ethers.getContractAt(
-                'MintedIncreasingInterestTGE',
+                'MintedNormalTGE',
                 sotTGEPoolCAddress
             );
             const sotPoolCAddress = await poolCContract.sotToken();
@@ -498,19 +506,20 @@ describe('Pool to Pool', () => {
             await stableCoin.connect(poolBPotSigner).approve(poolBContract.address, ethers.constants.MaxUint256);
 
             // Init JOT sale pool B
-            const { jotTGEAddress: jotTGEPoolBAddress, jotTokenAddress: jotPoolBAddress  } = await untangledProtocol.initJOTSale(poolBCreatorSigner, {
-                issuerTokenController: untangledAdminSigner.address,
-                pool: poolBContract.address,
-                minBidAmount: parseEther('1'),
-                saleType: SaleType.NORMAL_SALE,
-                longSale: true,
-                ticker: "Ticker",
-                openingTime: NOW,
-                closingTime: NOW + ONE_DAY,
-                rate: 10000,
-                cap: parseEther('10'),
-                initialJOTAmount: parseEther('1'),
-            });
+            const { jotTGEAddress: jotTGEPoolBAddress, jotTokenAddress: jotPoolBAddress } =
+                await untangledProtocol.initJOTSale(poolBCreatorSigner, {
+                    issuerTokenController: untangledAdminSigner.address,
+                    pool: poolBContract.address,
+                    minBidAmount: parseEther('1'),
+                    saleType: SaleType.NORMAL_SALE,
+                    longSale: true,
+                    ticker: 'Ticker',
+                    openingTime: NOW,
+                    closingTime: NOW + ONE_DAY,
+                    rate: 10000,
+                    cap: parseEther('10'),
+                    initialJOTAmount: parseEther('1'),
+                });
             mintedNormalTGEPoolBContract = await ethers.getContractAt('MintedNormalTGE', jotTGEPoolBAddress);
             jotBContract = await ethers.getContractAt('NoteToken', jotPoolBAddress);
 
@@ -530,10 +539,10 @@ describe('Pool to Pool', () => {
                 finalInterest: 90000,
                 timeInterval: 86400,
                 amountChangeEachInterval: 10000,
-                ticker: "Ticker",
+                ticker: 'Ticker',
             });
             mintedIncreasingInterestTGEPoolBContract = await ethers.getContractAt(
-                'MintedIncreasingInterestTGE',
+                'MintedNormalTGE',
                 sotTGEPoolBAddress
             );
             const sotPoolBAddress = await poolBContract.sotToken();
@@ -546,13 +555,13 @@ describe('Pool to Pool', () => {
             await poolAContract.connect(poolACreatorSigner).setPot(poolAPotSigner.address);
 
             // Init JOT sale PoolA
-            const { jotTGEAddress: jotTGEAddressPoolA  } = await untangledProtocol.initJOTSale(poolACreatorSigner, {
+            const { jotTGEAddress: jotTGEAddressPoolA } = await untangledProtocol.initJOTSale(poolACreatorSigner, {
                 issuerTokenController: untangledAdminSigner.address,
                 pool: poolAContract.address,
                 minBidAmount: parseEther('1'),
                 saleType: SaleType.NORMAL_SALE,
                 longSale: true,
-                ticker: "Ticker",
+                ticker: 'Ticker',
                 openingTime: NOW,
                 closingTime: NOW + ONE_DAY,
                 rate: 10000,
@@ -575,7 +584,7 @@ describe('Pool to Pool', () => {
                 finalInterest: 90000,
                 timeInterval: 86400,
                 amountChangeEachInterval: 10000,
-                ticker: "Ticker",
+                ticker: 'Ticker',
             });
 
             // Anonymous investor gain UID
@@ -586,7 +595,6 @@ describe('Pool to Pool', () => {
                 mintedNormalTGEPoolAContract.address,
                 parseEther('2')
             );
-
 
             // Pool A pot gain UID
             await untangledProtocol.mintUID(poolAPotSigner);
@@ -600,12 +608,20 @@ describe('Pool to Pool', () => {
 
         it('Pool A pot invests into pool B for JOT', async () => {
             // Invest into main pool (buy JOT token)
-            await untangledProtocol.buyToken(poolAPotSigner, mintedNormalTGEPoolBContract.address, stableCoinAmountToBuyBJOT)
+            await untangledProtocol.buyToken(
+                poolAPotSigner,
+                mintedNormalTGEPoolBContract.address,
+                stableCoinAmountToBuyBJOT
+            );
             expect(await stableCoin.balanceOf(poolAPotSigner.address)).equal('0');
             expect(await jotBContract.balanceOf(poolAContract.address)).equal(parseEther('2'));
         });
         it('Pool B pot invests into pool C for JOT', async () => {
-            await  untangledProtocol.buyToken(poolBPotSigner, mintedNormalTGEPoolCContract.address, stableCoinAmountToBuyCJOT)
+            await untangledProtocol.buyToken(
+                poolBPotSigner,
+                mintedNormalTGEPoolCContract.address,
+                stableCoinAmountToBuyCJOT
+            );
             expect(await stableCoin.balanceOf(poolBPotSigner.address)).equal(
                 stableCoinAmountToBuyBJOT.sub(stableCoinAmountToBuyCJOT)
             );

@@ -7,6 +7,7 @@ require('@openzeppelin/hardhat-upgrades');
 require('@nomicfoundation/hardhat-chai-matchers');
 require('hardhat-gas-reporter');
 require('hardhat-abi-exporter');
+require('hardhat-if-gen');
 
 require('dotenv').config();
 require('./tasks');
@@ -58,10 +59,10 @@ module.exports = {
 
             // forking: {
             //     url: 'https://alfajores-forno.celo-testnet.org',
-            //     url: 'https://rpc.ankr.com/polygon',
-            //     blockNumber: 52577088,
+            //     // url: 'https://rpc.ankr.com/polygon',
+            //     blockNumber: 22829184,
             // },
-            // chainId: 137,
+            // chainId: 44787,
         },
         celo: {
             saveDeployments: true,
@@ -80,6 +81,9 @@ module.exports = {
             cusdToken: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
             usdcToken: '',
             kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
+            superAdmin: '0x60e7b40B1f46971B800cd00200371fFd35c09Da9',
+            beSigner: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
+            beAdmin: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
         },
         alfajores_v2: {
             saveDeployments: true,
@@ -90,6 +94,18 @@ module.exports = {
             usdcToken: '',
             kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
         },
+        alfajores_v3: {
+            saveDeployments: true,
+            accounts: accounts,
+            loggingEnabled: true,
+            url: `https://alfajores-forno.celo-testnet.org`,
+            cusdToken: '0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1',
+            usdcToken: '',
+            kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
+            superAdmin: '0x60e7b40B1f46971B800cd00200371fFd35c09Da9',
+            beSigner: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
+            beAdmin: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
+        },
         rinkeby: {
             saveDeployments: true,
             accounts,
@@ -99,7 +115,10 @@ module.exports = {
         ...networks,
     },
     etherscan: {
-        apiKey: '',
+        apiKey: {
+            alfajores: process.env.ALFAJORES_SCAN_API_KEY,
+            polygon_v2: process.env.POLYGON_SCAN_API_KEY,
+        },
         customChains: [
             {
                 network: 'alfajores',
@@ -107,6 +126,14 @@ module.exports = {
                 urls: {
                     apiURL: 'https://api-alfajores.celoscan.io/api',
                     browserURL: 'https://api-alfajores.celoscan.io',
+                },
+            },
+            {
+                network: 'polygon_v2',
+                chainId: 137,
+                urls: {
+                    apiURL: 'https://api.polygonscan.com/api',
+                    browserURL: 'https://api.polygonscan.com',
                 },
             },
         ],

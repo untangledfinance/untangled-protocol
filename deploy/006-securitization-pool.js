@@ -2,46 +2,44 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, execute } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    const securitizationPool = await deploy('SecuritizationPool', {
+    const poolNAVLogic = await deploy('PoolNAVLogic', {
         from: deployer,
         args: [],
         log: true,
     });
 
-    const pAccessControl = await deploy('SecuritizationAccessControl', {
+    const poolAssetLogic = await deploy('PoolAssetLogic', {
         from: deployer,
         args: [],
+        libraries: {
+            PoolNAVLogic: poolNAVLogic.address,
+        },
         log: true,
     });
-    await execute('SecuritizationPool', { from: deployer, log: true }, 'registerExtension', pAccessControl.address);
 
-    const pStorage = await deploy('SecuritizationPoolStorage', {
+    const tgeLogic = await deploy('TGELogic', {
         from: deployer,
         args: [],
         log: true,
     });
-    await execute('SecuritizationPool', { from: deployer, log: true }, 'registerExtension', pStorage.address);
 
-    const pTGE = await deploy('SecuritizationTGE', {
+    const rebaseLogic = await deploy('RebaseLogic', {
         from: deployer,
         args: [],
         log: true,
     });
-    await execute('SecuritizationPool', { from: deployer, log: true }, 'registerExtension', pTGE.address);
 
-    const pAsset = await deploy('SecuritizationPoolAsset', {
+    const securitizationPool = await deploy('Pool', {
         from: deployer,
         args: [],
+        libraries: {
+            PoolAssetLogic: poolAssetLogic.address,
+            PoolNAVLogic: poolNAVLogic.address,
+            TGELogic: tgeLogic.address,
+            RebaseLogic: rebaseLogic.address,
+        },
         log: true,
     });
-    await execute('SecuritizationPool', { from: deployer, log: true }, 'registerExtension', pAsset.address);
-
-    const pNAV = await deploy('SecuritizationPoolNAV', {
-        from: deployer,
-        args: [],
-        log: true,
-    });
-    await execute('SecuritizationPool', { from: deployer, log: true }, 'registerExtension', pNAV.address);
 
     await execute('Registry', { from: deployer, log: true }, 'setSecuritizationPool', securitizationPool.address);
 };

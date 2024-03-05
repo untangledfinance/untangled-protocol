@@ -183,6 +183,73 @@ async function fillDebtOrder(
     return tokenIds;
 }
 
+async function getLoansValue(
+    signer,
+    securitizationPoolContract,
+    borrowerSigner,
+    assetPurpose,
+    loans,
+    validatorSigner,
+    validatorAddress
+) {
+    const CREDITOR_FEE = '0';
+
+    const orderAddresses = [
+        securitizationPoolContract.address,
+        this.stableCoin.address,
+        this.loanRepaymentRouter.address,
+        // borrower 1
+        // borrower 2
+        // ...
+        ...new Array(loans.length).fill(borrowerSigner.address),
+    ];
+
+    const orderValues = [
+        CREDITOR_FEE,
+        assetPurpose,
+        ...loans.map((l) => parseEther(l.principalAmount.toString())),
+        ...loans.map((l) => l.expirationTimestamp),
+        ...loans.map((l) => l.salt || genSalt()),
+        ...loans.map((l) => l.riskScore),
+    ];
+
+    const interestRatePercentage = 5;
+
+    const termsContractParameters = loans.map((l) =>
+        packTermsContractParameters({
+            amortizationUnitType: 1,
+            gracePeriodInDays: 2,
+            principalAmount: l.principalAmount,
+            termLengthUnits: _.ceil(l.termInDays * 24),
+            interestRateFixedPoint: interestRateFixedPoint(interestRatePercentage),
+        })
+    );
+
+    const salts = saltFromOrderValues(orderValues, termsContractParameters.length);
+    const debtors = debtorsFromOrderAddresses(orderAddresses, termsContractParameters.length);
+
+    const tokenIds = genLoanAgreementIds(this.loanRepaymentRouter.address, debtors, termsContractParameters, salts);
+
+    const fillDebtOrderParams = formatFillDebtOrderParams(
+        orderAddresses,
+        orderValues,
+        termsContractParameters,
+        await Promise.all(
+            tokenIds.map(async (x, i) => ({
+                ...(await generateLATMintPayload(
+                    this.loanAssetTokenContract,
+                    validatorSigner || this.defaultLoanAssetTokenValidator,
+                    [x],
+                    [loans[i].nonce || (await this.loanAssetTokenContract.nonce(x)).toNumber()],
+                    validatorAddress || this.defaultLoanAssetTokenValidator.address
+                )),
+            }))
+        )
+    );
+    const expectedLoansValue = await this.loanKernel.connect(signer).getLoansValue(fillDebtOrderParams);
+    return { tokenIds, expectedLoansValue };
+}
+
 async function initSOTSale(signer, saleParameters) {
     const transactionSOTSale = await this.securitizationManager.connect(signer).setUpTGEForSOT(
         {
@@ -255,6 +322,7 @@ function bind(contracts) {
         createSecuritizationPool: createSecuritizationPool.bind(contracts),
         setupRiskScore: setupRiskScore.bind(contracts),
         uploadLoans: fillDebtOrder.bind(contracts),
+        getLoansValue: getLoansValue.bind(contracts),
         initSOTSale: initSOTSale.bind(contracts),
         initJOTSale: initJOTSale.bind(contracts),
         buyToken: buyToken.bind(contracts),

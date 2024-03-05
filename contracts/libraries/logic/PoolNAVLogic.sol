@@ -21,7 +21,7 @@
 
 pragma solidity 0.8.19;
 import '../UnpackLoanParamtersLib.sol';
-import {DataTypes,ONE_HUNDRED_PERCENT,ONE,WRITEOFF_RATE_GROUP_START} from '../DataTypes.sol';
+import {DataTypes, ONE_HUNDRED_PERCENT, ONE, WRITEOFF_RATE_GROUP_START} from '../DataTypes.sol';
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
 import {GenericLogic} from './GenericLogic.sol';
@@ -33,7 +33,6 @@ import {GenericLogic} from './GenericLogic.sol';
  * @author Untangled Team
  */
 library PoolNAVLogic {
-
     event IncreaseDebt(bytes32 indexed loan, uint256 currencyAmount);
     event DecreaseDebt(bytes32 indexed loan, uint256 currencyAmount);
 
@@ -45,6 +44,18 @@ library PoolNAVLogic {
     event UpdateAssetRiskScore(bytes32 loan, uint256 risk);
 
     /** UTILITY FUNCTION */
+
+    function getExpectedLoanvalue(
+        DataTypes.Storage storage _poolStorage,
+        DataTypes.LoanEntry calldata loanEntry
+    ) public view returns (uint256 principalAmount) {
+        UnpackLoanParamtersLib.InterestParams memory loanParam = GenericLogic.unpackParamsForAgreementID(loanEntry);
+        DataTypes.RiskScore memory riskParam = GenericLogic.getRiskScoreByIdx(
+            _poolStorage.riskScores,
+            loanEntry.riskScore
+        );
+        principalAmount = (loanParam.principalAmount * riskParam.advanceRate) / (ONE_HUNDRED_PERCENT);
+    }
 
     function addLoan(
         DataTypes.Storage storage _poolStorage,

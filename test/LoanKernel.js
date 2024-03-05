@@ -24,7 +24,7 @@ const {
 const { setup } = require('./setup.js');
 const { SaleType } = require('./shared/constants.js');
 
-const { OWNER_ROLE ,POOL_ADMIN_ROLE } = require('./constants.js');
+const { OWNER_ROLE, POOL_ADMIN_ROLE } = require('./constants.js');
 const { utils } = require('ethers');
 const { ORIGINATOR_ROLE } = require('./constants');
 const { ASSET_PURPOSE } = require('./shared/constants');
@@ -342,7 +342,7 @@ describe('LoanKernel', () => {
             let stablecoinBalanceOfAdmin = await stableCoin.balanceOf(untangledAdminSigner.address);
             expect(formatEther(stablecoinBalanceOfAdmin)).equal('99000.0');
 
-            tokenIds = await untangledProtocol.uploadLoans(
+            const { expectedLoansValue } = await untangledProtocol.getLoansValue(
                 untangledAdminSigner,
                 securitizationPoolContract,
                 borrowerSigner,
@@ -350,7 +350,15 @@ describe('LoanKernel', () => {
                 loans
             );
 
-            console.log('tokenIds: ', tokenIds);
+            expect(formatEther(expectedLoansValue)).equal('19.0');
+
+            tokenIds = await untangledProtocol.uploadLoans(
+                untangledAdminSigner,
+                securitizationPoolContract,
+                borrowerSigner,
+                ASSET_PURPOSE.LOAN,
+                loans
+            );
 
             const ownerOfAgreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
             expect(ownerOfAgreement).equal(securitizationPoolContract.address);

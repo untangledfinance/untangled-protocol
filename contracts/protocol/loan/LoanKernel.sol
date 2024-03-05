@@ -268,6 +268,61 @@ contract LoanKernel is ILoanKernel, UntangledBase {
     // EXTERNAL FUNCTIONS
     /*********************** */
 
+    function getLoansValue(FillDebtOrderParam calldata fillDebtOrderParam) public view returns (uint256) {
+        address poolAddress = fillDebtOrderParam.orderAddresses[uint8(FillingAddressesIndex.SECURITIZATION_POOL)];
+        IPool pool = IPool(poolAddress);
+        require(fillDebtOrderParam.termsContractParameters.length > 0, 'LoanKernel: Invalid Term Contract params');
+
+        uint256[] memory salts = _saltFromOrderValues(
+            fillDebtOrderParam.orderValues,
+            fillDebtOrderParam.termsContractParameters.length
+        );
+        LoanOrder memory debtOrder = _getLoanOrder(
+            _debtorsFromOrderAddresses(
+                fillDebtOrderParam.orderAddresses,
+                fillDebtOrderParam.termsContractParameters.length
+            ),
+            fillDebtOrderParam.orderAddresses,
+            fillDebtOrderParam.orderValues,
+            fillDebtOrderParam.termsContractParameters,
+            salts
+        );
+
+        uint x = 0;
+        uint256 expectedAssetsValue = 0;
+
+        for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
+            DataTypes.LoanEntry[] memory loans = new DataTypes.LoanEntry[](
+                fillDebtOrderParam.latInfo[i].tokenIds.length
+            );
+
+            for (uint j = 0; j < fillDebtOrderParam.latInfo[i].tokenIds.length; j = UntangledMath.uncheckedInc(j)) {
+                require(
+                    debtOrder.issuance.agreementIds[x] == bytes32(fillDebtOrderParam.latInfo[i].tokenIds[j]),
+                    'LoanKernel: Invalid LAT Token Id'
+                );
+
+                DataTypes.LoanEntry memory newLoan = DataTypes.LoanEntry({
+                    debtor: debtOrder.issuance.debtors[x],
+                    principalTokenAddress: debtOrder.principalTokenAddress,
+                    termsParam: fillDebtOrderParam.termsContractParameters[x],
+                    salt: salts[x],
+                    issuanceBlockTimestamp: block.timestamp,
+                    expirationTimestamp: debtOrder.expirationTimestampInSecs[x],
+                    assetPurpose: Configuration.ASSET_PURPOSE(debtOrder.assetPurpose),
+                    riskScore: debtOrder.riskScores[x]
+                });
+                loans[j] = newLoan;
+
+                x = UntangledMath.uncheckedInc(x);
+            }
+
+            expectedAssetsValue += pool.getLoansValue(fillDebtOrderParam.latInfo[i].tokenIds, loans);
+        }
+
+        return expectedAssetsValue;
+    }
+
     /**
      * Filling new Debt Order
      * Notice:
@@ -318,7 +373,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                     debtor: debtOrder.issuance.debtors[x],
                     principalTokenAddress: debtOrder.principalTokenAddress,
                     termsParam: fillDebtOrderParam.termsContractParameters[x],
-                    salt: salts[x], //solium-disable-next-line security
+                    salt: salts[x],
                     issuanceBlockTimestamp: block.timestamp,
                     expirationTimestamp: debtOrder.expirationTimestampInSecs[x],
                     assetPurpose: Configuration.ASSET_PURPOSE(debtOrder.assetPurpose),

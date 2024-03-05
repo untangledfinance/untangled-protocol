@@ -11,6 +11,11 @@ interface IPool {
 
     function changeSeniorAsset(uint256 _seniorSupply, uint256 _seniorRedeem) external;
 
+    function getLoansValue(
+        uint256[] memory tokenIds,
+        DataTypes.LoanEntry[] memory loanEntries
+    ) external view returns (uint256);
+
     function collectAssets(
         uint256[] memory tokenIds,
         DataTypes.LoanEntry[] memory loanEntries

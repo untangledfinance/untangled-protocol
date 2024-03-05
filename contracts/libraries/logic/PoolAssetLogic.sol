@@ -167,6 +167,19 @@ library PoolAssetLogic {
         emit WithdrawNFTAsset(tokenAddresses, tokenIds, recipients);
     }
 
+    function getLoansValue(
+        DataTypes.Storage storage _poolStorage,
+        uint256[] calldata tokenIds,
+        DataTypes.LoanEntry[] calldata loanEntries
+    ) external view returns (uint256) {
+        uint256 expectedAssetsValue = 0;
+        for (uint256 i = 0; i < tokenIds.length; i = UntangledMath.uncheckedInc(i)) {
+            expectedAssetsValue = expectedAssetsValue + PoolNAVLogic.getExpectedLoanvalue(_poolStorage, loanEntries[i]);
+        }
+
+        return expectedAssetsValue;
+    }
+
     // TODO have to use modifier in main contract
     function collectAssets(
         DataTypes.Storage storage _poolStorage,

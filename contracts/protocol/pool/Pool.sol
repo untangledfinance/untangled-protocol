@@ -127,6 +127,13 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         PoolAssetLogic.withdrawAssets(_poolStorage.nftAssets, tokenAddresses, tokenIds, recipients);
     }
 
+    function getLoansValue(
+        uint256[] memory tokenIds,
+        DataTypes.LoanEntry[] memory loanEntries
+    ) external view returns (uint256) {
+        return PoolAssetLogic.getLoansValue(_poolStorage, tokenIds, loanEntries);
+    }
+
     /// @notice collects NFT assets from a specified address
     function collectAssets(
         uint256[] calldata tokenIds,

@@ -14,7 +14,7 @@ interface IPool {
     function getLoansValue(
         uint256[] memory tokenIds,
         DataTypes.LoanEntry[] memory loanEntries
-    ) external view returns (uint256);
+    ) external view returns (uint256 expectedAssetsValue, uint256[] memory expectedAssetValues);
 
     function collectAssets(
         uint256[] memory tokenIds,

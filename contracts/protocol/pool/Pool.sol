@@ -130,7 +130,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     function getLoansValue(
         uint256[] memory tokenIds,
         DataTypes.LoanEntry[] memory loanEntries
-    ) external view returns (uint256) {
+    ) external view returns (uint256, uint256[] memory) {
         return PoolAssetLogic.getLoansValue(_poolStorage, tokenIds, loanEntries);
     }
 

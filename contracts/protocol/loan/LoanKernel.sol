@@ -268,7 +268,9 @@ contract LoanKernel is ILoanKernel, UntangledBase {
     // EXTERNAL FUNCTIONS
     /*********************** */
 
-    function getLoansValue(FillDebtOrderParam calldata fillDebtOrderParam) public view returns (uint256) {
+    function getLoansValue(
+        FillDebtOrderParam calldata fillDebtOrderParam
+    ) public view returns (uint256, uint256[][] memory) {
         address poolAddress = fillDebtOrderParam.orderAddresses[uint8(FillingAddressesIndex.SECURITIZATION_POOL)];
         IPool pool = IPool(poolAddress);
         require(fillDebtOrderParam.termsContractParameters.length > 0, 'LoanKernel: Invalid Term Contract params');
@@ -290,6 +292,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
 
         uint x = 0;
         uint256 expectedAssetsValue = 0;
+        uint256[][] memory expectedAssetValues = new uint256[][](fillDebtOrderParam.latInfo.length);
 
         for (uint i = 0; i < fillDebtOrderParam.latInfo.length; i = UntangledMath.uncheckedInc(i)) {
             DataTypes.LoanEntry[] memory loans = new DataTypes.LoanEntry[](
@@ -316,11 +319,15 @@ contract LoanKernel is ILoanKernel, UntangledBase {
 
                 x = UntangledMath.uncheckedInc(x);
             }
-
-            expectedAssetsValue += pool.getLoansValue(fillDebtOrderParam.latInfo[i].tokenIds, loans);
+            (uint256 expectedLoansValue, uint256[] memory expectedLoanValues) = pool.getLoansValue(
+                fillDebtOrderParam.latInfo[i].tokenIds,
+                loans
+            );
+            expectedAssetsValue += expectedLoansValue;
+            expectedAssetValues[i] = expectedLoanValues;
         }
 
-        return expectedAssetsValue;
+        return (expectedAssetsValue, expectedAssetValues);
     }
 
     /**

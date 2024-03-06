@@ -23,7 +23,6 @@ describe('Pool to Pool', () => {
         let stableCoin;
         let securitizationManager;
         let loanKernel;
-        let loanRepaymentRouter;
         let loanAssetTokenContract;
         let loanRegistry;
         let uniqueIdentity;
@@ -83,7 +82,6 @@ describe('Pool to Pool', () => {
                 loanAssetTokenContract,
                 loanRegistry,
                 loanKernel,
-                loanRepaymentRouter,
                 securitizationManager,
                 registry,
                 securitizationPoolValueService,
@@ -357,13 +355,11 @@ describe('Pool to Pool', () => {
         let stableCoin;
         let securitizationManager;
         let loanKernel;
-        let loanRepaymentRouter;
         let loanAssetTokenContract;
         let loanRegistry;
         let uniqueIdentity;
         let registry;
         let noteTokenVault;
-        let distributionAssessor;
         let securitizationPoolValueService;
         let chainId;
 
@@ -434,9 +430,7 @@ describe('Pool to Pool', () => {
                 loanAssetTokenContract,
                 loanRegistry,
                 loanKernel,
-                loanRepaymentRouter,
                 securitizationManager,
-                distributionAssessor,
                 registry,
                 securitizationPoolValueService,
                 noteTokenVault,

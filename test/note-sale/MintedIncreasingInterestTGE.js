@@ -153,7 +153,6 @@ describe('Increasing Interest TGE', () => {
     let loanAssetTokenContract;
     let loanRegistry;
     let loanKernel;
-    let loanRepaymentRouter;
     let securitizationManager;
     let securitizationPoolContract;
     let tokenIds;
@@ -166,7 +165,6 @@ describe('Increasing Interest TGE', () => {
     let jotMintedNormalTGE;
     let securitizationPoolValueService;
     let securitizationPoolImpl;
-    let distributionAssessor;
     let untangledProtocol;
     let chainId;
     const INITIAL_INTEREST = 10000;
@@ -184,19 +182,17 @@ describe('Increasing Interest TGE', () => {
             loanAssetTokenContract,
             loanRegistry,
             loanKernel,
-            loanRepaymentRouter,
             securitizationManager,
             securitizationPoolValueService,
             securitizationPoolImpl,
             defaultLoanAssetTokenValidator,
             uniqueIdentity,
-            distributionAssessor,
         } = contracts);
 
         await stableCoin.mint(parseEther('1000000'));
         await stableCoin.transfer(lenderSigner.address, parseEther('1000000'));
 
-        await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
+        await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
 
         // Gain UID
         await untangledProtocol.mintUID(lenderSigner);

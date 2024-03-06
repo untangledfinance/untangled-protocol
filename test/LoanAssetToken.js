@@ -22,7 +22,6 @@ describe('LoanAssetToken', () => {
     let loanAssetTokenContract;
     let loanRegistry;
     let loanKernel;
-    let loanRepaymentRouter;
     let securitizationManager;
     let securitizationPoolContract;
     let tokenIds;
@@ -31,7 +30,6 @@ describe('LoanAssetToken', () => {
     let mintedIncreasingInterestTGE;
     let jotMintedIncreasingInterestTGE;
     let securitizationPoolValueService;
-    let distributionAssessor;
     let chainId;
     let untangledProtocol;
     // Wallets
@@ -48,18 +46,16 @@ describe('LoanAssetToken', () => {
             loanAssetTokenContract,
             loanRegistry,
             loanKernel,
-            loanRepaymentRouter,
             securitizationManager,
             securitizationPoolValueService,
             securitizationPoolImpl,
             defaultLoanAssetTokenValidator,
             uniqueIdentity,
-            distributionAssessor,
         } = contracts);
 
         await stableCoin.transfer(lenderSigner.address, parseEther('1000'));
 
-        await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
+        await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
 
         chainId = await getChainId();
         // Gain UID
@@ -186,7 +182,7 @@ describe('LoanAssetToken', () => {
                 },
             ];
 
-            // tokenIds = genLoanAgreementIds(loanRepaymentRouter.address, debtors, termsContractParameters, salts);
+            // tokenIds = genLoanAgreementIds(loanKernel.address, debtors, termsContractParameters, salts);
 
             const [, , , , wrongLoanAssetTokenValidator] = await ethers.getSigners();
 
@@ -381,7 +377,7 @@ describe('LoanAssetToken', () => {
                 const stablecoinBalanceOfPoolBefore = await stableCoin.balanceOf(securitizationPoolContract.address);
                 expect(stablecoinBalanceOfPoolBefore).to.closeTo(parseEther('200'), parseEther('0.001'));
 
-                await loanRepaymentRouter
+                await loanKernel
                     .connect(untangledAdminSigner)
                     .repayInBatch([tokenIds[0]], [parseEther('100')], stableCoin.address);
 

@@ -52,7 +52,6 @@ describe('NAV', () => {
         let stableCoin;
         let securitizationManager;
         let loanKernel;
-        let loanRepaymentRouter;
         let loanAssetTokenContract;
         let loanRegistry;
         let uniqueIdentity;
@@ -69,7 +68,6 @@ describe('NAV', () => {
         let jotToken;
         let mintedIncreasingInterestTGE;
         let jotMintedIncreasingInterestTGE;
-        let distributionAssessor;
         let untangledProtocol;
 
         // Wallets
@@ -97,14 +95,12 @@ describe('NAV', () => {
             ({
                 stableCoin,
                 distributionOperator,
-                distributionAssessor,
                 distributionTranche,
                 securitizationPoolValueService,
                 uniqueIdentity,
                 loanAssetTokenContract,
                 loanRegistry,
                 loanKernel,
-                loanRepaymentRouter,
                 securitizationManager,
                 distributionOperator,
                 distributionTranche,
@@ -211,7 +207,7 @@ describe('NAV', () => {
 
             expect(formatEther(await stableCoin.balanceOf(securitizationPoolContract.address))).equal('200.0');
 
-            const sotValue = await distributionAssessor.calcCorrespondingTotalAssetValue(
+            const sotValue = await securitizationPoolValueService.calcCorrespondingTotalAssetValue(
                 sotToken.address,
                 lenderSigner.address
             );
@@ -236,7 +232,7 @@ describe('NAV', () => {
             const orderAddresses = [
                 securitizationPoolContract.address,
                 stableCoin.address,
-                loanRepaymentRouter.address,
+                loanKernel.address,
                 borrowerSigner.address,
             ];
 
@@ -267,7 +263,7 @@ describe('NAV', () => {
             const salts = saltFromOrderValues(orderValues, termsContractParameters.length);
             const debtors = debtorsFromOrderAddresses(orderAddresses, termsContractParameters.length);
 
-            tokenIds = genLoanAgreementIds(loanRepaymentRouter.address, debtors, termsContractParameters, salts);
+            tokenIds = genLoanAgreementIds(loanKernel.address, debtors, termsContractParameters, salts);
 
             // Upload, tokenize loan assets
             await loanKernel.fillDebtOrder(
@@ -395,8 +391,8 @@ describe('NAV', () => {
         });
 
         it('should repay successfully', async () => {
-            await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
-            await loanRepaymentRouter
+            await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
+            await loanKernel
                 .connect(untangledAdminSigner)
                 .repayInBatch([tokenIds[0]], [parseEther('10')], stableCoin.address);
             const balanceAfterRepay = await stableCoin.balanceOf(untangledAdminSigner.address);
@@ -408,7 +404,6 @@ describe('NAV', () => {
         let stableCoin;
         let securitizationManager;
         let loanKernel;
-        let loanRepaymentRouter;
         let loanAssetTokenContract;
         let loanRegistry;
         let uniqueIdentity;
@@ -426,7 +421,6 @@ describe('NAV', () => {
         let jotToken;
         let mintedIncreasingInterestTGE;
         let jotMintedIncreasingInterestTGE;
-        let distributionAssessor;
 
         // Wallets
         let untangledAdminSigner,
@@ -453,14 +447,12 @@ describe('NAV', () => {
             ({
                 stableCoin,
                 distributionOperator,
-                distributionAssessor,
                 distributionTranche,
                 securitizationPoolValueService,
                 uniqueIdentity,
                 loanAssetTokenContract,
                 loanRegistry,
                 loanKernel,
-                loanRepaymentRouter,
                 securitizationManager,
                 distributionOperator,
                 distributionTranche,
@@ -565,7 +557,7 @@ describe('NAV', () => {
 
             expect(formatEther(await stableCoin.balanceOf(securitizationPoolContract.address))).equal('200.0');
 
-            const sotValue = await distributionAssessor.calcCorrespondingTotalAssetValue(
+            const sotValue = await securitizationPoolValueService.calcCorrespondingTotalAssetValue(
                 sotToken.address,
                 lenderSigner.address
             );
@@ -586,7 +578,7 @@ describe('NAV', () => {
             const orderAddresses = [
                 securitizationPoolContract.address,
                 stableCoin.address,
-                loanRepaymentRouter.address,
+                loanKernel.address,
                 borrowerSigner.address,
                 borrowerSigner.address,
             ];
@@ -633,7 +625,7 @@ describe('NAV', () => {
             const salts = saltFromOrderValues(orderValues, termsContractParameters.length);
             const debtors = debtorsFromOrderAddresses(orderAddresses, termsContractParameters.length);
 
-            tokenIds = genLoanAgreementIds(loanRepaymentRouter.address, debtors, termsContractParameters, salts);
+            tokenIds = genLoanAgreementIds(loanKernel.address, debtors, termsContractParameters, salts);
 
             // Upload, tokenize loan assets
             await loanKernel.fillDebtOrder(
@@ -720,8 +712,8 @@ describe('NAV', () => {
         });
         /*
         xit('should repay now', async () => {
-          await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
-          await loanRepaymentRouter
+          await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
+          await loanKernel
               .connect(untangledAdminSigner)
               .repayInBatch([tokenIds[0]], [parseEther('10')], stableCoin.address);
     */
@@ -768,8 +760,8 @@ describe('NAV', () => {
         });
 
         it('should repay partially successfully', async () => {
-            await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
-            await loanRepaymentRouter
+            await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
+            await loanKernel
                 .connect(untangledAdminSigner)
                 .repayInBatch(tokenIds, [parseEther('5'), parseEther('5')], stableCoin.address);
             const debtLoan = await securitizationPoolContract.debt(tokenIds[0]);
@@ -782,10 +774,8 @@ describe('NAV', () => {
         });
         it('should repay remaining successfully', async () => {
             await stableCoin.transfer(borrowerSigner.address, parseEther('10'));
-            await stableCoin.connect(borrowerSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
-            await loanRepaymentRouter
-                .connect(borrowerSigner)
-                .repayInBatch([tokenIds[0]], [parseEther('5')], stableCoin.address);
+            await stableCoin.connect(borrowerSigner).approve(loanKernel.address, unlimitedAllowance);
+            await loanKernel.connect(borrowerSigner).repayInBatch([tokenIds[0]], [parseEther('5')], stableCoin.address);
 
             const balanceAfterRepay = await stableCoin.balanceOf(borrowerSigner.address);
             const currentNAV = await securitizationPoolContract.currentNAV();

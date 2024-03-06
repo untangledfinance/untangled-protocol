@@ -33,8 +33,6 @@ const setUpTokenGenerationEventFactory = async (registry, factoryAdmin) => {
         factoryAdmin.address,
     ]);
 
-    // const MintedIncreasingInterestTGE = await ethers.getContractFactory('MintedIncreasingInterestTGE');
-    // const mintedIncreasingInterestTGEImpl = await MintedIncreasingInterestTGE.deploy();
     const MintedNormalTGE = await ethers.getContractFactory('MintedNormalTGE');
     const mintedNormalTGEImpl = await MintedNormalTGE.deploy();
 
@@ -59,35 +57,6 @@ const setUpNoteTokenFactory = async (registry, factoryAdmin) => {
 
     return { noteTokenFactory };
 };
-
-// const initPool = async (securitizationPoolImpl) => {
-//     // SecuritizationAccessControl,
-//     // SecuritizationPoolStorage,
-//     // SecuritizationTGE,
-//     // SecuritizationPoolAsset,
-//     // SecuritizationPoolNAV
-//     const SecuritizationAccessControl = await ethers.getContractFactory('SecuritizationAccessControl');
-//     const securitizationAccessControlImpl = await SecuritizationAccessControl.deploy();
-//     await securitizationPoolImpl.registerExtension(securitizationAccessControlImpl.address);
-
-//     const SecuritizationPoolStorage = await ethers.getContractFactory('SecuritizationPoolStorage');
-//     const securitizationPoolStorageImpl = await SecuritizationPoolStorage.deploy();
-//     await securitizationPoolImpl.registerExtension(securitizationPoolStorageImpl.address);
-
-//     const SecuritizationPoolTGE = await ethers.getContractFactory('SecuritizationTGE');
-//     const securitizationPoolTGEImpl = await SecuritizationPoolTGE.deploy();
-//     await securitizationPoolImpl.registerExtension(securitizationPoolTGEImpl.address);
-
-//     const SecuritizationPoolAsset = await ethers.getContractFactory('SecuritizationPoolAsset');
-//     const securitizationPoolAssetImpl = await SecuritizationPoolAsset.deploy();
-//     await securitizationPoolImpl.registerExtension(securitizationPoolAssetImpl.address);
-
-//     const SecuritizationPoolNAV = await ethers.getContractFactory('SecuritizationPoolNAV');
-//     const securitizationPoolNAVImpl = await SecuritizationPoolNAV.deploy();
-//     await securitizationPoolImpl.registerExtension(securitizationPoolNAVImpl.address);
-
-//     return securitizationPoolImpl;
-// };
 
 const setUpSecuritizationPoolImpl = async (registry) => {
     const PoolNAVLogic = await ethers.getContractFactory('PoolNAVLogic');
@@ -119,9 +88,6 @@ const setUpSecuritizationPoolImpl = async (registry) => {
     const securitizationPoolImpl = await SecuritizationPool.deploy();
     await securitizationPoolImpl.deployed();
     await registry.setSecuritizationPool(securitizationPoolImpl.address);
-
-    // await initPool(securitizationPoolImpl);
-
     return securitizationPoolImpl;
 };
 
@@ -132,12 +98,10 @@ async function setup() {
     let registry;
 
     let loanKernel;
-    let loanRepaymentRouter;
     let securitizationManager;
     let securitizationPoolValueService;
     let go;
     let uniqueIdentity;
-    let distributionAssessor;
     let distributionOperator;
     let distributionTranche;
     let noteTokenVault;
@@ -176,20 +140,13 @@ async function setup() {
 
     const LoanKernel = await ethers.getContractFactory('LoanKernel');
     loanKernel = await upgrades.deployProxy(LoanKernel, [registry.address]);
-    // const LoanRepaymentRouter = await ethers.getContractFactory('LoanRepaymentRouter');
-    loanRepaymentRouter = loanKernel;
-    // const DistributionAssessor = await ethers.getContractFactory('DistributionAssessor');
-    // distributionAssessor = await upgrades.deployProxy(DistributionAssessor, [registry.address]);
-    distributionAssessor = securitizationPoolValueService;
 
     const NoteTokenVault = await ethers.getContractFactory('NoteTokenVault');
     noteTokenVault = await upgrades.deployProxy(NoteTokenVault, [registry.address]);
 
     await registry.setSecuritizationManager(securitizationManager.address);
     await registry.setLoanKernel(loanKernel.address);
-    // await registry.setLoanRepaymentRouter(loanRepaymentRouter.address);
     await registry.setSecuritizationPoolValueService(securitizationPoolValueService.address);
-    // await registry.setDistributionAssessor(distributionAssessor.address);
     await registry.setNoteTokenVault(noteTokenVault.address);
 
     const { loanAssetTokenContract, defaultLoanAssetTokenValidator } = await setUpLoanAssetToken(
@@ -205,7 +162,6 @@ async function setup() {
         loanAssetTokenContract,
         defaultLoanAssetTokenValidator,
         loanKernel,
-        loanRepaymentRouter,
         securitizationManager,
         securitizationPoolValueService,
         securitizationPoolImpl,
@@ -214,7 +170,6 @@ async function setup() {
         noteTokenFactory,
         tokenGenerationEventFactory,
         distributionOperator,
-        distributionAssessor,
         distributionTranche,
         noteTokenVault,
         factoryAdmin,

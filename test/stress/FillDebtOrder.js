@@ -41,7 +41,7 @@ async function getFillDebtOrderParameters(
     const orderAddresses = [
         securitizationPoolContract.address,
         this.stableCoin.address,
-        this.loanRepaymentRouter.address,
+        this.loanKernel.address,
         relayer.address,
         // borrower 1
         // borrower 2
@@ -73,7 +73,7 @@ async function getFillDebtOrderParameters(
     const salts = saltFromOrderValues(orderValues, termsContractParameters.length);
     const debtors = debtorsFromOrderAddresses(orderAddresses, termsContractParameters.length);
 
-    const tokenIds = genLoanAgreementIds(this.loanRepaymentRouter.address, debtors, termsContractParameters, salts);
+    const tokenIds = genLoanAgreementIds(this.loanKernel.address, debtors, termsContractParameters, salts);
 
     return {
         fillDebtOrderParams: formatFillDebtOrderParams(
@@ -102,7 +102,6 @@ describe('FillDebtOrder - Stress test', () => {
     let loanAssetTokenContract;
     let loanRegistry;
     let loanKernel;
-    let loanRepaymentRouter;
     let securitizationManager;
     let securitizationPoolContract;
     let tokenIds;
@@ -115,7 +114,6 @@ describe('FillDebtOrder - Stress test', () => {
     let jotMintedIncreasingInterestTGE;
     let securitizationPoolValueService;
     let securitizationPoolImpl;
-    let distributionAssessor;
     let chainId;
     // Wallets
     let untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, relayer;
@@ -130,19 +128,17 @@ describe('FillDebtOrder - Stress test', () => {
             loanAssetTokenContract,
             loanRegistry,
             loanKernel,
-            loanRepaymentRouter,
             securitizationManager,
             securitizationPoolValueService,
             securitizationPoolImpl,
             defaultLoanAssetTokenValidator,
             uniqueIdentity,
-            distributionAssessor,
         } = contracts);
 
         await stableCoin.mint(parseEther('1000000'));
         await stableCoin.transfer(lenderSigner.address, parseEther('1000000'));
 
-        await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
+        await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
 
         // Gain UID
         const UID_TYPE = 0;
@@ -342,7 +338,7 @@ describe('FillDebtOrder - Stress test', () => {
 
             // expect(formatEther(await stableCoin.balanceOf(securitizationPoolContract.address))).equal('200.0');
 
-            const sotValue = await distributionAssessor.calcCorrespondingTotalAssetValue(
+            const sotValue = await securitizationPoolValueService.calcCorrespondingTotalAssetValue(
                 sotToken.address,
                 lenderSigner.address
             );

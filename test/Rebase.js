@@ -24,14 +24,13 @@ const {
 const { setup } = require('./setup.js');
 const { SaleType, ASSET_PURPOSE } = require('./shared/constants.js');
 
-const { OWNER_ROLE,POOL_ADMIN_ROLE, BACKEND_ADMIN, ORIGINATOR_ROLE } = require('./constants.js');
+const { OWNER_ROLE, POOL_ADMIN_ROLE, BACKEND_ADMIN, ORIGINATOR_ROLE } = require('./constants.js');
 const { utils, BigNumber } = require('ethers');
 
 describe('Rebase Logic', () => {
     let stableCoin;
     let loanAssetTokenContract;
     let loanKernel;
-    let loanRepaymentRouter;
     let securitizationManager;
     let securitizationPoolContract;
     let tokenIds;
@@ -68,7 +67,6 @@ describe('Rebase Logic', () => {
             stableCoin,
             loanAssetTokenContract,
             loanKernel,
-            loanRepaymentRouter,
             securitizationManager,
             uniqueIdentity,
             distributionOperator,
@@ -83,7 +81,7 @@ describe('Rebase Logic', () => {
 
         await stableCoin.transfer(lenderSigner.address, parseEther('1000'));
 
-        await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
+        await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
 
         // Gain UID
         await untangledProtocol.mintUID(lenderSigner);
@@ -93,9 +91,7 @@ describe('Rebase Logic', () => {
 
     describe('#Initialize suit', async () => {
         it('Create pool & TGEs', async () => {
-            // const OWNER_ROLE = await securitizationManager.OWNER_ROLE();
             await securitizationManager.setRoleAdmin(POOL_ADMIN_ROLE, OWNER_ROLE);
-
             await securitizationManager.grantRole(OWNER_ROLE, borrowerSigner.address);
             await securitizationManager.connect(borrowerSigner).grantRole(POOL_ADMIN_ROLE, poolCreatorSigner.address);
 
@@ -113,9 +109,9 @@ describe('Rebase Logic', () => {
                     daysPastDue: oneDayInSecs,
                     advanceRate: 1000000, // LTV
                     penaltyRate: 0,
-                    interestRate: 150000, //
-                    probabilityOfDefault: 0, //
-                    lossGivenDefault: 0, //
+                    interestRate: 150000,
+                    probabilityOfDefault: 0,
+                    lossGivenDefault: 0,
                     gracePeriod: halfOfADay,
                     collectionPeriod: halfOfADay,
                     writeOffAfterGracePeriod: halfOfADay,
@@ -129,7 +125,7 @@ describe('Rebase Logic', () => {
             const rate = 100000;
             const totalCapOfToken = parseEther('100000');
             const interestRate = 100000; // 10%
-            const timeInterval = 1 * 24 * 3600; // seconds
+            const timeInterval = 1 * 24 * 3600;
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'Ticker_';
             const sotInfo = {
@@ -193,12 +189,6 @@ describe('Rebase Logic', () => {
         });
     });
 
-    let expirationTimestamps;
-    const CREDITOR_FEE = '0';
-    const ASSET_PURPOSE_LOAN = '0';
-    const ASSET_PURPOSE_INVOICE = '1';
-    const inputAmount = 10;
-    const inputPrice = 15;
     const ONE_YEAR = 365 * 24 * 60 * 60;
     const principalAmount1 = 80000000000000000000n;
     const principalAmount2 = 10000000000000000000n;
@@ -355,7 +345,7 @@ describe('Rebase Logic', () => {
             expect(debtAndBalance[1]).to.closeTo(parseEther('18'), parseEther('0.000001'));
 
             // ACTION: REPAY 60
-            await loanRepaymentRouter
+            await loanKernel
                 .connect(untangledAdminSigner)
                 .repayInBatch([tokenIds[0]], [parseEther('60')], stableCoin.address);
 

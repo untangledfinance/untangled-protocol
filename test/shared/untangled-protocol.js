@@ -130,7 +130,7 @@ async function fillDebtOrder(
     const orderAddresses = [
         securitizationPoolContract.address,
         this.stableCoin.address,
-        this.loanRepaymentRouter.address,
+        this.loanKernel.address,
         // borrower 1
         // borrower 2
         // ...
@@ -161,7 +161,7 @@ async function fillDebtOrder(
     const salts = saltFromOrderValues(orderValues, termsContractParameters.length);
     const debtors = debtorsFromOrderAddresses(orderAddresses, termsContractParameters.length);
 
-    const tokenIds = genLoanAgreementIds(this.loanRepaymentRouter.address, debtors, termsContractParameters, salts);
+    const tokenIds = genLoanAgreementIds(this.loanKernel.address, debtors, termsContractParameters, salts);
 
     const fillDebtOrderParams = formatFillDebtOrderParams(
         orderAddresses,
@@ -197,7 +197,7 @@ async function getLoansValue(
     const orderAddresses = [
         securitizationPoolContract.address,
         this.stableCoin.address,
-        this.loanRepaymentRouter.address,
+        this.loanKernel.address,
         // borrower 1
         // borrower 2
         // ...
@@ -228,7 +228,7 @@ async function getLoansValue(
     const salts = saltFromOrderValues(orderValues, termsContractParameters.length);
     const debtors = debtorsFromOrderAddresses(orderAddresses, termsContractParameters.length);
 
-    const tokenIds = genLoanAgreementIds(this.loanRepaymentRouter.address, debtors, termsContractParameters, salts);
+    const tokenIds = genLoanAgreementIds(this.loanKernel.address, debtors, termsContractParameters, salts);
 
     const fillDebtOrderParams = formatFillDebtOrderParams(
         orderAddresses,

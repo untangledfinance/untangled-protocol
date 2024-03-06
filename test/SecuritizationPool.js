@@ -21,7 +21,6 @@ describe('SecuritizationPool', () => {
     let stableCoin;
     let loanAssetTokenContract;
     let loanKernel;
-    let loanRepaymentRouter;
     let securitizationManager;
     let securitizationPoolContract;
     let secondSecuritizationPool;
@@ -52,7 +51,6 @@ describe('SecuritizationPool', () => {
             stableCoin,
             loanAssetTokenContract,
             loanKernel,
-            loanRepaymentRouter,
             securitizationManager,
             uniqueIdentity,
             distributionOperator,
@@ -64,8 +62,7 @@ describe('SecuritizationPool', () => {
         } = contracts);
 
         await stableCoin.transfer(lenderSigner.address, parseEther('1000'));
-
-        await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
+        await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
 
         // Gain UID
         await untangledProtocol.mintUID(lenderSigner);
@@ -546,7 +543,7 @@ describe('SecuritizationPool', () => {
 
     describe('Burn agreement', async () => {
         it('only LoanKernel contract can burn', async () => {
-            await loanRepaymentRouter
+            await loanKernel
                 .connect(untangledAdminSigner)
                 .repayInBatch([tokenIds[0]], [parseEther('100')], stableCoin.address);
 

@@ -33,7 +33,6 @@ describe('LoanKernel', () => {
     let stableCoin;
     let loanAssetTokenContract;
     let loanKernel;
-    let loanRepaymentRouter;
     let securitizationManager;
     let securitizationPoolContract;
     let tokenIds;
@@ -63,7 +62,6 @@ describe('LoanKernel', () => {
             stableCoin,
             loanAssetTokenContract,
             loanKernel,
-            loanRepaymentRouter,
             securitizationManager,
             uniqueIdentity,
             distributionOperator,
@@ -77,7 +75,7 @@ describe('LoanKernel', () => {
 
         await stableCoin.transfer(lenderSigner.address, parseEther('1000'));
 
-        await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
+        await stableCoin.connect(untangledAdminSigner).approve(loanKernel.address, unlimitedAllowance);
 
         // Gain UID
         await untangledProtocol.mintUID(lenderSigner);
@@ -199,12 +197,7 @@ describe('LoanKernel', () => {
         });
 
         it('SECURITIZATION_POOL is zero address', async () => {
-            const orderAddresses = [
-                ZERO_ADDRESS,
-                stableCoin.address,
-                loanRepaymentRouter.address,
-                borrowerSigner.address,
-            ];
+            const orderAddresses = [ZERO_ADDRESS, stableCoin.address, loanKernel.address, borrowerSigner.address];
             await expect(
                 loanKernel.fillDebtOrder(formatFillDebtOrderParams(orderAddresses, [], [], []))
             ).to.be.revertedWith(`SECURITIZATION_POOL is zero address.`);
@@ -226,7 +219,7 @@ describe('LoanKernel', () => {
             const orderAddresses = [
                 securitizationPoolContract.address,
                 ZERO_ADDRESS,
-                loanRepaymentRouter.address,
+                loanKernel.address,
                 borrowerSigner.address,
             ];
             await expect(
@@ -238,7 +231,7 @@ describe('LoanKernel', () => {
             const orderAddresses = [
                 securitizationPoolContract.address,
                 stableCoin.address,
-                loanRepaymentRouter.address,
+                loanKernel.address,
                 borrowerSigner.address,
             ];
             await expect(
@@ -250,7 +243,7 @@ describe('LoanKernel', () => {
             const orderAddresses = [
                 securitizationPoolContract.address,
                 stableCoin.address,
-                loanRepaymentRouter.address,
+                loanKernel.address,
                 borrowerSigner.address,
             ];
 
@@ -408,7 +401,7 @@ describe('LoanKernel', () => {
             const stablecoinBalanceOfPoolBefore = await stableCoin.balanceOf(securitizationPoolContract.address);
             expect(stablecoinBalanceOfPoolBefore).to.closeTo(parseEther('181.00'), parseEther('0.01'));
 
-            await loanRepaymentRouter
+            await loanKernel
                 .connect(untangledAdminSigner)
                 .repayInBatch([tokenIds[0]], [parseEther('3')], stableCoin.address);
 
@@ -418,7 +411,7 @@ describe('LoanKernel', () => {
 
             time.increase(100);
 
-            await loanRepaymentRouter
+            await loanKernel
                 .connect(untangledAdminSigner)
                 .repayInBatch([tokenIds[0]], [parseEther('10')], stableCoin.address);
 

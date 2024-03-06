@@ -246,8 +246,8 @@ async function getLoansValue(
             }))
         )
     );
-    const expectedLoansValue = await this.loanKernel.connect(signer).getLoansValue(fillDebtOrderParams);
-    return { tokenIds, expectedLoansValue };
+    const result = await this.loanKernel.connect(signer).getLoansValue(fillDebtOrderParams);
+    return { tokenIds, expectedLoansValue: result[0] };
 }
 
 async function initSOTSale(signer, saleParameters) {

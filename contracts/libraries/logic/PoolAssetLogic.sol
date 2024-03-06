@@ -171,13 +171,15 @@ library PoolAssetLogic {
         DataTypes.Storage storage _poolStorage,
         uint256[] calldata tokenIds,
         DataTypes.LoanEntry[] calldata loanEntries
-    ) external view returns (uint256) {
-        uint256 expectedAssetsValue = 0;
+    ) external view returns (uint256 expectedAssetsValue, uint256[] memory expectedAssetValues) {
+        expectedAssetValues = new uint256[](tokenIds.length);
         for (uint256 i = 0; i < tokenIds.length; i = UntangledMath.uncheckedInc(i)) {
-            expectedAssetsValue = expectedAssetsValue + PoolNAVLogic.getExpectedLoanvalue(_poolStorage, loanEntries[i]);
+            uint256 assetValue = PoolNAVLogic.getExpectedLoanvalue(_poolStorage, loanEntries[i]);
+            expectedAssetsValue = expectedAssetsValue + assetValue;
+            expectedAssetValues[i] = assetValue;
         }
 
-        return expectedAssetsValue;
+        return (expectedAssetsValue, expectedAssetValues);
     }
 
     // TODO have to use modifier in main contract

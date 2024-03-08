@@ -400,6 +400,8 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         // rebase
         pool.rebase();
         require(pool.isMinFirstLossValid(), 'LoanKernel: Exceeds MinFirstLoss');
+
+        emit DrawdownAsset(poolAddress, expectedAssetsValue);
     }
 
     /// @inheritdoc ILoanKernel

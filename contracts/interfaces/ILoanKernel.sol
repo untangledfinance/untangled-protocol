@@ -40,6 +40,8 @@ interface ILoanKernel {
 
     event LogError(uint8 indexed _errorId, bytes32 indexed _agreementId);
 
+    event DrawdownAsset(address indexed _poolAddress, uint256 _drawdownAmount);
+
     //********************************************************* */
 
     /*********** */

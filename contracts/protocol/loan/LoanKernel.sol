@@ -214,7 +214,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
         }
 
         TransferHelper.safeTransferFrom(_tokenAddress, _payer, beneficiary, totalRepayAmount);
-        _pool.increaseTotalAssetRepaidCurrency(totalRepayAmount);
+        // _pool.increaseTotalAssetRepaidCurrency(totalRepayAmount);
 
         return true;
     }

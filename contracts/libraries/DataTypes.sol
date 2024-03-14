@@ -200,8 +200,8 @@ library DataTypes {
         mapping(bytes32 => uint256) overdueLoansOfNavAssets;
         mapping(uint256 => bytes32) loanToNFT;
         // value to view
-        uint256 totalPrincipalRepaid;
-        uint256 totalInterestRepaid;
+        uint256 incomeReserve;
+        uint256 capitalReserve;
         // value to calculate rebase
         uint256 seniorDebt;
         uint256 seniorBalance;

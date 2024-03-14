@@ -37,10 +37,6 @@ library TGELogic {
         return _poolStorage.underlyingCurrency;
     }
 
-    function reserve(DataTypes.Storage storage _poolStorage) public view returns (uint256) {
-        return _poolStorage.reserve;
-    }
-
     function minFirstLossCushion(DataTypes.Storage storage _poolStorage) public view returns (uint32) {
         return _poolStorage.minFirstLossCushion;
     }
@@ -98,14 +94,6 @@ library TGELogic {
         return _poolStorage.debtCeiling >= totalDebt;
     }
 
-    // Increase by value
-    function increaseTotalAssetRepaidCurrency(DataTypes.Storage storage _poolStorage, uint256 amount) external {
-        _poolStorage.reserve = _poolStorage.reserve + amount;
-        _poolStorage.totalAssetRepaidCurrency = _poolStorage.totalAssetRepaidCurrency + amount;
-
-        emit IncreaseReserve(amount, _poolStorage.reserve);
-    }
-
     function hasFinishedRedemption(DataTypes.Storage storage _poolStorage) public view returns (bool) {
         address stoken = sotToken(_poolStorage);
         if (stoken != address(0)) {
@@ -160,20 +148,6 @@ library TGELogic {
         emit UpdateInterestRateSot(_newRate);
     }
 
-    function increaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
-        _poolStorage.reserve = _poolStorage.reserve + currencyAmount;
-        emit IncreaseReserve(currencyAmount, _poolStorage.reserve);
-    }
-
-    function decreaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
-        _decreaseReserve(_poolStorage, currencyAmount);
-    }
-
-    function _decreaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) internal {
-        _poolStorage.reserve = _poolStorage.reserve - currencyAmount;
-        emit DecreaseReserve(currencyAmount, _poolStorage.reserve);
-    }
-
     // After closed pool and redeem all not -> get remain cash to recipient wallet
     function claimCashRemain(DataTypes.Storage storage _poolStorage, address recipientWallet) external {
         IERC20Upgradeable currency = IERC20Upgradeable(_poolStorage.underlyingCurrency);
@@ -187,9 +161,9 @@ library TGELogic {
     }
 
     function withdraw(DataTypes.Storage storage _poolStorage, address to, uint256 amount) public {
-        require(_poolStorage.reserve >= amount, 'SecuritizationPool: not enough reserve');
-
-        _decreaseReserve(_poolStorage, amount);
+        require(_poolStorage.capitalReserve >= amount, 'SecuritizationPool: not enough reserve');
+        _poolStorage.capitalReserve = _poolStorage.capitalReserve - amount;
+        emit DecreaseReserve(amount, _poolStorage.reserve);
 
         TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, to, amount);
         emit Withdraw(to, amount);

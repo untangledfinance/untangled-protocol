@@ -34,7 +34,7 @@ import {Discounting} from '../Discounting.sol';
 library GenericLogic {
     event SetRate(bytes32 indexed loan, uint256 rate);
     event ChangeRate(bytes32 indexed loan, uint256 newRate);
-
+    event IncreaseCapitalReserve(uint256 increasingAmount, uint256 newCapitalReserve);
     /** GETTER */
     /// @notice getter function for the maturityDate
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
@@ -551,6 +551,15 @@ library GenericLogic {
         bytes32 agreementId
     ) internal view returns (DataTypes.NFTDetails memory) {
         return _poolStorage.details[agreementId];
+    }
+
+    function reserve(DataTypes.Storage storage _poolStorage) internal view returns(uint256){
+        return Math.safeAdd(_poolStorage.capitalReserve, _poolStorage.incomeReserve);
+    }
+
+    function increaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 amount) internal {
+        _poolStorage.capitalReserve = Math.safeAdd(_poolStorage.capitalReserve, amount);
+        emit IncreaseCapitalReserve(amount, _poolStorage.capitalReserve);
     }
 
     /// @param amortizationUnitType AmortizationUnitType enum

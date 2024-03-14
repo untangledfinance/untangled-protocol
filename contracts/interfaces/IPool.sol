@@ -31,8 +31,6 @@ interface IPool {
 
     function debtCeiling() external view returns (uint256);
 
-    function decreaseReserve(uint256 currencyAmount) external;
-
     function disburse(address usr, uint256 currencyAmount) external;
 
     function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory);
@@ -41,11 +39,7 @@ interface IPool {
 
     function getTokenAssetAddressesLength() external view returns (uint256);
 
-    function increaseRepayAmount(uint256 principalRepay, uint256 interestRepay) external;
-
-    function increaseReserve(uint256 currencyAmount) external;
-
-    function increaseTotalAssetRepaidCurrency(uint256 amount) external;
+    function increaseCapitalReserve(uint256 currencyAmount) external;
 
     function injectTGEAddress(address _tgeAddress, Configuration.NOTE_TOKEN_TYPE) external;
 

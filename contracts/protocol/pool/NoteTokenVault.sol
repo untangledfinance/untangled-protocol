@@ -122,34 +122,34 @@ contract NoteTokenVault is
         emit RedeemOrder(pool, noteTokenAddress, usr, noteTokenRedeemAmount, noteTokenPrice);
     }
 
-    function preDistribute(
-        address poolAddress,
-        uint256 totalCurrencyAmount,
-        address[] calldata noteTokenAddresses,
-        uint256[] calldata totalRedeemedNoteAmounts
-    ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
-        IPool pool = IPool(poolAddress);
+    // function preDistribute(
+    //     address poolAddress,
+    //     uint256 totalCurrencyAmount,
+    //     address[] calldata noteTokenAddresses,
+    //     uint256[] calldata totalRedeemedNoteAmounts
+    // ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
+    //     IPool pool = IPool(poolAddress);
 
-        (, uint256 sotTokenPrice) = pool.calcTokenPrices();
-        uint256 totalSotRedeem;
-        uint256 decimals;
+    //     (, uint256 sotTokenPrice) = pool.calcTokenPrices();
+    //     uint256 totalSotRedeem;
+    //     uint256 decimals;
 
-        for (uint i = 0; i < noteTokenAddresses.length; i++) {
-            INoteToken(noteTokenAddresses[i]).burn(totalRedeemedNoteAmounts[i]);
-            if (INoteToken(noteTokenAddresses[i]).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.SENIOR)) {
-                totalSotRedeem += totalRedeemedNoteAmounts[i];
-                decimals = INoteToken(noteTokenAddresses[i]).decimals();
-            }
-        }
-        pool.decreaseReserve(totalCurrencyAmount);
-        // rebase
-        if (totalSotRedeem > 0) {
-            pool.changeSeniorAsset(0, (sotTokenPrice * totalSotRedeem) / 10 ** decimals);
-        }
-        require(pool.isMinFirstLossValid(), 'NoteTokenVault: Exceeds MinFirstLoss');
+    //     for (uint i = 0; i < noteTokenAddresses.length; i++) {
+    //         INoteToken(noteTokenAddresses[i]).burn(totalRedeemedNoteAmounts[i]);
+    //         if (INoteToken(noteTokenAddresses[i]).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.SENIOR)) {
+    //             totalSotRedeem += totalRedeemedNoteAmounts[i];
+    //             decimals = INoteToken(noteTokenAddresses[i]).decimals();
+    //         }
+    //     }
+    //     // pool.decreaseReserve(totalCurrencyAmount);
+    //     // rebase
+    //     if (totalSotRedeem > 0) {
+    //         pool.changeSeniorAsset(0, (sotTokenPrice * totalSotRedeem) / 10 ** decimals);
+    //     }
+    //     require(pool.isMinFirstLossValid(), 'NoteTokenVault: Exceeds MinFirstLoss');
 
-        emit PreDistribute(poolAddress, totalCurrencyAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
-    }
+    //     emit PreDistribute(poolAddress, totalCurrencyAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
+    // }
 
     /// @inheritdoc INoteTokenVault
     function disburseAll(
@@ -185,7 +185,7 @@ contract NoteTokenVault is
             // Update pot pool reserve in P2P investment
             address poolOfPot = registry.getSecuritizationManager().potToPool(toAddresses[i]);
             if (poolOfPot != address(0)) {
-                IPool(poolOfPot).increaseReserve(currencyAmounts[i]);
+                IPool(poolOfPot).increaseCapitalReserve(currencyAmounts[i]);
             }
         }
 

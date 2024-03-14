@@ -31,7 +31,9 @@ interface IPool {
 
     function debtCeiling() external view returns (uint256);
 
-    function decreaseReserve(uint256 currencyAmount) external;
+    function decreaseCapitalReserve(uint256 currencyAmount) external;
+
+    function decreaseIncomeReserve(uint256 currencyAmount) external;
 
     function disburse(address usr, uint256 currencyAmount) external;
 
@@ -41,9 +43,7 @@ interface IPool {
 
     function getTokenAssetAddressesLength() external view returns (uint256);
 
-    function increaseRepayAmount(uint256 principalRepay, uint256 interestRepay) external;
-
-    function increaseReserve(uint256 currencyAmount) external;
+    function increaseCapitalReserve(uint256 currencyAmount) external;
 
     function increaseTotalAssetRepaidCurrency(uint256 amount) external;
 

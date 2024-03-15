@@ -144,7 +144,8 @@ library DataTypes {
         address sotToken;
         address jotToken;
         address underlyingCurrency;
-        uint256 reserve; // Money in pool
+        uint256 incomeReserve;
+        uint256 capitalReserve;
         uint32 minFirstLossCushion;
         uint64 openingBlockTimestamp;
         // by default it is address(this)

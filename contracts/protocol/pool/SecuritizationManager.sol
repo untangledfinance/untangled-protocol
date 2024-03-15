@@ -256,11 +256,11 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             }
         }
 
-        IPool(pool).increaseReserve(currencyAmount);
+        IPool(pool).increaseCapitalReserve(currencyAmount);
 
         if (poolOfPot != address(0)) {
             IPool(poolOfPot).collectERC20Asset(noteToken);
-            IPool(poolOfPot).decreaseReserve(currencyAmount);
+            IPool(poolOfPot).decreaseCapitalReserve(currencyAmount);
         }
 
         // rebase

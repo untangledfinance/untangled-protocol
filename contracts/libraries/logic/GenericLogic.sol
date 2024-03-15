@@ -553,6 +553,10 @@ library GenericLogic {
         return _poolStorage.details[agreementId];
     }
 
+    function reserve(DataTypes.Storage storage _poolStorage) internal view returns (uint256) {
+        return Math.safeAdd(_poolStorage.capitalReserve, _poolStorage.incomeReserve);
+    }
+
     /// @param amortizationUnitType AmortizationUnitType enum
     /// @return the corresponding length of the unit in seconds
     function _getAmortizationUnitLengthInSeconds(

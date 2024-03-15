@@ -124,7 +124,8 @@ contract NoteTokenVault is
 
     function preDistribute(
         address poolAddress,
-        uint256 totalCurrencyAmount,
+        uint256 incomeAmount,
+        uint256 capitalAmount,
         address[] calldata noteTokenAddresses,
         uint256[] calldata totalRedeemedNoteAmounts
     ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
@@ -141,14 +142,15 @@ contract NoteTokenVault is
                 decimals = INoteToken(noteTokenAddresses[i]).decimals();
             }
         }
-        pool.decreaseReserve(totalCurrencyAmount);
+        pool.decreaseIncomeReserve(incomeAmount);
+        pool.decreaseCapitalReserve(capitalAmount);
         // rebase
         if (totalSotRedeem > 0) {
             pool.changeSeniorAsset(0, (sotTokenPrice * totalSotRedeem) / 10 ** decimals);
         }
         require(pool.isMinFirstLossValid(), 'NoteTokenVault: Exceeds MinFirstLoss');
 
-        emit PreDistribute(poolAddress, totalCurrencyAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
+        emit PreDistribute(poolAddress, incomeAmount, capitalAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
     }
 
     /// @inheritdoc INoteTokenVault
@@ -185,7 +187,7 @@ contract NoteTokenVault is
             // Update pot pool reserve in P2P investment
             address poolOfPot = registry.getSecuritizationManager().potToPool(toAddresses[i]);
             if (poolOfPot != address(0)) {
-                IPool(poolOfPot).increaseReserve(currencyAmounts[i]);
+                IPool(poolOfPot).increaseCapitalReserve(currencyAmounts[i]);
             }
         }
 

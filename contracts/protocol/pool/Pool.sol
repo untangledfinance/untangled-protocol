@@ -27,6 +27,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     Registry public registry;
 
     event InsertNFTAsset(address token, uint256 tokenId);
+    event Repay(address poolAddress, uint256 increaseInterestRepay, uint256 increasePrincipalRepay, uint256 timestamp);
 
     modifier requirePoolAdminOrOwner() {
         require(
@@ -218,16 +219,10 @@ contract Pool is IPool, PoolStorage, UntangledBase {
             }
         }
 
-        _poolStorage.totalInterestRepaid += totalInterestRepay;
-        _poolStorage.totalPrincipalRepaid += totalPrincipalRepay;
-
+        _poolStorage.incomeReserve += totalInterestRepay;
+        _poolStorage.capitalReserve += totalPrincipalRepay;
+        emit Repay(address(this), totalInterestRepay, totalPrincipalRepay, block.timestamp);
         return (repayAmounts, previousDebts);
-    }
-
-    function increaseRepayAmount(uint256 principalRepay, uint256 interestRepay) external {
-        require(address(registry.getLoanKernel()) == msg.sender, 'not authorized');
-        _poolStorage.totalPrincipalRepaid += principalRepay;
-        _poolStorage.totalInterestRepaid += interestRepay;
     }
 
     function getRepaidAmount() external view returns (uint256, uint256) {
@@ -294,23 +289,32 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     }
 
     /// @dev trigger update reserve when buy note token action happens
-    function increaseReserve(uint256 currencyAmount) external whenNotPaused {
+    function increaseCapitalReserve(uint256 currencyAmount) external whenNotPaused {
         require(
             _msgSender() == address(registry.getSecuritizationManager()) ||
                 _msgSender() == address(registry.getNoteTokenVault()),
             'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
-        TGELogic.increaseReserve(_poolStorage, currencyAmount);
+        TGELogic.increaseCapitalReserve(_poolStorage, currencyAmount);
     }
 
     /// @dev trigger update reserve
-    function decreaseReserve(uint256 currencyAmount) external whenNotPaused {
+    function decreaseIncomeReserve(uint256 currencyAmount) external whenNotPaused {
         require(
             _msgSender() == address(registry.getSecuritizationManager()) ||
                 _msgSender() == address(registry.getNoteTokenVault()),
             'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
         );
-        TGELogic.decreaseReserve(_poolStorage, currencyAmount);
+        TGELogic.decreaseIncomeReserve(_poolStorage, currencyAmount);
+    }
+
+    function decreaseCapitalReserve(uint256 currencyAmount) external whenNotPaused {
+        require(
+            _msgSender() == address(registry.getSecuritizationManager()) ||
+                _msgSender() == address(registry.getNoteTokenVault()),
+            'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
+        );
+        TGELogic.decreaseCapitalReserve(_poolStorage, currencyAmount);
     }
 
     function secondTGEAddress() external view returns (address) {
@@ -334,7 +338,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     }
 
     function reserve() external view returns (uint256) {
-        return _poolStorage.reserve;
+        return GenericLogic.reserve(_poolStorage);
     }
 
     function debtCeiling() external view returns (uint256) {
@@ -422,7 +426,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     /// @notice rebase the debt and balance of the senior tranche according to
     /// the current ratio between senior and junior
     function rebase() public {
-        RebaseLogic.rebase(_poolStorage, GenericLogic.currentNAV(_poolStorage), _poolStorage.reserve);
+        RebaseLogic.rebase(_poolStorage, GenericLogic.currentNAV(_poolStorage), GenericLogic.reserve(_poolStorage));
     }
 
     /// @notice changes the senior asset value based on new supply or redeems
@@ -437,7 +441,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         RebaseLogic.changeSeniorAsset(
             _poolStorage,
             GenericLogic.currentNAV(_poolStorage),
-            _poolStorage.reserve,
+            GenericLogic.reserve(_poolStorage),
             _seniorSupply,
             _seniorRedeem
         );
@@ -454,7 +458,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         uint256 noteTokenDecimal = (10 ** INoteToken(sotTokenAddress).decimals());
         (uint256 _juniorTokenPrice, uint256 _seniorTokenPrice) = RebaseLogic.calcTokenPrices(
             GenericLogic.currentNAV(_poolStorage),
-            _poolStorage.reserve,
+            GenericLogic.reserve(_poolStorage),
             RebaseLogic.seniorDebt(_poolStorage),
             _poolStorage.seniorBalance,
             INoteToken(jotTokenAddress).totalSupply(),
@@ -467,7 +471,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return
             RebaseLogic.calcJuniorRatio(
                 GenericLogic.currentNAV(_poolStorage),
-                _poolStorage.reserve,
+                GenericLogic.reserve(_poolStorage),
                 RebaseLogic.seniorDebt(_poolStorage),
                 _poolStorage.seniorBalance
             );

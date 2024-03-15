@@ -9,10 +9,12 @@ import {DataTypes, RATE_SCALING_FACTOR} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
 
 library TGELogic {
-
     event UpdateTGEAddress(address tge, Configuration.NOTE_TOKEN_TYPE noteType);
     event IncreaseReserve(uint256 increasingAmount, uint256 currencyAmount);
+    event IncreaseCapitalReserve(uint256 increasingAmount, uint256 currencyAmount);
     event DecreaseReserve(uint256 decreasingAmount, uint256 currencyAmount);
+    event DecreaseCapitalReserve(uint256 decreasingAmount, uint256 currencyAmount);
+    event DecreaseIncomeReserve(uint256 decreasingAmount, uint256 currencyAmount);
     event UpdateDebtCeiling(uint256 _debtCeiling);
     event UpdateMintFirstLoss(uint32 _mintFirstLoss);
     event UpdateInterestRateSot(uint32 _interestRateSot);
@@ -35,10 +37,6 @@ library TGELogic {
 
     function underlyingCurrency(DataTypes.Storage storage _poolStorage) public view returns (address) {
         return _poolStorage.underlyingCurrency;
-    }
-
-    function reserve(DataTypes.Storage storage _poolStorage) public view returns (uint256) {
-        return _poolStorage.reserve;
     }
 
     function minFirstLossCushion(DataTypes.Storage storage _poolStorage) public view returns (uint32) {
@@ -100,10 +98,7 @@ library TGELogic {
 
     // Increase by value
     function increaseTotalAssetRepaidCurrency(DataTypes.Storage storage _poolStorage, uint256 amount) external {
-        _poolStorage.reserve = _poolStorage.reserve + amount;
         _poolStorage.totalAssetRepaidCurrency = _poolStorage.totalAssetRepaidCurrency + amount;
-
-        emit IncreaseReserve(amount, _poolStorage.reserve);
     }
 
     function hasFinishedRedemption(DataTypes.Storage storage _poolStorage) public view returns (bool) {
@@ -160,18 +155,21 @@ library TGELogic {
         emit UpdateInterestRateSot(_newRate);
     }
 
-    function increaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
-        _poolStorage.reserve = _poolStorage.reserve + currencyAmount;
-        emit IncreaseReserve(currencyAmount, _poolStorage.reserve);
+    function increaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        _poolStorage.capitalReserve = _poolStorage.capitalReserve + currencyAmount;
+        emit IncreaseCapitalReserve(currencyAmount, _poolStorage.capitalReserve);
     }
 
-    function decreaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
-        _decreaseReserve(_poolStorage, currencyAmount);
+    function decreaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        require(_poolStorage.capitalReserve >= currencyAmount, 'insufficient balance of capital reserve');
+        _poolStorage.capitalReserve = _poolStorage.capitalReserve - currencyAmount;
+        emit DecreaseCapitalReserve(currencyAmount, _poolStorage.capitalReserve);
     }
 
-    function _decreaseReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) internal {
-        _poolStorage.reserve = _poolStorage.reserve - currencyAmount;
-        emit DecreaseReserve(currencyAmount, _poolStorage.reserve);
+    function decreaseIncomeReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        require(_poolStorage.incomeReserve >= currencyAmount, 'insufficient balance of income reserve');
+        _poolStorage.incomeReserve = _poolStorage.incomeReserve - currencyAmount;
+        emit DecreaseIncomeReserve(currencyAmount, _poolStorage.incomeReserve);
     }
 
     // After closed pool and redeem all not -> get remain cash to recipient wallet
@@ -187,11 +185,10 @@ library TGELogic {
     }
 
     function withdraw(DataTypes.Storage storage _poolStorage, address to, uint256 amount) public {
-        require(_poolStorage.reserve >= amount, 'SecuritizationPool: not enough reserve');
-
-        _decreaseReserve(_poolStorage, amount);
+        require(_poolStorage.capitalReserve >= amount, 'SecuritizationPool: insufficient balance of capital reserve');
+        _poolStorage.capitalReserve = _poolStorage.capitalReserve - amount;
 
         TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, to, amount);
-        emit Withdraw(to, amount);
+        emit DecreaseCapitalReserve(amount, _poolStorage.capitalReserve);
     }
 }

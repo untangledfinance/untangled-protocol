@@ -27,6 +27,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     Registry public registry;
 
     event InsertNFTAsset(address token, uint256 tokenId);
+    event Repay(address poolAddress, uint256 increaseInterestRepay, uint256 increasePrincipalRepay, uint256 timestamp);
 
     modifier requirePoolAdminOrOwner() {
         require(
@@ -220,7 +221,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
         _poolStorage.incomeReserve += totalInterestRepay;
         _poolStorage.capitalReserve += totalPrincipalRepay;
-
+        emit Repay(address(this), totalInterestRepay, totalPrincipalRepay, block.timestamp);
         return (repayAmounts, previousDebts);
     }
 

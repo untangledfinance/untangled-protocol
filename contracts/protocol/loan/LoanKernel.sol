@@ -206,7 +206,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
             emit AssetRepay(
                 bytes32(_nftIds[i]),
                 _payer,
-                beneficiary,
+                address(_pool),
                 repayAmounts[i],
                 outstandingAmount,
                 _tokenAddress

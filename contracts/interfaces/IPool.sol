@@ -66,6 +66,10 @@ interface IPool {
 
     function reserve() external view returns (uint256);
 
+    function incomeReserve() external view returns (uint256);
+
+    function capitalReserve() external view returns (uint256);
+
     function risk(bytes32 nft_) external view returns (uint256 risk_);
 
     function riskScores(uint256 index) external view returns (DataTypes.RiskScore memory);

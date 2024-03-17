@@ -317,6 +317,14 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return GenericLogic.reserve(_poolStorage);
     }
 
+    function capitalReserve() external view returns (uint256) {
+        return _poolStorage.capitalReserve;
+    }
+
+    function incomeReserve() external view returns (uint256) {
+        return _poolStorage.incomeReserve;
+    }
+
     function debtCeiling() external view returns (uint256) {
         return _poolStorage.debtCeiling;
     }

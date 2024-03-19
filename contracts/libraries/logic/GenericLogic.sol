@@ -20,10 +20,12 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 pragma solidity 0.8.19;
+import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/interfaces/IERC20Upgradeable.sol';
 import '../UnpackLoanParamtersLib.sol';
 import {DataTypes, ONE_HUNDRED_PERCENT, ONE, WRITEOFF_RATE_GROUP_START} from '../DataTypes.sol';
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
+import {TransferHelper} from '../TransferHelper.sol';
 
 /**
  * @title Untangled's SecuritizaionPoolNAV contract
@@ -35,6 +37,9 @@ library GenericLogic {
     event SetRate(bytes32 indexed loan, uint256 rate);
     event ChangeRate(bytes32 indexed loan, uint256 newRate);
     event IncreaseCapitalReserve(uint256 increasingAmount, uint256 newCapitalReserve);
+    event DecreaseCapitalReserve(uint256 decreasingAmount, uint256 currencyAmount);
+    event DecreaseIncomeReserve(uint256 decreasingAmount, uint256 currencyAmount);
+
     /** GETTER */
     /// @notice getter function for the maturityDate
     /// @param nft_ the id of the nft based on the hash of registry and tokenId
@@ -553,7 +558,7 @@ library GenericLogic {
         return _poolStorage.details[agreementId];
     }
 
-    function reserve(DataTypes.Storage storage _poolStorage) internal view returns(uint256){
+    function reserve(DataTypes.Storage storage _poolStorage) internal view returns (uint256) {
         return Math.safeAdd(_poolStorage.capitalReserve, _poolStorage.incomeReserve);
     }
 
@@ -630,5 +635,40 @@ library GenericLogic {
                 amortizationUnitType: amortizationUnitType,
                 termLengthInAmortizationUnits: termLengthInAmortizationUnits
             });
+    }
+    function decreaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        require(_poolStorage.capitalReserve >= currencyAmount, 'insufficient balance of capital reserve');
+        _poolStorage.capitalReserve = _poolStorage.capitalReserve - currencyAmount;
+        emit DecreaseCapitalReserve(currencyAmount, _poolStorage.capitalReserve);
+    }
+
+    function decreaseIncomeReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        require(_poolStorage.incomeReserve >= currencyAmount, 'insufficient balance of income reserve');
+        _poolStorage.incomeReserve = _poolStorage.incomeReserve - currencyAmount;
+        emit DecreaseIncomeReserve(currencyAmount, _poolStorage.incomeReserve);
+    }
+
+    function setPot(DataTypes.Storage storage _poolStorage, address _pot) external {
+        require(_poolStorage.pot != _pot, 'SecuritizationPool: Same address with current pot');
+        _poolStorage.pot = _pot;
+
+        if (_pot == address(this)) {
+            require(
+                IERC20Upgradeable(_poolStorage.underlyingCurrency).approve(_pot, type(uint256).max),
+                'SecuritizationPool: Pot not approved'
+            );
+        }
+    }
+
+    function disburse(DataTypes.Storage storage _poolStorage, address usr, uint256 currencyAmount) external {
+        TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, usr, currencyAmount);
+    }
+
+    function withdraw(DataTypes.Storage storage _poolStorage, address to, uint256 amount) public {
+        require(_poolStorage.capitalReserve >= amount, 'SecuritizationPool: insufficient balance of capital reserve');
+        _poolStorage.capitalReserve = _poolStorage.capitalReserve - amount;
+
+        TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, to, amount);
+        emit DecreaseCapitalReserve(amount, _poolStorage.capitalReserve);
     }
 }

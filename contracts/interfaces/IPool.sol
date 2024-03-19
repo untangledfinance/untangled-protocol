@@ -5,6 +5,18 @@ import {DataTypes} from '../libraries/DataTypes.sol';
 import {Configuration} from '../libraries/Configuration.sol';
 
 interface IPool {
+    event UpdateTGEAddress(address tge, Configuration.NOTE_TOKEN_TYPE noteType);
+    event IncreaseReserve(uint256 increasingAmount, uint256 currencyAmount);
+    event IncreaseCapitalReserve(uint256 increasingAmount, uint256 currencyAmount);
+    event DecreaseReserve(uint256 decreasingAmount, uint256 currencyAmount);
+    event DecreaseCapitalReserve(uint256 decreasingAmount, uint256 currencyAmount);
+    event DecreaseIncomeReserve(uint256 decreasingAmount, uint256 currencyAmount);
+    event UpdateDebtCeiling(uint256 _debtCeiling);
+    event UpdateMintFirstLoss(uint32 _mintFirstLoss);
+    event UpdateInterestRateSot(uint32 _interestRateSot);
+    event Withdraw(address originatorAddress, uint256 amount);
+    event ClaimCashRemain(address pot, address recipientWallet, uint256 balance);
+
     function calcJuniorRatio() external view returns (uint256 juniorRatio);
 
     function calcTokenPrices() external view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice);
@@ -31,21 +43,25 @@ interface IPool {
 
     function debtCeiling() external view returns (uint256);
 
+    function capitalReserve() external view returns (uint256);
+
+    function incomeReserve() external view returns (uint256);
+
+    function decreaseCapitalReserve(uint256 currencyAmount) external;
+
+    function decreaseIncomeReserve(uint256 currencyAmount) external;
+
     function disburse(address usr, uint256 currencyAmount) external;
 
     function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory);
 
     function getTokenAssetAddresses() external view returns (address[] memory);
 
-    function getTokenAssetAddressesLength() external view returns (uint256);
-
     function increaseCapitalReserve(uint256 currencyAmount) external;
 
-    function injectTGEAddress(address _tgeAddress, Configuration.NOTE_TOKEN_TYPE) external;
+    function increaseTotalAssetRepaidCurrency(uint256 amount) external;
 
     function interestRateSOT() external view returns (uint256);
-
-    function isDebtCeilingValid() external view returns (bool);
 
     function isMinFirstLossValid() external view returns (bool);
 
@@ -66,15 +82,9 @@ interface IPool {
 
     function reserve() external view returns (uint256);
 
-    function incomeReserve() external view returns (uint256);
-
-    function capitalReserve() external view returns (uint256);
-
     function risk(bytes32 nft_) external view returns (uint256 risk_);
 
     function riskScores(uint256 index) external view returns (DataTypes.RiskScore memory);
-
-    function secondTGEAddress() external view returns (address);
 
     function seniorDebtAndBalance() external view returns (uint256, uint256);
 
@@ -84,13 +94,7 @@ interface IPool {
 
     function setMinFirstLossCushion(uint32 _minFirstLossCushion) external;
 
-    function setUpOpeningBlockTimestamp() external;
-
     function sotToken() external view returns (address);
-
-    function tgeAddress() external view returns (address);
-
-    function tokenAssetAddresses(uint256 idx) external view returns (address);
 
     function totalAssetRepaidCurrency() external view returns (uint256);
 

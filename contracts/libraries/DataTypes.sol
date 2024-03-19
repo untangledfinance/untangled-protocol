@@ -138,13 +138,11 @@ library DataTypes {
         NFTAsset[] nftAssets;
         address[] tokenAssetAddresses;
         mapping(address => bool) existsTokenAssetAddress;
-        // TGE
-        address tgeAddress;
-        address secondTGEAddress;
         address sotToken;
         address jotToken;
         address underlyingCurrency;
-        uint256 reserve; // Money in pool
+        uint256 incomeReserve;
+        uint256 capitalReserve;
         uint32 minFirstLossCushion;
         uint64 openingBlockTimestamp;
         // by default it is address(this)
@@ -154,13 +152,6 @@ library DataTypes {
         uint256 interestRateSOT; // Annually, support 4 decimals num
         uint256 totalAssetRepaidCurrency;
         uint256 debtCeiling;
-        // lock distribution
-        mapping(address => mapping(address => uint256)) lockedDistributeBalances;
-        uint256 totalLockedDistributeBalance;
-        mapping(address => mapping(address => uint256)) lockedRedeemBalances;
-        // token address -> total locked
-        mapping(address => uint256) totalLockedRedeemBalances;
-        uint256 totalRedeemedCurrency; // Total $ (cUSD) has been redeemed
         /// @notice Interest Rate Groups are identified by a `uint` and stored in a mapping
         mapping(uint256 => Rate) rates;
         mapping(uint256 => uint256) pie;
@@ -200,8 +191,8 @@ library DataTypes {
         mapping(bytes32 => uint256) overdueLoansOfNavAssets;
         mapping(uint256 => bytes32) loanToNFT;
         // value to view
-        uint256 incomeReserve;
-        uint256 capitalReserve;
+        uint256 totalPrincipalRepaid;
+        uint256 totalInterestRepaid;
         // value to calculate rebase
         uint256 seniorDebt;
         uint256 seniorBalance;

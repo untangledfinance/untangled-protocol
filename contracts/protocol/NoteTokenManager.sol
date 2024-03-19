@@ -24,31 +24,16 @@ contract NoteTokenManager is
     AccessControlEnumerableUpgradeable,
     ReentrancyGuardUpgradeable
 {
-    struct Epoch {
-        uint256 withdrawFulfillment;
-        uint256 investFullfillment;
-        uint256 price;
-    }
-
-    struct UserOrder {
-        uint256 orderedInEpoch;
-        uint256 investCurrencyAmount;
-        uint256 withdrawTokenAmount;
-    }
-
-    event TokenMinted(address pool, address receiver, uint256 amount);
     using ConfigHelper for Registry;
     Registry public registry;
 
     mapping(address => uint256) public totalWithdraw;
     mapping(address => uint256) public totalInvest;
 
-    mapping(address => address) public noteToken;
-    mapping(address => address) public issuers;
+    mapping(address => NoteTokenInfor) public tokenInfor;
 
     mapping(address => mapping(uint256 => Epoch)) public epochs;
 
-    mapping(address => uint256) public requestedCurrency;
     mapping(address => address) public poolAdmin;
 
     mapping(address => mapping(address => UserOrder)) orders;
@@ -82,33 +67,46 @@ contract NoteTokenManager is
         poolAdmin[msg.sender] = admin;
     }
 
+    function setupNewToken(address pool, address tokenAddress, uint256 minBidAmount) external {
+        tokenInfor[pool].tokenAddress = tokenAddress;
+        tokenInfor[pool].correspondingPool = pool;
+        tokenInfor[pool].minBidAmount = minBidAmount;
+        emit NewTokenAdded(pool, tokenAddress, block.timestamp);
+    }
+
     function investOrder(address pool, address user, uint256 newInvestAmount) public {
+        require(tokenInfor[pool].tokenAddress != address(0), 'NoteTokenManager: No note token found');
+        require(newInvestAmount >= tokenInfor[pool].minBidAmount, 'NoteTokenManager: invest amount is too low');
         orders[pool][user].orderedInEpoch = epochExecutor.currentEpoch(pool);
         uint256 currentInvestAmount = orders[pool][user].investCurrencyAmount;
         orders[pool][user].investCurrencyAmount = newInvestAmount;
         totalInvest[pool] = Math.safeAdd(Math.safeSub(totalInvest[pool], currentInvestAmount), newInvestAmount);
         if (newInvestAmount > currentInvestAmount) {
             require(
-                currency.transferFrom(user, issuers[pool], Math.safeSub(newInvestAmount, currentInvestAmount)),
+                currency.transferFrom(user, IPool(pool).pot(), Math.safeSub(newInvestAmount, currentInvestAmount)),
                 'NoteTokenManager: currency transfer failed'
             );
             return;
         } else if (newInvestAmount < currentInvestAmount) {
-            currency.transferFrom(issuers[pool], user, Math.safeSub(currentInvestAmount, newInvestAmount));
+            currency.transferFrom(IPool(pool).pot(), user, Math.safeSub(currentInvestAmount, newInvestAmount));
         }
     }
 
     function withdrawOrder(address pool, address user, uint256 newWithdrawAmount) public {
+        require(tokenInfor[pool].tokenAddress != address(0), 'NoteTokenManager: No note token found');
         orders[pool][user].orderedInEpoch = epochExecutor.currentEpoch(pool);
         uint256 currentWithdrawAmount = orders[pool][user].withdrawTokenAmount;
         orders[pool][user].withdrawTokenAmount = newWithdrawAmount;
         totalWithdraw[pool] = Math.safeAdd(Math.safeSub(totalWithdraw[pool], currentWithdrawAmount), newWithdrawAmount);
         if (newWithdrawAmount > currentWithdrawAmount) {
-            INoteToken(noteToken[pool]).transfer(issuers[pool], Math.safeSub(newWithdrawAmount, currentWithdrawAmount));
+            INoteToken(tokenInfor[pool].tokenAddress).transfer(
+                IPool(pool).pot(),
+                Math.safeSub(newWithdrawAmount, currentWithdrawAmount)
+            );
             return;
         } else if (newWithdrawAmount < currentWithdrawAmount) {
-            INoteToken(noteToken[pool]).transferFrom(
-                issuers[pool],
+            INoteToken(tokenInfor[pool].tokenAddress).transferFrom(
+                IPool(pool).pot(),
                 user,
                 Math.safeSub(currentWithdrawAmount, newWithdrawAmount)
             );
@@ -239,7 +237,7 @@ contract NoteTokenManager is
         orders[pool][user].orderedInEpoch = Math.safeAdd(endEpoch, 1);
 
         if (payoutCurrencyAmount > 0) {
-            currency.transferFrom(issuers[pool], user, payoutCurrencyAmount);
+            currency.transferFrom(IPool(pool).pot(), user, payoutCurrencyAmount);
         }
 
         if (payoutTokenAmount > 0) {
@@ -289,8 +287,12 @@ contract NoteTokenManager is
     }
 
     function mint(address pool, address receiver, uint256 amount) public returns (uint256) {
-        INoteToken(noteToken[pool]).mint(receiver, amount);
+        INoteToken(tokenInfor[pool].tokenAddress).mint(receiver, amount);
         emit TokenMinted(pool, receiver, amount);
         return amount;
+    }
+
+    function getTokenAddress(address pool) public view returns (address) {
+        return tokenInfor[pool].tokenAddress;
     }
 }

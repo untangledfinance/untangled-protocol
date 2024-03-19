@@ -251,43 +251,30 @@ async function getLoansValue(
 }
 
 async function initSOTSale(signer, saleParameters) {
-    const transactionSOTSale = await this.securitizationManager.connect(signer).setUpTGEForSOT(
-        {
-            issuerTokenController: saleParameters.issuerTokenController,
-            pool: saleParameters.pool,
-            minBidAmount: saleParameters.minBidAmount,
-            totalCap: saleParameters.cap,
-            openingTime: saleParameters.openingTime,
-            saleType: saleParameters.saleType,
-            ticker: saleParameters.ticker,
-        },
-        saleParameters.interestRate
-    );
+    const transactionSOTSale = await this.securitizationManager
+        .connect(signer)
+        .setupNoteTokenSale(
+            saleParameters.pool,
+            0,
+            saleParameters.minBidAmount,
+            saleParameters.interestRate,
+            saleParameters.ticker
+        );
     const receiptSOTSale = await transactionSOTSale.wait();
-    const [sotTokenAddress, sotTGEAddress] = receiptSOTSale.events.find((e) => e.event == 'SetupSot').args;
+    const [poolAddress, sotTokenAddress] = receiptSOTSale.events.find((e) => e.event == 'NewTokenCreated').args;
 
-    return { sotTGEAddress, sotTokenAddress };
+    return { poolAddress, sotTokenAddress };
 }
 
 async function initJOTSale(signer, saleParameters) {
-    const transactionJOTSale = await this.securitizationManager.connect(signer).setUpTGEForJOT(
-        {
-            issuerTokenController: saleParameters.issuerTokenController,
-            pool: saleParameters.pool,
-            minBidAmount: saleParameters.minBidAmount,
-            totalCap: saleParameters.cap,
-            openingTime: saleParameters.openingTime,
-            saleType: saleParameters.saleType,
-            longSale: true,
-            ticker: saleParameters.ticker,
-        },
-        saleParameters.initialJOTAmount
-    );
+    const transactionJOTSale = await this.securitizationManager
+        .connect(signer)
+        .setupNoteTokenSale(saleParameters.pool, 1, saleParameters.minBidAmount, 0, saleParameters.ticker);
     const receiptJOTSale = await transactionJOTSale.wait();
 
-    const [jotTokenAddress, jotTGEAddress] = receiptJOTSale.events.find((e) => e.event == 'SetupJot').args;
+    const [poolAddress, jotTokenAddress] = receiptJOTSale.events.find((e) => e.event == 'NewTokenCreated').args;
 
-    return { jotTGEAddress, jotTokenAddress };
+    return { poolAddress, jotTokenAddress };
 }
 
 async function buyToken(signer, tgeAddress, currencyAmount) {

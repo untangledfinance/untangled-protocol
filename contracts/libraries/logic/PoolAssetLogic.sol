@@ -244,20 +244,7 @@ library PoolAssetLogic {
     }
 
     /// @dev Set the opening block timestamp
-    function _setUpOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage) private {
-        address tgeAddress = _poolStorage.tgeAddress;
-        if (tgeAddress == address(0)) return;
-        uint64 _firstNoteTokenMintedTimestamp = uint64(IMintedNormalTGE(tgeAddress).firstNoteTokenMintedTimestamp());
-        uint64 _firstAssetTimestamp = _poolStorage.firstAssetTimestamp;
-        if (_firstNoteTokenMintedTimestamp > 0 && _firstAssetTimestamp > 0) {
-            // Pick the later
-            if (_firstAssetTimestamp > _firstNoteTokenMintedTimestamp) {
-                _setOpeningBlockTimestamp(_poolStorage, _firstAssetTimestamp);
-            } else {
-                _setOpeningBlockTimestamp(_poolStorage, _firstNoteTokenMintedTimestamp);
-            }
-        }
-    }
+    function _setUpOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage) private {}
 
     function _setOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage, uint64 _openingBlockTimestamp) internal {
         _poolStorage.openingBlockTimestamp = _openingBlockTimestamp;

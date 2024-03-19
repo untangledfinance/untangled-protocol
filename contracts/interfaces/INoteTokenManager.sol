@@ -1,6 +1,29 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 interface INoteTokenManager {
+    struct Epoch {
+        uint256 withdrawFulfillment;
+        uint256 investFullfillment;
+        uint256 price;
+    }
+
+    struct UserOrder {
+        uint256 orderedInEpoch;
+        uint256 investCurrencyAmount;
+        uint256 withdrawTokenAmount;
+    }
+
+    struct NoteTokenInfor {
+        address tokenAddress;
+        address correspondingPool;
+        uint256 minBidAmount;
+    }
+
+    event TokenMinted(address pool, address receiver, uint256 amount);
+    event NewTokenAdded(address pool, address tokenAddress, uint256 timestamp);
+
+    function setupNewToken(address pool, address tokenAddress, uint256 minBidAmount) external;
+
     function investOrder(address pool, address user, uint256 newInvestAmount) external;
 
     function withdrawOrder(address pool, address user, uint256 newWithdrawAmount) external;
@@ -68,4 +91,5 @@ interface INoteTokenManager {
     ) external;
 
     function closeEpoch(address pool) external returns (uint256 totalInvestCurrency_, uint256 totalWithdrawToken_);
+    function getTokenAddress(address pool) external view returns (address);
 }

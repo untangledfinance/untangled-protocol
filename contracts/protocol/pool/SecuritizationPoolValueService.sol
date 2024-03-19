@@ -10,7 +10,6 @@ import {SecuritizationPoolServiceBase} from './base/SecuritizationPoolServiceBas
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {UntangledMath} from '../../libraries/UntangledMath.sol';
 import {DataTypes, ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
-import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 
 /// @title SecuritizationPoolValueService
 /// @author Untangled Team
@@ -100,10 +99,12 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
 
         expectedAssetsValue = expectedAssetsValue + getExpectedLATAssetValue(poolAddress);
 
-        uint256 tokenAssetAddressesLength = securitizationPool.getTokenAssetAddressesLength();
-        for (uint256 i = 0; i < tokenAssetAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            address tokenAddress = securitizationPool.tokenAssetAddresses(i);
-            expectedAssetsValue = expectedAssetsValue + calcCorrespondingTotalAssetValue(tokenAddress, poolAddress);
+        address[] memory tokenAddresses = securitizationPool.getTokenAssetAddresses();
+
+        for (uint256 i = 0; i < tokenAddresses.length; i = UntangledMath.uncheckedInc(i)) {
+            expectedAssetsValue =
+                expectedAssetsValue +
+                calcCorrespondingTotalAssetValue(tokenAddresses[i], poolAddress);
         }
     }
 
@@ -258,10 +259,10 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
     ) external view returns (DataTypes.NoteToken[] memory noteTokens) {
         IPool securitizationPool = IPool(poolAddress);
 
-        uint256 tokenAssetAddressesLength = securitizationPool.getTokenAssetAddressesLength();
-        noteTokens = new DataTypes.NoteToken[](tokenAssetAddressesLength);
-        for (uint256 i = 0; i < tokenAssetAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            address tokenAddress = securitizationPool.tokenAssetAddresses(i);
+        address[] memory tokenAddresses = securitizationPool.getTokenAssetAddresses();
+        noteTokens = new DataTypes.NoteToken[](tokenAddresses.length);
+        for (uint256 i = 0; i < tokenAddresses.length; i = UntangledMath.uncheckedInc(i)) {
+            address tokenAddress = tokenAddresses[i];
             INoteToken noteToken = INoteToken(tokenAddress);
             IPool notePool = IPool(noteToken.poolAddress());
 

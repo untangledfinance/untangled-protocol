@@ -12,8 +12,9 @@ import {ITokenGenerationEventFactory} from '../interfaces/ITokenGenerationEventF
 import {ILoanKernel} from '../interfaces/ILoanKernel.sol';
 import {LoanAssetToken} from '../tokens/ERC721/LoanAssetToken.sol';
 import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPoolValueService.sol';
-import {ISecuritizationPoolValueService} from '../interfaces/ISecuritizationPoolValueService.sol';
 import {IGo} from '../interfaces/IGo.sol';
+import {INoteTokenManager} from '../interfaces/INoteTokenManager.sol';
+import {IEpochExecutor} from '../interfaces/IEpochExecutor.sol';
 import {OWNER_ROLE} from './DataTypes.sol';
 import {INoteTokenVault} from '../interfaces/INoteTokenVault.sol';
 
@@ -36,15 +37,20 @@ library ConfigHelper {
         return IPool(getAddress(registry, Configuration.CONTRACT_TYPE.SECURITIZATION_POOL));
     }
 
-    function getNoteTokenFactory(Registry registry) internal view returns (INoteTokenFactory) {
-        return INoteTokenFactory(getAddress(registry, Configuration.CONTRACT_TYPE.NOTE_TOKEN_FACTORY));
+    function getSeniorTokenManager(Registry registry) internal view returns (INoteTokenManager) {
+        return INoteTokenManager(getAddress(registry, Configuration.CONTRACT_TYPE.SENIOR_TOKEN_MANAGER));
     }
 
-    function getTokenGenerationEventFactory(Registry registry) internal view returns (ITokenGenerationEventFactory) {
-        return
-            ITokenGenerationEventFactory(
-                getAddress(registry, Configuration.CONTRACT_TYPE.TOKEN_GENERATION_EVENT_FACTORY)
-            );
+    function getJuniorTokenManager(Registry registry) internal view returns (INoteTokenManager) {
+        return INoteTokenManager(getAddress(registry, Configuration.CONTRACT_TYPE.JUNIOR_TOKEN_MANAGER));
+    }
+
+    function getEpochExecutor(Registry registry) internal view returns (IEpochExecutor) {
+        return IEpochExecutor(getAddress(registry, Configuration.CONTRACT_TYPE.EPOCH_EXECUTOR));
+    }
+
+    function getNoteTokenFactory(Registry registry) internal view returns (INoteTokenFactory) {
+        return INoteTokenFactory(getAddress(registry, Configuration.CONTRACT_TYPE.NOTE_TOKEN_FACTORY));
     }
 
     function getLoanAssetToken(Registry registry) internal view returns (LoanAssetToken) {
@@ -66,10 +72,6 @@ library ConfigHelper {
 
     function getGo(Registry registry) internal view returns (IGo) {
         return IGo(getAddress(registry, Configuration.CONTRACT_TYPE.GO));
-    }
-
-    function getNoteTokenVault(Registry registry) internal view returns (INoteTokenVault) {
-        return INoteTokenVault(getAddress(registry, Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT));
     }
 
     function requireSecuritizationManager(Registry registry, address account) internal view {

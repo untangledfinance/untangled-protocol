@@ -51,4 +51,5 @@ interface IEpochExecutor {
     ) external view returns (uint256 reserve);
     function currentEpoch(address pool) external view returns (uint256);
     function lastEpochExecuted(address pool) external view returns (uint256);
+    function getNoteTokenAddress(address pool) external view returns (address, address);
 }

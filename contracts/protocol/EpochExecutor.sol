@@ -32,7 +32,7 @@ contract EpochExecutor is IEpochExecutor {
     INoteTokenManager public jotManager;
 
     mapping(address => EpochInformation) public epochInfor;
-    mapping(address => uint256) public maxCapitalReserve;
+    mapping(address => uint256) public debtCeiling;
 
     constructor(address sotManager_, address jotManager_) {
         sotManager = INoteTokenManager(sotManager_);
@@ -204,7 +204,7 @@ contract EpochExecutor is IEpochExecutor {
         uint256 nav_
     ) public view returns (int256 err) {
         // constraint 3: max capital reserve
-        if (reserve_ > maxCapitalReserve[pool]) {
+        if (reserve_ > debtCeiling[pool]) {
             return ERR_MAX_RESERVE;
         }
         uint256 assets = Math.safeAdd(nav_, reserve_);
@@ -337,8 +337,6 @@ contract EpochExecutor is IEpochExecutor {
         epochInfor[pool].minChallengePeriodEnd = 0;
         epochInfor[pool].bestSubScore = 0;
         epochInfor[pool].gotFullValidation = false;
-        // epochInfor[pool].bestRatioImprovement = 0 ;
-        // epochInfor[pool].bestReserveImprovement = 0;
     }
 
     function _calcFullfillment(uint256 amount, uint256 totalOrder) public pure returns (uint256 percent) {
@@ -356,6 +354,7 @@ contract EpochExecutor is IEpochExecutor {
         uint256 jotInvest
     ) public view returns (uint256) {
         // TO DO: calculate the withdrawal after subtract income
+
         // TO DO: calculate new income reserve
         return
             Math.safeSub(
@@ -370,5 +369,11 @@ contract EpochExecutor is IEpochExecutor {
 
     function lastEpochExecuted(address pool) public view returns (uint256) {
         return epochInfor[pool].lastEpochExecuted;
+    }
+
+    function getNoteTokenAddress(address pool) public view returns (address, address) {
+        require(sotManager.getTokenAddress(pool) != address(0), 'EpochExecutor: no SeniorToken found');
+        require(jotManager.getTokenAddress(pool) != address(0), 'EpochExecutor: no JuniorToken found');
+        return (sotManager.getTokenAddress(pool), jotManager.getTokenAddress(pool));
     }
 }

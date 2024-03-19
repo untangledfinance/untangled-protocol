@@ -2,15 +2,15 @@
 pragma solidity 0.8.19;
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IPool} from '../../interfaces/IPool.sol';
+import {IEpochExecutor} from '../../interfaces/IEpochExecutor.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {OWNER_ROLE, ORIGINATOR_ROLE, POOL_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
 import {PoolStorage} from './PoolStorage.sol';
-import {DataTypes, ONE, ONE_HUNDRED_PERCENT} from '../../libraries/DataTypes.sol';
+import {DataTypes, ONE, ONE_HUNDRED_PERCENT, RATE_SCALING_FACTOR} from '../../libraries/DataTypes.sol';
 import {UntangledBase} from '../../base/UntangledBase.sol';
 import {PoolNAVLogic} from '../../libraries/logic/PoolNAVLogic.sol';
 import {PoolAssetLogic} from '../../libraries/logic/PoolAssetLogic.sol';
-import {TGELogic} from '../../libraries/logic/TGELogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {RebaseLogic} from '../../libraries/logic/RebaseLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
@@ -27,6 +27,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     Registry public registry;
 
     event InsertNFTAsset(address token, uint256 tokenId);
+    event Repay(address poolAddress, uint256 increaseInterestRepay, uint256 increasePrincipalRepay, uint256 timestamp);
 
     modifier requirePoolAdminOrOwner() {
         require(
@@ -51,8 +52,8 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         _poolStorage.validatorRequired = newPoolParams.validatorRequired;
         _poolStorage.pot = address(this);
 
-        TGELogic._setMinFirstLossCushion(_poolStorage, newPoolParams.minFirstLossCushion);
-        TGELogic._setDebtCeiling(_poolStorage, newPoolParams.debtCeiling);
+        setMinFirstLossCushion(newPoolParams.minFirstLossCushion);
+        setDebtCeiling(newPoolParams.debtCeiling);
 
         require(
             INoteToken(newPoolParams.currency).approve(address(this), type(uint256).max),
@@ -62,10 +63,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         registry.getLoanAssetToken().setApprovalForAll(address(registry.getLoanKernel()), true);
     }
 
-    function tgeAddress() public view returns (address) {
-        return _poolStorage.tgeAddress;
-    }
-
     function getNFTAssetsLength() external view returns (uint256) {
         return _poolStorage.nftAssets.length;
     }
@@ -73,11 +70,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     /// @notice A view function that returns an array of token asset addresses
     function getTokenAssetAddresses() external view returns (address[] memory) {
         return _poolStorage.tokenAssetAddresses;
-    }
-
-    /// @notice A view function that returns the length of the token asset addresses array
-    function getTokenAssetAddressesLength() external view returns (uint256) {
-        return _poolStorage.tokenAssetAddresses.length;
     }
 
     /// @notice Riks scores length
@@ -90,12 +82,16 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return _poolStorage.riskScores[index];
     }
 
-    function nftAssets(uint256 idx) external view returns (DataTypes.NFTAsset memory) {
-        return _poolStorage.nftAssets[idx];
+    function capitalReserve() external view returns (uint256) {
+        return _poolStorage.capitalReserve;
     }
 
-    function tokenAssetAddresses(uint256 idx) external view returns (address) {
-        return _poolStorage.tokenAssetAddresses[idx];
+    function incomeReserve() external view returns (uint256) {
+        return _poolStorage.incomeReserve;
+    }
+
+    function nftAssets(uint256 idx) external view returns (DataTypes.NFTAsset memory) {
+        return _poolStorage.nftAssets[idx];
     }
 
     /// @notice sets up the risk scores for the contract for pool
@@ -159,10 +155,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     }
 
     /// @dev Trigger set up opening block timestamp
-    function setUpOpeningBlockTimestamp() external {
-        require(_msgSender() == tgeAddress(), 'SecuritizationPool: Only tge address');
-        PoolAssetLogic.setUpOpeningBlockTimestamp(_poolStorage);
-    }
 
     function onERC721Received(address, address, uint256 tokenId, bytes memory) external returns (bytes4) {
         address token = _msgSender();
@@ -204,24 +196,28 @@ contract Pool is IPool, PoolStorage, UntangledBase {
             amounts
         );
 
-        uint256 totalIncomeRepay;
-        uint256 totalCapitalRepay;
+        uint256 totalInterestRepay;
+        uint256 totalPrincipalRepay;
 
         for (uint256 i; i < numberOfLoans; i++) {
             uint256 interestAmount = previousDebts[i] - lastOutstandingDebt[i];
 
             if (repayAmounts[i] <= interestAmount) {
-                totalIncomeRepay += repayAmounts[i];
+                totalInterestRepay += repayAmounts[i];
             } else {
-                totalIncomeRepay += interestAmount;
-                totalCapitalRepay += repayAmounts[i] - interestAmount;
+                totalInterestRepay += interestAmount;
+                totalPrincipalRepay += repayAmounts[i] - interestAmount;
             }
         }
 
-        _poolStorage.incomeReserve += totalIncomeRepay;
-        _poolStorage.capitalReserve += totalCapitalRepay;
-
+        _poolStorage.incomeReserve += totalInterestRepay;
+        _poolStorage.capitalReserve += totalPrincipalRepay;
+        emit Repay(address(this), totalInterestRepay, totalPrincipalRepay, block.timestamp);
         return (repayAmounts, previousDebts);
+    }
+
+    function getRepaidAmount() external view returns (uint256, uint256) {
+        return (_poolStorage.totalPrincipalRepaid, _poolStorage.totalInterestRepaid);
     }
 
     function debt(uint256 loan) external view returns (uint256 loanDebt) {
@@ -263,20 +259,26 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return _poolStorage.details[agreementId];
     }
 
-    /*==================== TGE ====================*/
     function setPot(address _pot) external whenNotPaused nonReentrant requirePoolAdminOrOwner {
-        TGELogic.setPot(_poolStorage, _pot);
+        GenericLogic.setPot(_poolStorage, _pot);
         registry.getSecuritizationManager().registerPot(_pot);
     }
 
     /// @notice sets debt ceiling value
-    function setDebtCeiling(uint256 _debtCeiling) external whenNotPaused requirePoolAdminOrOwner {
-        TGELogic.setDebtCeiling(_poolStorage, _debtCeiling);
+    function setDebtCeiling(uint256 _debtCeiling) public whenNotPaused requirePoolAdminOrOwner {
+        _poolStorage.debtCeiling = _debtCeiling;
+        emit UpdateDebtCeiling(_debtCeiling);
     }
 
     /// @notice sets mint first loss value
-    function setMinFirstLossCushion(uint32 _minFirstLossCushion) external whenNotPaused requirePoolAdminOrOwner {
-        TGELogic.setMinFirstLossCushion(_poolStorage, _minFirstLossCushion);
+    function setMinFirstLossCushion(uint32 _minFirstLossCushion) public whenNotPaused requirePoolAdminOrOwner {
+        require(
+            _minFirstLossCushion <= 100 * RATE_SCALING_FACTOR,
+            'SecuritizationPool: minFirstLossCushion is greater than 100'
+        );
+
+        _poolStorage.minFirstLossCushion = _minFirstLossCushion;
+        emit UpdateMintFirstLoss(_minFirstLossCushion);
     }
 
     function pot() external view returns (address) {
@@ -286,23 +288,40 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     /// @dev trigger update reserve when buy note token action happens
     function increaseCapitalReserve(uint256 currencyAmount) external whenNotPaused {
         require(
-            _msgSender() == address(registry.getSecuritizationManager()) ||
-                _msgSender() == address(registry.getNoteTokenVault()),
-            'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
+            _msgSender() == address(registry.getEpochExecutor()),
+            // _msgSender() == address(registry.getNoteTokenVault()),
+            'SecuritizationPool: Caller must be EpochExecutor'
         );
         GenericLogic.increaseCapitalReserve(_poolStorage, currencyAmount);
     }
 
-    function secondTGEAddress() external view returns (address) {
-        return _poolStorage.secondTGEAddress;
+    /// @dev trigger update reserve
+    function decreaseIncomeReserve(uint256 currencyAmount) external whenNotPaused {
+        require(
+            _msgSender() == address(registry.getEpochExecutor()),
+            // _msgSender() == address(registry.getNoteTokenVault()),
+            'SecuritizationPool: Caller must be EpochExecutor'
+        );
+        GenericLogic.decreaseIncomeReserve(_poolStorage, currencyAmount);
     }
 
-    function sotToken() external view returns (address) {
-        return TGELogic.sotToken(_poolStorage);
+    function decreaseCapitalReserve(uint256 currencyAmount) external whenNotPaused {
+        require(
+            _msgSender() == address(registry.getEpochExecutor()),
+            // _msgSender() == address(registry.getNoteTokenVault())
+            'SecuritizationPool: Caller must be EpochExecutor '
+        );
+        GenericLogic.decreaseCapitalReserve(_poolStorage, currencyAmount);
     }
 
-    function jotToken() external view returns (address) {
-        return TGELogic.jotToken(_poolStorage);
+    function sotToken() public view returns (address) {
+        (address sotAddress, ) = registry.getEpochExecutor().getNoteTokenAddress(address(this));
+        return sotAddress;
+    }
+
+    function jotToken() public view returns (address) {
+        (, address jotAddress) = registry.getEpochExecutor().getNoteTokenAddress(address(this));
+        return jotAddress;
     }
 
     function underlyingCurrency() external view returns (address) {
@@ -317,14 +336,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return GenericLogic.reserve(_poolStorage);
     }
 
-    function capitalReserve() external view returns (uint256) {
-        return _poolStorage.capitalReserve;
-    }
-
-    function incomeReserve() external view returns (uint256) {
-        return _poolStorage.incomeReserve;
-    }
-
     function debtCeiling() external view returns (uint256) {
         return _poolStorage.debtCeiling;
     }
@@ -336,7 +347,8 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     function setInterestRateSOT(uint32 _newRate) external {
         registry.requireSecuritizationManager(_msgSender());
-        TGELogic._setInterestRateSOT(_poolStorage, _newRate);
+        _poolStorage.interestRateSOT = _newRate;
+        emit UpdateInterestRateSot(_newRate);
     }
 
     function minFirstLossCushion() external view returns (uint32) {
@@ -348,14 +360,17 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return _poolStorage.totalAssetRepaidCurrency;
     }
 
-    /// @notice injects the address of the Token Generation Event (TGE) and the associated token address
-    function injectTGEAddress(
-        address _tgeAddress,
-        // address _tokenAddress,
-        Configuration.NOTE_TOKEN_TYPE _noteToken
-    ) external whenNotPaused {
+    function injectNoteToken() external whenNotPaused {
         registry.requireSecuritizationManager(_msgSender());
-        TGELogic.injectTGEAddress(_poolStorage, _tgeAddress, _noteToken);
+        (address sotAddress, address jotAddress) = registry.getEpochExecutor().getNoteTokenAddress(address(this));
+        _poolStorage.sotToken = sotAddress;
+        _poolStorage.jotToken = jotAddress;
+    }
+
+    /// @dev trigger update asset value repaid
+    function increaseTotalAssetRepaidCurrency(uint256 amount) external whenNotPaused {
+        registry.requireLoanKernel(_msgSender());
+        _poolStorage.totalAssetRepaidCurrency = _poolStorage.totalAssetRepaidCurrency + amount;
     }
 
     /// @dev Disburses a specified amount of currency to the given user.
@@ -363,25 +378,10 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     /// @param currencyAmount The amount of currency to disburse.
     function disburse(address usr, uint256 currencyAmount) external whenNotPaused {
         require(
-            _msgSender() == address(registry.getNoteTokenVault()),
-            'SecuritizationPool: Caller must be NoteTokenVault'
+            _msgSender() == address(registry.getEpochExecutor()),
+            'SecuritizationPool: Caller must be EpochExecutor'
         );
-        TGELogic.disburse(_poolStorage, usr, currencyAmount);
-    }
-
-    /// @notice checks if the redemption process has finished
-    function hasFinishedRedemption() external view returns (bool) {
-        return TGELogic.hasFinishedRedemption(_poolStorage);
-    }
-
-    ///@notice check current debt ceiling is valid
-    function isDebtCeilingValid() external view returns (bool) {
-        return TGELogic.isDebtCeilingValid(_poolStorage);
-    }
-
-    function claimCashRemain(address recipientWallet) external whenNotPaused onlyRole(OWNER_ROLE) {
-        require(TGELogic.hasFinishedRedemption(_poolStorage), 'SecuritizationPool: Redemption has not finished');
-        TGELogic.claimCashRemain(_poolStorage, recipientWallet);
+        GenericLogic.disburse(_poolStorage, usr, currencyAmount);
     }
 
     function openingBlockTimestamp() external view returns (uint64) {
@@ -392,8 +392,8 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     function withdraw(address to, uint256 amount) external whenNotPaused {
         registry.requireLoanKernel(_msgSender());
         require(hasRole(ORIGINATOR_ROLE, to), 'SecuritizationPool: Only Originator can drawdown');
-        require(!registry.getNoteTokenVault().redeemDisabled(address(this)), 'SecuritizationPool: withdraw paused');
-        TGELogic.withdraw(_poolStorage, to, amount);
+        // require(!registry.getNoteTokenVault().redeemDisabled(address(this)), 'SecuritizationPool: withdraw paused');
+        GenericLogic.withdraw(_poolStorage, to, amount);
     }
 
     function validatorRequired() external view returns (bool) {
@@ -413,7 +413,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     function changeSeniorAsset(uint256 _seniorSupply, uint256 _seniorRedeem) external {
         require(
             _msgSender() == address(registry.getSecuritizationManager()) ||
-                _msgSender() == address(registry.getNoteTokenVault()),
+                _msgSender() == address(registry.getEpochExecutor()),
             'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
         RebaseLogic.changeSeniorAsset(
@@ -431,8 +431,8 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     }
 
     function calcTokenPrices() external view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice) {
-        address jotTokenAddress = TGELogic.jotToken(_poolStorage);
-        address sotTokenAddress = TGELogic.sotToken(_poolStorage);
+        address jotTokenAddress = jotToken();
+        address sotTokenAddress = sotToken();
         uint256 noteTokenDecimal = (10 ** INoteToken(sotTokenAddress).decimals());
         (uint256 _juniorTokenPrice, uint256 _seniorTokenPrice) = RebaseLogic.calcTokenPrices(
             GenericLogic.currentNAV(_poolStorage),

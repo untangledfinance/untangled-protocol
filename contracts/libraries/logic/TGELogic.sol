@@ -9,29 +9,17 @@ import {DataTypes, RATE_SCALING_FACTOR} from '../DataTypes.sol';
 import {TransferHelper} from '../TransferHelper.sol';
 
 library TGELogic {
-
     event UpdateTGEAddress(address tge, Configuration.NOTE_TOKEN_TYPE noteType);
     event IncreaseReserve(uint256 increasingAmount, uint256 currencyAmount);
+    event IncreaseCapitalReserve(uint256 increasingAmount, uint256 currencyAmount);
     event DecreaseReserve(uint256 decreasingAmount, uint256 currencyAmount);
+    event DecreaseCapitalReserve(uint256 decreasingAmount, uint256 currencyAmount);
+    event DecreaseIncomeReserve(uint256 decreasingAmount, uint256 currencyAmount);
     event UpdateDebtCeiling(uint256 _debtCeiling);
     event UpdateMintFirstLoss(uint32 _mintFirstLoss);
     event UpdateInterestRateSot(uint32 _interestRateSot);
     event Withdraw(address originatorAddress, uint256 amount);
     event ClaimCashRemain(address pot, address recipientWallet, uint256 balance);
-
-    // alias
-    function sotToken(DataTypes.Storage storage _poolStorage) public view returns (address) {
-        address tge = _poolStorage.tgeAddress;
-        if (tge == address(0)) return address(0);
-        return IMintedNormalTGE(tge).token();
-    }
-
-    // alias
-    function jotToken(DataTypes.Storage storage _poolStorage) public view returns (address) {
-        address tge = _poolStorage.secondTGEAddress;
-        if (tge == address(0)) return address(0);
-        return IMintedNormalTGE(tge).token();
-    }
 
     function underlyingCurrency(DataTypes.Storage storage _poolStorage) public view returns (address) {
         return _poolStorage.underlyingCurrency;
@@ -57,52 +45,26 @@ library TGELogic {
         return _poolStorage.totalAssetRepaidCurrency;
     }
 
-    function injectTGEAddress(
-        DataTypes.Storage storage _poolStorage,
-        address _tgeAddress,
-        Configuration.NOTE_TOKEN_TYPE _noteType
-    ) external {
-        require(_tgeAddress != address(0), 'SecuritizationPool: Address zero');
-        address _tokenAddress = IMintedNormalTGE(_tgeAddress).token();
-        require(_tokenAddress != address(0), 'SecuritizationPool: Address zero');
-
-        if (_noteType == Configuration.NOTE_TOKEN_TYPE.SENIOR) {
-            require(_poolStorage.tgeAddress == address(0), 'SecuritizationPool: Already issue sot');
-            _poolStorage.tgeAddress = _tgeAddress;
-            _poolStorage.sotToken = _tokenAddress;
-        } else {
-            require(_poolStorage.secondTGEAddress == address(0), 'SecuritizationPool: Already issue jot');
-            _poolStorage.secondTGEAddress = _tgeAddress;
-            _poolStorage.jotToken = _tokenAddress;
-        }
-
-        emit UpdateTGEAddress(_tgeAddress, _noteType);
-    }
-
     function disburse(DataTypes.Storage storage _poolStorage, address usr, uint256 currencyAmount) external {
         TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, usr, currencyAmount);
     }
 
     function isDebtCeilingValid(DataTypes.Storage storage _poolStorage) public view returns (bool) {
-        uint256 totalDebt = 0;
-        if (_poolStorage.tgeAddress != address(0)) {
-            totalDebt += IMintedNormalTGE(_poolStorage.tgeAddress).currencyRaised();
-        }
-        if (_poolStorage.secondTGEAddress != address(0)) {
-            totalDebt += IMintedNormalTGE(_poolStorage.secondTGEAddress).currencyRaised();
-        }
-        return _poolStorage.debtCeiling >= totalDebt;
+        return _poolStorage.debtCeiling >= _poolStorage.capitalReserve;
     }
 
-    function hasFinishedRedemption(DataTypes.Storage storage _poolStorage) public view returns (bool) {
-        address stoken = sotToken(_poolStorage);
-        if (stoken != address(0)) {
-            require(IERC20Upgradeable(stoken).totalSupply() == 0, 'SecuritizationPool: SOT still remain');
+    // Increase by value
+    function increaseTotalAssetRepaidCurrency(DataTypes.Storage storage _poolStorage, uint256 amount) external {
+        _poolStorage.totalAssetRepaidCurrency = _poolStorage.totalAssetRepaidCurrency + amount;
+    }
+
+    function hasFinishedRedemption(address sotAddress, address jotAddress) public view returns (bool) {
+        if (sotAddress != address(0)) {
+            require(IERC20Upgradeable(sotAddress).totalSupply() == 0, 'SecuritizationPool: SOT still remain');
         }
 
-        address jtoken = jotToken(_poolStorage);
-        if (jtoken != address(0)) {
-            require(IERC20Upgradeable(jtoken).totalSupply() == 0, 'SecuritizationPool: JOT still remain');
+        if (jotAddress != address(0)) {
+            require(IERC20Upgradeable(jotAddress).totalSupply() == 0, 'SecuritizationPool: JOT still remain');
         }
 
         return true;
@@ -121,10 +83,6 @@ library TGELogic {
     }
 
     function setMinFirstLossCushion(DataTypes.Storage storage _poolStorage, uint32 _minFirstLossCushion) external {
-        _setMinFirstLossCushion(_poolStorage, _minFirstLossCushion);
-    }
-
-    function _setMinFirstLossCushion(DataTypes.Storage storage _poolStorage, uint32 _minFirstLossCushion) internal {
         require(
             _minFirstLossCushion <= 100 * RATE_SCALING_FACTOR,
             'SecuritizationPool: minFirstLossCushion is greater than 100'
@@ -135,10 +93,6 @@ library TGELogic {
     }
 
     function setDebtCeiling(DataTypes.Storage storage _poolStorage, uint256 _debtCeiling) external {
-        _setDebtCeiling(_poolStorage, _debtCeiling);
-    }
-
-    function _setDebtCeiling(DataTypes.Storage storage _poolStorage, uint256 _debtCeiling) internal {
         _poolStorage.debtCeiling = _debtCeiling;
         emit UpdateDebtCeiling(_debtCeiling);
     }
@@ -146,6 +100,23 @@ library TGELogic {
     function _setInterestRateSOT(DataTypes.Storage storage _poolStorage, uint32 _newRate) external {
         _poolStorage.interestRateSOT = _newRate;
         emit UpdateInterestRateSot(_newRate);
+    }
+
+    function increaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        _poolStorage.capitalReserve = _poolStorage.capitalReserve + currencyAmount;
+        emit IncreaseCapitalReserve(currencyAmount, _poolStorage.capitalReserve);
+    }
+
+    function decreaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        require(_poolStorage.capitalReserve >= currencyAmount, 'insufficient balance of capital reserve');
+        _poolStorage.capitalReserve = _poolStorage.capitalReserve - currencyAmount;
+        emit DecreaseCapitalReserve(currencyAmount, _poolStorage.capitalReserve);
+    }
+
+    function decreaseIncomeReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+        require(_poolStorage.incomeReserve >= currencyAmount, 'insufficient balance of income reserve');
+        _poolStorage.incomeReserve = _poolStorage.incomeReserve - currencyAmount;
+        emit DecreaseIncomeReserve(currencyAmount, _poolStorage.incomeReserve);
     }
 
     // After closed pool and redeem all not -> get remain cash to recipient wallet
@@ -161,11 +132,10 @@ library TGELogic {
     }
 
     function withdraw(DataTypes.Storage storage _poolStorage, address to, uint256 amount) public {
-        require(_poolStorage.capitalReserve >= amount, 'SecuritizationPool: not enough reserve');
+        require(_poolStorage.capitalReserve >= amount, 'SecuritizationPool: insufficient balance of capital reserve');
         _poolStorage.capitalReserve = _poolStorage.capitalReserve - amount;
-        emit DecreaseReserve(amount, _poolStorage.reserve);
 
         TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, _poolStorage.pot, to, amount);
-        emit Withdraw(to, amount);
+        emit DecreaseCapitalReserve(amount, _poolStorage.capitalReserve);
     }
 }

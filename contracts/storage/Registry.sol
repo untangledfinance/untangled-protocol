@@ -41,8 +41,15 @@ contract Registry is UntangledBase {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_FACTORY), newAddress);
     }
 
-    function setTokenGenerationEventFactory(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.TOKEN_GENERATION_EVENT_FACTORY), newAddress);
+    function setSeniorTokenManager(address newAddress) public onlyAdmin whenNotPaused {
+        _setAddress(uint8(Configuration.CONTRACT_TYPE.SENIOR_TOKEN_MANAGER), newAddress);
+    }
+    function setJuniorTokenManager(address newAddress) public onlyAdmin whenNotPaused {
+        _setAddress(uint8(Configuration.CONTRACT_TYPE.JUNIOR_TOKEN_MANAGER), newAddress);
+    }
+
+    function setEpochExecutor(address newAddress) public onlyAdmin whenNotPaused {
+        _setAddress(uint8(Configuration.CONTRACT_TYPE.EPOCH_EXECUTOR), newAddress);
     }
 
     function setLoanAssetToken(address newAddress) public onlyAdmin whenNotPaused {
@@ -59,9 +66,5 @@ contract Registry is UntangledBase {
 
     function setGo(address newAddress) public onlyAdmin whenNotPaused {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.GO), newAddress);
-    }
-
-    function setNoteTokenVault(address newAddress) public onlyAdmin whenNotPaused {
-        _setAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT), newAddress);
     }
 }

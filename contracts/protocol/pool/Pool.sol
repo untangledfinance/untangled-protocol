@@ -180,6 +180,8 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         uint256[] calldata amounts
     ) external returns (uint256[] memory, uint256[] memory) {
         require(address(registry.getLoanKernel()) == msg.sender, 'not authorized');
+        uint256 juniorRatio = calcJuniorRatio();
+
         uint256 numberOfLoans = loans.length;
         require(numberOfLoans == amounts.length, 'Invalid length');
 
@@ -212,6 +214,14 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
         _poolStorage.incomeReserve += totalInterestRepay;
         _poolStorage.capitalReserve += totalPrincipalRepay;
+
+        uint256 jotIncomeAmt = (totalInterestRepay * juniorRatio) / ONE_HUNDRED_PERCENT;
+        uint256 sotIncomeAmt = totalInterestRepay - jotIncomeAmt;
+
+        // Increase income for each type of token
+        INoteToken(_poolStorage.sotToken).increaseIncome(sotIncomeAmt);
+        INoteToken(_poolStorage.jotToken).increaseIncome(jotIncomeAmt);
+
         emit Repay(address(this), totalInterestRepay, totalPrincipalRepay, block.timestamp);
         return (repayAmounts, previousDebts);
     }

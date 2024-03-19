@@ -6,7 +6,6 @@ import {IERC20MetadataUpgradeable} from '@openzeppelin/contracts-upgradeable/tok
 import {IPauseable} from './IPauseable.sol';
 
 interface INoteToken is IERC20Upgradeable, IERC20MetadataUpgradeable, IPauseable {
-
     function poolAddress() external view returns (address);
 
     function noteTokenType() external view returns (uint8);
@@ -14,4 +13,12 @@ interface INoteToken is IERC20Upgradeable, IERC20MetadataUpgradeable, IPauseable
     function mint(address receiver, uint256 amount) external;
 
     function burn(uint256 amount) external;
+
+    function increaseIncome(uint256 usdAmount) external;
+
+    function decreaseUserPrinciple(address[] calldata users, uint256[] calldata amounts) external;
+
+    function decreaseUserIncome(address[] calldata users, uint256[] calldata amounts) external;
+
+    function getUserIncomes(address[] calldata users) external view returns (uint256[] memory);
 }

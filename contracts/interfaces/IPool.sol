@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 import {DataTypes} from '../libraries/DataTypes.sol';
 import {Configuration} from '../libraries/Configuration.sol';
 
+import '../storage/Registry.sol';
+
 interface IPool {
     event UpdateTGEAddress(address tge, Configuration.NOTE_TOKEN_TYPE noteType);
     event IncreaseReserve(uint256 increasingAmount, uint256 currencyAmount);
@@ -74,6 +76,8 @@ interface IPool {
     function pot() external view returns (address);
 
     function rebase() external;
+
+    function registry() external returns (Registry);
 
     function repayLoan(
         uint256[] calldata loans,

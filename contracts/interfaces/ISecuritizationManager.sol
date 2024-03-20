@@ -20,6 +20,7 @@ interface ISecuritizationManager {
     event NoteTokenPurchased(
         address indexed investor,
         address indexed tgeAddress,
+        address noteTokenAddress,
         address poolAddress,
         uint256 amount,
         uint256 tokenAmount

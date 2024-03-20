@@ -270,7 +270,14 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
             IPool(pool).changeSeniorAsset(currencyAmount, 0);
         }
 
-        emit NoteTokenPurchased(_msgSender(), tgeAddress, pool, currencyAmount, tokenAmount);
+        emit NoteTokenPurchased(
+            _msgSender(),
+            tgeAddress,
+            IMintedNormalTGE(tgeAddress).token(),
+            pool,
+            currencyAmount,
+            tokenAmount
+        );
     }
 
     function setAllowedUIDTypes(uint256[] calldata ids) external onlyRole(DEFAULT_ADMIN_ROLE) {

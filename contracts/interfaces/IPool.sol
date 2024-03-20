@@ -3,6 +3,7 @@ pragma solidity 0.8.19;
 
 import {DataTypes} from '../libraries/DataTypes.sol';
 import {Configuration} from '../libraries/Configuration.sol';
+import '../storage/Registry.sol';
 
 interface IPool {
     function calcJuniorRatio() external view returns (uint256 juniorRatio);
@@ -71,6 +72,8 @@ interface IPool {
     ) external returns (uint256[] memory, uint256[] memory);
 
     function reserve() external view returns (uint256);
+
+    function registry() external returns (Registry);
 
     function risk(bytes32 nft_) external view returns (uint256 risk_);
 

@@ -162,7 +162,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
                 poolValue -
                 expectedSOTCurrencyAmount -
                 ((seniorAsset - expectedSOTCurrencyAmount) * RATE_SCALING_FACTOR) /
-                (RATE_SCALING_FACTOR - minFirstLossCushion);
+                (ONE_HUNDRED_PERCENT - minFirstLossCushion);
         }
 
         uint256 ableToWithdrawLeft = ableToWithdraw - expectedSOTCurrencyAmount;

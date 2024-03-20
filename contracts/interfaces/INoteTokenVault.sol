@@ -45,17 +45,23 @@ interface INoteTokenVault {
         uint256 maxTimestamp;
     }
 
+    struct EpochParam {
+        address pool;
+        uint256 epochId;
+        uint256 batchId;
+    }
+
     /// @notice redeemJOTOrder function can be used to place or revoke a redeem
     function redeemOrder(RedeemOrderParam calldata redeemParam, bytes calldata signature) external;
 
     /// @dev Disburses funds and handles JOT redemptions for a pool.
-    /// @param pool The address of the pool contract.
+    /// @param epochParam The information of the epoch params.
     /// @param toAddresses An array of recipient addresses.
     /// @param currencyAmounts An array of amounts to disburse to each recipient.
     /// @param redeemedNoteAmounts An array of JOT amounts redeemed by each recipient.
     /// @notice Only accessible by BACKEND_ADMIN role.
     function disburseAll(
-        address pool,
+        EpochParam calldata epochParam,
         address noteTokenAddress,
         address[] memory toAddresses,
         uint256[] memory currencyAmounts,

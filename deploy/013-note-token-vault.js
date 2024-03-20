@@ -37,6 +37,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     //     beSigner
     // );
 
+    // console.log('beAdmin', beAdmin);
     // const BACKEND_ADMIN = utils.keccak256(Buffer.from('BACKEND_ADMIN'));
     // await execute(
     //     'NoteTokenVault',
@@ -45,7 +46,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     //         log: true,
     //     },
     //     'grantRole',
-    //     SIGNER_ROLE,
+    //     BACKEND_ADMIN,
     //     beAdmin
     // );
 };

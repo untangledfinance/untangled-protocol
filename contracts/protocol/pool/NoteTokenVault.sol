@@ -41,6 +41,7 @@ contract NoteTokenVault is
     /// @dev We include a nonce in every hashed message, and increment the nonce as part of a
     /// state-changing operation, so as to prevent replay attacks, i.e. the reuse of a signature.
     mapping(address => uint256) public nonces;
+    mapping(address => mapping(uint256 => mapping(uint256 => bool))) public epochBatchs;
 
     /// @dev Checks if redeeming is allowed for a given pool.
     /// @param pool The address of the pool to check.
@@ -155,12 +156,16 @@ contract NoteTokenVault is
 
     /// @inheritdoc INoteTokenVault
     function disburseAll(
-        address pool,
+        EpochParam calldata epochParam,
         address noteTokenAddress,
         address[] memory toAddresses,
         uint256[] memory currencyAmounts,
         uint256[] memory redeemedNoteAmounts
     ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
+        address pool = epochParam.pool;
+
+        require(!epochBatchs[pool][epochParam.epochId][epochParam.batchId], 'NoteTokenVault: BatchId already existed');
+
         IPool poolTGE = IPool(pool);
         address jotTokenAddress = poolTGE.jotToken();
         address sotTokenAddress = poolTGE.sotToken();
@@ -168,6 +173,8 @@ contract NoteTokenVault is
             _isJotToken(noteTokenAddress, jotTokenAddress) || _isSotToken(noteTokenAddress, sotTokenAddress),
             'NoteTokenVault: Invalid token address'
         );
+
+        epochBatchs[pool][epochParam.epochId][epochParam.batchId] = true;
 
         uint256 totalCurrencyAmount = 0;
         uint256 userLength = toAddresses.length;

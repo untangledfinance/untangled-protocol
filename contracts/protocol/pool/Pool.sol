@@ -218,6 +218,10 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return GenericLogic.currentNAVAsset(_poolStorage, tokenId);
     }
 
+    function getReserves() external view returns (uint256, uint256) {
+        return (_poolStorage.incomeReserve, _poolStorage.capitalReserve);
+    }
+
     function futureValue(bytes32 nft_) external view returns (uint256) {
         return uint256(_poolStorage.details[nft_].futureValue);
     }

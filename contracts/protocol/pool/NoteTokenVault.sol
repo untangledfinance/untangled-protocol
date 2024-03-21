@@ -42,6 +42,7 @@ contract NoteTokenVault is
     /// state-changing operation, so as to prevent replay attacks, i.e. the reuse of a signature.
     mapping(address => uint256) public nonces;
     mapping(address => mapping(uint256 => mapping(uint256 => bool))) public epochBatchs;
+    mapping(address => mapping(uint256 => bool)) epochPreDistributed;
 
     /// @dev Checks if redeeming is allowed for a given pool.
     /// @param pool The address of the pool to check.
@@ -124,12 +125,17 @@ contract NoteTokenVault is
     }
 
     function preDistribute(
+        EpochParam calldata epochParam,
         address poolAddress,
         uint256 incomeAmount,
         uint256 capitalAmount,
         address[] calldata noteTokenAddresses,
         uint256[] calldata totalRedeemedNoteAmounts
     ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
+        require(
+            !epochPreDistributed[poolAddress][epochParam.epochId],
+            'NoteTokenVault: Epoch have been pre distributed'
+        );
         IPool pool = IPool(poolAddress);
 
         (, uint256 sotTokenPrice) = pool.calcTokenPrices();
@@ -150,8 +156,15 @@ contract NoteTokenVault is
             pool.changeSeniorAsset(0, (sotTokenPrice * totalSotRedeem) / 10 ** decimals);
         }
         require(pool.isMinFirstLossValid(), 'NoteTokenVault: Exceeds MinFirstLoss');
-
-        emit PreDistribute(poolAddress, incomeAmount, capitalAmount, noteTokenAddresses, totalRedeemedNoteAmounts);
+        epochPreDistributed[poolAddress][epochParam.epochId] = true;
+        emit PreDistribute(
+            poolAddress,
+            epochParam,
+            incomeAmount,
+            capitalAmount,
+            noteTokenAddresses,
+            totalRedeemedNoteAmounts
+        );
     }
 
     /// @inheritdoc INoteTokenVault
@@ -200,7 +213,7 @@ contract NoteTokenVault is
             IMintedNormalTGE(IPool(pool).tgeAddress()).onRedeem(totalCurrencyAmount);
         }
 
-        emit DisburseOrder(pool, noteTokenAddress, toAddresses, currencyAmounts, redeemedNoteAmounts);
+        emit DisburseOrder(pool, epochParam, noteTokenAddress, toAddresses, currencyAmounts, redeemedNoteAmounts);
     }
 
     function _validateCancelParam(CancelOrderParam calldata cancelParam, bytes calldata signature) internal view {

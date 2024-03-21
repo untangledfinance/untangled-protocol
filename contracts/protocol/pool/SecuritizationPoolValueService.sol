@@ -94,11 +94,8 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
     }
 
     /// @inheritdoc ISecuritizationPoolValueService
-    function getExpectedAssetsValue(address poolAddress) public view returns (uint256 expectedAssetsValue) {
-        expectedAssetsValue = 0;
-        IPool securitizationPool = IPool(poolAddress);
-
-        expectedAssetsValue = expectedAssetsValue + getExpectedLATAssetValue(poolAddress);
+    function getExpectedAssetsValue(address poolAddress) public view returns (uint256) {
+        return getExpectedLATAssetValue(poolAddress);
     }
 
     function getPoolValue(address poolAddress) public view returns (uint256) {

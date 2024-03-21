@@ -235,12 +235,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         require(hasAllowedUID(_msgSender()), 'Unauthorized. Must have correct UID');
 
         IMintedNormalTGE tge = IMintedNormalTGE(tgeAddress);
-        address poolOfPot = potToPool[_msgSender()];
-        uint256 tokenAmount = tge.buyTokens(
-            _msgSender(),
-            poolOfPot == address(0) ? _msgSender() : poolOfPot,
-            currencyAmount
-        );
+        uint256 tokenAmount = tge.buyTokens(_msgSender(), _msgSender(), currencyAmount);
         address pool = tge.pool();
         require(!registry.getNoteTokenVault().redeemDisabled(pool), 'SM: Buy token paused');
 
@@ -257,11 +252,6 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         }
 
         IPool(pool).increaseCapitalReserve(currencyAmount);
-
-        if (poolOfPot != address(0)) {
-            IPool(poolOfPot).collectERC20Asset(noteToken);
-            IPool(poolOfPot).decreaseCapitalReserve(currencyAmount);
-        }
 
         // rebase
         if (noteTokenType == uint8(Configuration.NOTE_TOKEN_TYPE.JUNIOR)) {

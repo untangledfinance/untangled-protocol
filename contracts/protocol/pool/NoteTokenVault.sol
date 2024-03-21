@@ -190,12 +190,6 @@ contract NoteTokenVault is
             } else {
                 poolUserRedeems[pool][toAddresses[i]].redeemSOTAmount -= redeemedNoteAmounts[i];
             }
-
-            // Update pot pool reserve in P2P investment
-            address poolOfPot = registry.getSecuritizationManager().potToPool(toAddresses[i]);
-            if (poolOfPot != address(0)) {
-                IPool(poolOfPot).increaseCapitalReserve(currencyAmounts[i]);
-            }
         }
 
         if (_isJotToken(noteTokenAddress, jotTokenAddress)) {

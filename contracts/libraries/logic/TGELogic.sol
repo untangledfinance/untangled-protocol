@@ -43,10 +43,6 @@ library TGELogic {
         return _poolStorage.minFirstLossCushion;
     }
 
-    function paidPrincipalAmountSOT(DataTypes.Storage storage _poolStorage) public view returns (uint256) {
-        return _poolStorage.paidPrincipalAmountSOT;
-    }
-
     function debtCeiling(DataTypes.Storage storage _poolStorage) public view returns (uint256) {
         return _poolStorage.debtCeiling;
     }

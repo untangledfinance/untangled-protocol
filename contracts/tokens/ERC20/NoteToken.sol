@@ -34,12 +34,14 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
         address to,
         uint256 amount
     ) internal virtual override(ERC20PresetMinterPauserUpgradeable) {
-        address noteTokenVaultAddress = IPool(_poolAddress).registry().getAddress(
+        Registry registryContract = IPool(_poolAddress).registry();
+
+        address noteTokenVaultAddress = registryContract.getAddress(
             uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT)
         );
 
-        // if not mint
-        if (from != address(0)) {
+        // If not mint and not whitelist addresses
+        if (from != address(0) && !registryContract.isValidNoteTokenTransfer(from, to)) {
             require(from == noteTokenVaultAddress || to == noteTokenVaultAddress, 'Invalid transfer');
         }
     }

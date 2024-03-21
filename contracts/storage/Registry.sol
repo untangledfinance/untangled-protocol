@@ -13,6 +13,7 @@ import {Configuration} from '../libraries/Configuration.sol';
  */
 contract Registry is UntangledBase {
     mapping(uint8 => address) public contractAddresses;
+    mapping(address => bool) public whiteListAddresses;
 
     event AddressUpdated(address owner, uint8 index, address oldValue, address newValue);
 
@@ -27,6 +28,18 @@ contract Registry is UntangledBase {
 
     function getAddress(uint8 index) public view returns (address) {
         return contractAddresses[index];
+    }
+
+    function isValidNoteTokenTransfer(address from, address to) external view returns (bool) {
+        return whiteListAddresses[from] || whiteListAddresses[to];
+    }
+
+    function setWhiteListAddresses(address[] memory addresses, bool[] memory bools) public onlyAdmin {
+        uint256 length = addresses.length;
+        require(length == bools.length, 'Invalid length');
+        for (uint256 i; i < length; i++) {
+            whiteListAddresses[addresses[i]] = bools[i];
+        }
     }
 
     function setSecuritizationManager(address newAddress) public onlyAdmin whenNotPaused {

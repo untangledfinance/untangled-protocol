@@ -21,26 +21,15 @@ bytes32 constant POOL_ADMIN_ROLE = keccak256('POOL_CREATOR');
 
 // In PoolNAV we use this
 bytes32 constant POOL = keccak256('POOL');
-
 uint256 constant PRICE_DECIMAL = 10 ** 18;
-
 bytes32 constant VALIDATOR_ROLE = keccak256('VALIDATOR_ROLE');
-
 bytes32 constant MINTER_ROLE = keccak256('MINTER_ROLE');
-
 // In Go
 bytes32 constant ZAPPER_ROLE = keccak256('ZAPPER_ROLE');
-
 // in ERC1155PresetPauserUpgradeable
 bytes32 constant PAUSER_ROLE = keccak256('PAUSER_ROLE');
 
 library DataTypes {
-    struct NoteToken {
-        address poolAddress;
-        address noteTokenAddress;
-        uint256 balance;
-        uint256 apy;
-    }
     struct RiskScore {
         uint32 daysPastDue;
         uint32 advanceRate;
@@ -136,9 +125,6 @@ library DataTypes {
         uint64 firstAssetTimestamp;
         RiskScore[] riskScores;
         NFTAsset[] nftAssets;
-        address[] tokenAssetAddresses;
-        mapping(address => bool) existsTokenAssetAddress;
-        // TGE
         address tgeAddress;
         address secondTGEAddress;
         address sotToken;
@@ -150,25 +136,14 @@ library DataTypes {
         uint64 openingBlockTimestamp;
         // by default it is address(this)
         address pot;
-        // for base (sell-loan) operation
-        uint256 paidPrincipalAmountSOT;
-        uint256 interestRateSOT; // Annually, support 4 decimals num
+        uint256 interestRateSOT;
         uint256 totalAssetRepaidCurrency;
         uint256 debtCeiling;
-        // lock distribution
-        mapping(address => mapping(address => uint256)) lockedDistributeBalances;
-        uint256 totalLockedDistributeBalance;
-        mapping(address => mapping(address => uint256)) lockedRedeemBalances;
-        // token address -> total locked
-        mapping(address => uint256) totalLockedRedeemBalances;
-        uint256 totalRedeemedCurrency; // Total $ (cUSD) has been redeemed
-        /// @notice Interest Rate Groups are identified by a `uint` and stored in a mapping
         mapping(uint256 => Rate) rates;
         mapping(uint256 => uint256) pie;
         /// @notice mapping from loan => rate
         mapping(uint256 => uint256) loanRates;
         /// @notice mapping from loan => grace time
-
         uint256 loanCount;
         mapping(uint256 => uint256) balances;
         uint256 balance;

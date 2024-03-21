@@ -94,17 +94,8 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
     }
 
     /// @inheritdoc ISecuritizationPoolValueService
-    function getExpectedAssetsValue(address poolAddress) public view returns (uint256 expectedAssetsValue) {
-        expectedAssetsValue = 0;
-        IPool securitizationPool = IPool(poolAddress);
-
-        expectedAssetsValue = expectedAssetsValue + getExpectedLATAssetValue(poolAddress);
-
-        uint256 tokenAssetAddressesLength = securitizationPool.getTokenAssetAddressesLength();
-        for (uint256 i = 0; i < tokenAssetAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            address tokenAddress = securitizationPool.tokenAssetAddresses(i);
-            expectedAssetsValue = expectedAssetsValue + calcCorrespondingTotalAssetValue(tokenAddress, poolAddress);
-        }
+    function getExpectedAssetsValue(address poolAddress) public view returns (uint256) {
+        return getExpectedLATAssetValue(poolAddress);
     }
 
     function getPoolValue(address poolAddress) public view returns (uint256) {
@@ -251,31 +242,6 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         }
 
         return tokenValues;
-    }
-
-    function getExternalTokenInfos(
-        address poolAddress
-    ) external view returns (DataTypes.NoteToken[] memory noteTokens) {
-        IPool securitizationPool = IPool(poolAddress);
-
-        uint256 tokenAssetAddressesLength = securitizationPool.getTokenAssetAddressesLength();
-        noteTokens = new DataTypes.NoteToken[](tokenAssetAddressesLength);
-        for (uint256 i = 0; i < tokenAssetAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            address tokenAddress = securitizationPool.tokenAssetAddresses(i);
-            INoteToken noteToken = INoteToken(tokenAddress);
-            IPool notePool = IPool(noteToken.poolAddress());
-
-            uint256 apy = notePool.interestRateSOT();
-
-            noteTokens[i] = DataTypes.NoteToken({
-                poolAddress: address(notePool),
-                noteTokenAddress: tokenAddress,
-                balance: noteToken.balanceOf(poolAddress),
-                apy: apy
-            });
-        }
-
-        return noteTokens;
     }
 
     function getJOTTokenPrice(address securitizationPool) public view returns (uint256) {

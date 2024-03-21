@@ -24,7 +24,7 @@ const {
 const { setup } = require('./setup.js');
 const { SaleType, ASSET_PURPOSE } = require('./shared/constants.js');
 
-const { OWNER_ROLE,POOL_ADMIN_ROLE, BACKEND_ADMIN, ORIGINATOR_ROLE } = require('./constants.js');
+const { OWNER_ROLE, POOL_ADMIN_ROLE, BACKEND_ADMIN, ORIGINATOR_ROLE } = require('./constants.js');
 const { utils, BigNumber } = require('ethers');
 
 describe('Rebase Logic', () => {
@@ -548,6 +548,7 @@ describe('Rebase Logic', () => {
                 .connect(backendAdminSigner)
                 .preDistribute(
                     securitizationPoolContract.address,
+                    parseEther('0'),
                     withdrawAmount,
                     [sotToken.address],
                     [tokenBurnAmount]

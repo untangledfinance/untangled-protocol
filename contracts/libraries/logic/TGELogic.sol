@@ -43,10 +43,6 @@ library TGELogic {
         return _poolStorage.minFirstLossCushion;
     }
 
-    function paidPrincipalAmountSOT(DataTypes.Storage storage _poolStorage) public view returns (uint256) {
-        return _poolStorage.paidPrincipalAmountSOT;
-    }
-
     function debtCeiling(DataTypes.Storage storage _poolStorage) public view returns (uint256) {
         return _poolStorage.debtCeiling;
     }
@@ -102,14 +98,14 @@ library TGELogic {
     }
 
     function hasFinishedRedemption(DataTypes.Storage storage _poolStorage) public view returns (bool) {
-        address stoken = sotToken(_poolStorage);
-        if (stoken != address(0)) {
-            require(IERC20Upgradeable(stoken).totalSupply() == 0, 'SecuritizationPool: SOT still remain');
+        address sToken = sotToken(_poolStorage);
+        if (sToken != address(0)) {
+            require(IERC20Upgradeable(sToken).totalSupply() == 0, 'SecuritizationPool: SOT still remain');
         }
 
-        address jtoken = jotToken(_poolStorage);
-        if (jtoken != address(0)) {
-            require(IERC20Upgradeable(jtoken).totalSupply() == 0, 'SecuritizationPool: JOT still remain');
+        address jToken = jotToken(_poolStorage);
+        if (jToken != address(0)) {
+            require(IERC20Upgradeable(jToken).totalSupply() == 0, 'SecuritizationPool: JOT still remain');
         }
 
         return true;

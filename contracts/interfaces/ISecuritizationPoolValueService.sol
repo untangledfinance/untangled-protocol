@@ -32,8 +32,6 @@ interface ISecuritizationPoolValueService {
         address[] calldata tokenAddresses
     ) external view returns (uint256[] memory);
 
-    function getExternalTokenInfos(address poolAddress) external view returns (DataTypes.NoteToken[] memory);
-
     /// @notice the available cash balance in the securitization pool
     function getCashBalance(address pool) external view returns (uint256);
 

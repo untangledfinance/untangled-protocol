@@ -3,6 +3,8 @@ pragma solidity 0.8.19;
 
 import '@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinterPauserUpgradeable.sol';
 import '../../interfaces/INoteToken.sol';
+import '../../interfaces/IPool.sol';
+import '../../libraries/Configuration.sol';
 
 /// @title NoteToken
 /// @author Untangled Team
@@ -25,6 +27,16 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
         _decimals = decimalsOfToken;
         _poolAddress = poolAddressOfToken;
         _noteTokenType = typeOfToken;
+    }
+
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual override(ERC20PresetMinterPauserUpgradeable) {
+        Registry registryContract = IPool(_poolAddress).registry();
+
+        require(from == address(0) || registryContract.isValidNoteTokenTransfer(from, to), 'Invalid transfer');
     }
 
     function poolAddress() external view returns (address) {

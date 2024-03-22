@@ -647,15 +647,18 @@ describe('NoteTokenVault', () => {
             });
 
             it('SOT: should run successfully', async () => {
-                await noteTokenVault
-                    .connect(backendAdminSigner)
-                    .preDistribute(
-                        securitizationPoolContract.address,
-                        parseEther('0'),
-                        parseEther('1.5'),
-                        [sotContract.address],
-                        [parseEther('1.5')]
-                    );
+                await noteTokenVault.connect(backendAdminSigner).preDistribute(
+                    {
+                        pool: securitizationPoolContract.address,
+                        epochId: 2,
+                        batchId: 1,
+                    },
+                    securitizationPoolContract.address,
+                    parseEther('0'),
+                    parseEther('1.5'),
+                    [sotContract.address],
+                    [parseEther('1.5')]
+                );
                 await expect(
                     noteTokenVault.connect(backendAdminSigner).disburseAll(
                         {
@@ -672,6 +675,7 @@ describe('NoteTokenVault', () => {
                     .to.emit(noteTokenVault, 'DisburseOrder')
                     .withArgs(
                         securitizationPoolContract.address,
+                        [securitizationPoolContract.address, 2, 1],
                         sotContract.address,
                         [lenderSignerA.address, lenderSignerB.address],
                         [parseEther('0.5'), parseEther('1')],
@@ -748,28 +752,34 @@ describe('NoteTokenVault', () => {
             });
             it('JOT: should revert if exceed max JOT redeem amount', async () => {
                 await expect(
-                    noteTokenVault
-                        .connect(backendAdminSigner)
-                        .preDistribute(
-                            securitizationPoolContract.address,
-                            parseEther('0'),
-                            maxReserveForJOTRedeem.add(parseEther('0.00001')),
-                            [jotContract.address],
-                            [parseEther('2.83')]
-                        )
+                    noteTokenVault.connect(backendAdminSigner).preDistribute(
+                        {
+                            pool: securitizationPoolContract.address,
+                            epochId: 3,
+                            batchId: 1,
+                        },
+                        securitizationPoolContract.address,
+                        parseEther('0'),
+                        maxReserveForJOTRedeem.add(parseEther('0.00001')),
+                        [jotContract.address],
+                        [parseEther('2.83')]
+                    )
                 ).to.revertedWith('NoteTokenVault: Exceeds MinFirstLoss');
             });
             it('JOT: should run successfully', async () => {
                 // Disburse $2.83 for JOT
-                await noteTokenVault
-                    .connect(backendAdminSigner)
-                    .preDistribute(
-                        securitizationPoolContract.address,
-                        parseEther('0'),
-                        parseEther('2.83'),
-                        [jotContract.address],
-                        [parseEther('1.5')]
-                    );
+                await noteTokenVault.connect(backendAdminSigner).preDistribute(
+                    {
+                        pool: securitizationPoolContract.address,
+                        epochId: 4,
+                        batchId: 1,
+                    },
+                    securitizationPoolContract.address,
+                    parseEther('0'),
+                    parseEther('2.83'),
+                    [jotContract.address],
+                    [parseEther('1.5')]
+                );
                 await noteTokenVault.connect(backendAdminSigner).disburseAll(
                     {
                         pool: securitizationPoolContract.address,

@@ -13,6 +13,8 @@ import {Configuration} from '../libraries/Configuration.sol';
  */
 contract Registry is UntangledBase {
     mapping(uint8 => address) public contractAddresses;
+    mapping(address => bool) public whiteListToAddresses;
+    mapping(address => bool) public whiteListFromAddresses;
 
     event AddressUpdated(address owner, uint8 index, address oldValue, address newValue);
 
@@ -27,6 +29,23 @@ contract Registry is UntangledBase {
 
     function getAddress(uint8 index) public view returns (address) {
         return contractAddresses[index];
+    }
+
+    function isValidNoteTokenTransfer(address from, address to) external view returns (bool) {
+        return whiteListFromAddresses[from] || whiteListToAddresses[to];
+    }
+
+    function setWhiteListAddresses(
+        address[] calldata addresses,
+        bool[] calldata boolFroms,
+        bool[] calldata boolTos
+    ) public onlyAdmin {
+        uint256 length = addresses.length;
+        require(length == boolFroms.length && length == boolTos.length, 'Invalid length');
+        for (uint256 i; i < length; i++) {
+            whiteListFromAddresses[addresses[i]] = boolFroms[i];
+            whiteListToAddresses[addresses[i]] = boolTos[i];
+        }
     }
 
     function setSecuritizationManager(address newAddress) public onlyAdmin whenNotPaused {
@@ -62,6 +81,15 @@ contract Registry is UntangledBase {
     }
 
     function setNoteTokenVault(address newAddress) public onlyAdmin whenNotPaused {
+        address oldNoteTokenVault = getAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT));
+        if (oldNoteTokenVault != address(0)) {
+            whiteListFromAddresses[oldNoteTokenVault] = false;
+            whiteListToAddresses[oldNoteTokenVault] = false;
+        }
+
         _setAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT), newAddress);
+
+        whiteListFromAddresses[newAddress] = true;
+        whiteListToAddresses[newAddress] = true;
     }
 }

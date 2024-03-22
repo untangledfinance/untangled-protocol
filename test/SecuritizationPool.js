@@ -38,6 +38,7 @@ describe('SecuritizationPool', () => {
     let securitizationPoolImpl;
     let defaultLoanAssetTokenValidator;
     let untangledProtocol;
+    let registry;
 
     // Wallets
     let untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner;
@@ -61,6 +62,7 @@ describe('SecuritizationPool', () => {
             factoryAdmin,
             securitizationPoolImpl,
             defaultLoanAssetTokenValidator,
+            registry,
         } = contracts);
 
         await stableCoin.transfer(lenderSigner.address, parseEther('1000'));
@@ -505,6 +507,9 @@ describe('SecuritizationPool', () => {
         it('#claimCashRemain', async () => {
             expect(formatEther(await stableCoin.balanceOf(poolCreatorSigner.address))).equal('0.0');
             expect(formatEther(await sotToken.totalSupply())).equal('100.0');
+
+            await registry.connect(untangledAdminSigner).setWhiteListAddresses([lenderSigner.address], [true], [false]);
+
             await expect(
                 securitizationPoolContract.connect(poolCreatorSigner).claimCashRemain(poolCreatorSigner.address)
             ).to.be.revertedWith(`SecuritizationPool: SOT still remain`);

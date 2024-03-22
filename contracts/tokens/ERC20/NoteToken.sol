@@ -36,17 +36,7 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
     ) internal virtual override(ERC20PresetMinterPauserUpgradeable) {
         Registry registryContract = IPool(_poolAddress).registry();
 
-        address noteTokenVaultAddress = registryContract.getAddress(
-            uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT)
-        );
-
-        require(
-            from == address(0) ||
-                from == noteTokenVaultAddress ||
-                to == noteTokenVaultAddress ||
-                registryContract.isValidNoteTokenTransfer(from, to),
-            'Invalid transfer'
-        );
+        require(from == address(0) || registryContract.isValidNoteTokenTransfer(from, to), 'Invalid transfer');
     }
 
     function poolAddress() external view returns (address) {

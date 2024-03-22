@@ -13,7 +13,8 @@ import {Configuration} from '../libraries/Configuration.sol';
  */
 contract Registry is UntangledBase {
     mapping(uint8 => address) public contractAddresses;
-    mapping(address => bool) public whiteListAddresses;
+    mapping(address => bool) public whiteListToAddresses;
+    mapping(address => bool) public whiteListFromAddresses;
 
     event AddressUpdated(address owner, uint8 index, address oldValue, address newValue);
 
@@ -31,14 +32,22 @@ contract Registry is UntangledBase {
     }
 
     function isValidNoteTokenTransfer(address from, address to) external view returns (bool) {
-        return whiteListAddresses[from] || whiteListAddresses[to];
+        return whiteListFromAddresses[from] || whiteListToAddresses[to];
     }
 
-    function setWhiteListAddresses(address[] memory addresses, bool[] memory bools) public onlyAdmin {
+    function setWhiteListToAddresses(address[] memory addresses, bool[] memory bools) public onlyAdmin {
         uint256 length = addresses.length;
         require(length == bools.length, 'Invalid length');
         for (uint256 i; i < length; i++) {
-            whiteListAddresses[addresses[i]] = bools[i];
+            whiteListToAddresses[addresses[i]] = bools[i];
+        }
+    }
+
+    function setWhiteListFromAddresses(address[] memory addresses, bool[] memory bools) public onlyAdmin {
+        uint256 length = addresses.length;
+        require(length == bools.length, 'Invalid length');
+        for (uint256 i; i < length; i++) {
+            whiteListFromAddresses[addresses[i]] = bools[i];
         }
     }
 
@@ -75,6 +84,15 @@ contract Registry is UntangledBase {
     }
 
     function setNoteTokenVault(address newAddress) public onlyAdmin whenNotPaused {
+        address oldNoteTokenVault = getAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT));
+        if (oldNoteTokenVault != address(0)) {
+            whiteListFromAddresses[oldNoteTokenVault] = false;
+            whiteListToAddresses[oldNoteTokenVault] = false;
+        }
+
         _setAddress(uint8(Configuration.CONTRACT_TYPE.NOTE_TOKEN_VAULT), newAddress);
+
+        whiteListFromAddresses[newAddress] = true;
+        whiteListToAddresses[newAddress] = true;
     }
 }

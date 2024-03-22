@@ -22,8 +22,6 @@ interface IPool {
         DataTypes.LoanEntry[] memory loanEntries
     ) external returns (uint256);
 
-    function collectERC20Asset(address tokenAddresss) external;
-
     function currentNAV() external view returns (uint256 nav_);
 
     function currentNAVAsset(bytes32 tokenId) external view returns (uint256);
@@ -39,10 +37,6 @@ interface IPool {
     function disburse(address usr, uint256 currencyAmount) external;
 
     function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory);
-
-    function getTokenAssetAddresses() external view returns (address[] memory);
-
-    function getTokenAssetAddressesLength() external view returns (uint256);
 
     function increaseCapitalReserve(uint256 currencyAmount) external;
 
@@ -95,8 +89,6 @@ interface IPool {
 
     function tgeAddress() external view returns (address);
 
-    function tokenAssetAddresses(uint256 idx) external view returns (address);
-
     function totalAssetRepaidCurrency() external view returns (uint256);
 
     function underlyingCurrency() external view returns (address);
@@ -109,11 +101,5 @@ interface IPool {
         address[] memory tokenAddresses,
         uint256[] memory tokenIds,
         address[] memory recipients
-    ) external;
-
-    function withdrawERC20Assets(
-        address[] memory tokenAddresses,
-        address[] memory recipients,
-        uint256[] memory amounts
     ) external;
 }

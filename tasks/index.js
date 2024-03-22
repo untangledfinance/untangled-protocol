@@ -6,3 +6,4 @@ exports.validateContracts = require('./contracts-validation.js');
 
 require('./deploy-securitization-pool-template.js');
 require('./upgrade-securitization-pool.js');
+require('./check-pool.js');

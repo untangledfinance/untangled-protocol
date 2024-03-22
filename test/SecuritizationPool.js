@@ -508,7 +508,7 @@ describe('SecuritizationPool', () => {
             expect(formatEther(await stableCoin.balanceOf(poolCreatorSigner.address))).equal('0.0');
             expect(formatEther(await sotToken.totalSupply())).equal('100.0');
 
-            await registry.connect(untangledAdminSigner).setWhiteListAddresses([lenderSigner.address], [true]);
+            await registry.connect(untangledAdminSigner).setWhiteListFromAddresses([lenderSigner.address], [true]);
 
             await expect(
                 securitizationPoolContract.connect(poolCreatorSigner).claimCashRemain(poolCreatorSigner.address)

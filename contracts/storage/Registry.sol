@@ -35,19 +35,16 @@ contract Registry is UntangledBase {
         return whiteListFromAddresses[from] || whiteListToAddresses[to];
     }
 
-    function setWhiteListToAddresses(address[] memory addresses, bool[] memory bools) public onlyAdmin {
+    function setWhiteListAddresses(
+        address[] calldata addresses,
+        bool[] calldata boolFroms,
+        bool[] calldata boolTos
+    ) public onlyAdmin {
         uint256 length = addresses.length;
-        require(length == bools.length, 'Invalid length');
+        require(length == boolFroms.length && length == boolTos.length, 'Invalid length');
         for (uint256 i; i < length; i++) {
-            whiteListToAddresses[addresses[i]] = bools[i];
-        }
-    }
-
-    function setWhiteListFromAddresses(address[] memory addresses, bool[] memory bools) public onlyAdmin {
-        uint256 length = addresses.length;
-        require(length == bools.length, 'Invalid length');
-        for (uint256 i; i < length; i++) {
-            whiteListFromAddresses[addresses[i]] = bools[i];
+            whiteListFromAddresses[addresses[i]] = boolFroms[i];
+            whiteListToAddresses[addresses[i]] = boolTos[i];
         }
     }
 

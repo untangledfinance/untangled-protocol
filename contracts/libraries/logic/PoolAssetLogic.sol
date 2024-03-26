@@ -208,37 +208,6 @@ library PoolAssetLogic {
     }
 
     // TODO have to use modifier in main contract
-    function collectERC20Asset(DataTypes.Storage storage _poolStorgae, address tokenAddress) external {
-        _pushTokenAssetAddress(_poolStorgae.existsTokenAssetAddress, _poolStorgae.tokenAssetAddresses, tokenAddress);
-
-        if (_poolStorgae.openingBlockTimestamp == 0) {
-            // If openingBlockTimestamp is not set
-            _setOpeningBlockTimestamp(_poolStorgae, uint64(block.timestamp));
-        }
-
-        emit CollectERC20Asset(tokenAddress, INoteToken(tokenAddress).balanceOf(address(this)));
-    }
-
-    // TODO have to use modifier in main contract
-    function withdrawERC20Assets(
-        mapping(address => bool) storage existsTokenAssetAddress,
-        address[] calldata tokenAddresses,
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) external {
-        uint256 tokenAddressesLength = tokenAddresses.length;
-        require(tokenAddressesLength == recipients.length, 'tokenAddresses length and tokenIds length are not equal');
-        require(tokenAddressesLength == amounts.length, 'tokenAddresses length and recipients length are not equal');
-
-        for (uint256 i = 0; i < tokenAddressesLength; i = UntangledMath.uncheckedInc(i)) {
-            require(existsTokenAssetAddress[tokenAddresses[i]], 'SecuritizationPool: note token asset does not exist');
-            TransferHelper.safeTransfer(tokenAddresses[i], recipients[i], amounts[i]);
-        }
-
-        emit WithdrawERC20Asset(tokenAddresses, recipients, amounts);
-    }
-
-    // TODO have to use modifier in main contract
     function setUpOpeningBlockTimestamp(DataTypes.Storage storage _poolStorage) public {
         _setUpOpeningBlockTimestamp(_poolStorage);
     }

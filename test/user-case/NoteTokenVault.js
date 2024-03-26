@@ -616,18 +616,20 @@ describe('NoteTokenVault', () => {
         });
 
         describe('Disburse', () => {
-            const maxReserveForJOTRedeem = parseEther('2.833333333333333333');
+            const maxReserveForJOTRedeem = parseEther('4.483333333333333334');
             it('SOT: should revert if not backend admin', async () => {
                 await expect(
-                    noteTokenVault
-                        .connect(poolCreatorSigner)
-                        .disburseAll(
-                            securitizationPoolContract.address,
-                            sotContract.address,
-                            [lenderSignerA.address, lenderSignerB.address],
-                            [parseEther('0.5'), parseEther('1')],
-                            [parseEther('0.5'), parseEther('1')]
-                        )
+                    noteTokenVault.connect(poolCreatorSigner).disburseAll(
+                        {
+                            pool: securitizationPoolContract.address,
+                            epochId: 1,
+                            batchId: 1,
+                        },
+                        sotContract.address,
+                        [lenderSignerA.address, lenderSignerB.address],
+                        [parseEther('0.5'), parseEther('1')],
+                        [parseEther('0.5'), parseEther('1')]
+                    )
                 ).to.be.revertedWith(
                     `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role ${BACKEND_ADMIN}`
                 );
@@ -638,35 +640,42 @@ describe('NoteTokenVault', () => {
                     parseEther('1.5')
                 );
                 expect(result).to.deep.equal([
-                    parseEther('4.333333333333333333'),
+                    parseEther('5.983333333333333334'),
                     parseEther('1.5'),
                     maxReserveForJOTRedeem,
                 ]);
             });
 
             it('SOT: should run successfully', async () => {
-                await noteTokenVault
-                    .connect(backendAdminSigner)
-                    .preDistribute(
-                        securitizationPoolContract.address,
-                        parseEther('1.5'),
-                        [sotContract.address],
-                        [parseEther('1.5')]
-                    );
+                await noteTokenVault.connect(backendAdminSigner).preDistribute(
+                    {
+                        pool: securitizationPoolContract.address,
+                        epochId: 2,
+                        batchId: 1,
+                    },
+                    securitizationPoolContract.address,
+                    parseEther('0'),
+                    parseEther('1.5'),
+                    [sotContract.address],
+                    [parseEther('1.5')]
+                );
                 await expect(
-                    noteTokenVault
-                        .connect(backendAdminSigner)
-                        .disburseAll(
-                            securitizationPoolContract.address,
-                            sotContract.address,
-                            [lenderSignerA.address, lenderSignerB.address],
-                            [parseEther('0.5'), parseEther('1')],
-                            [parseEther('0.5'), parseEther('1')]
-                        )
+                    noteTokenVault.connect(backendAdminSigner).disburseAll(
+                        {
+                            pool: securitizationPoolContract.address,
+                            epochId: 2,
+                            batchId: 1,
+                        },
+                        sotContract.address,
+                        [lenderSignerA.address, lenderSignerB.address],
+                        [parseEther('0.5'), parseEther('1')],
+                        [parseEther('0.5'), parseEther('1')]
+                    )
                 )
                     .to.emit(noteTokenVault, 'DisburseOrder')
                     .withArgs(
                         securitizationPoolContract.address,
+                        [securitizationPoolContract.address, 2, 1],
                         sotContract.address,
                         [lenderSignerA.address, lenderSignerB.address],
                         [parseEther('0.5'), parseEther('1')],
@@ -692,15 +701,17 @@ describe('NoteTokenVault', () => {
 
             it('JOT: should revert if not backend admin', async () => {
                 await expect(
-                    noteTokenVault
-                        .connect(poolCreatorSigner)
-                        .disburseAll(
-                            securitizationPoolContract.address,
-                            jotContract.address,
-                            [lenderSignerA.address, lenderSignerB.address],
-                            [parseEther('0.5'), parseEther('1')],
-                            [parseEther('0.5'), parseEther('1')]
-                        )
+                    noteTokenVault.connect(poolCreatorSigner).disburseAll(
+                        {
+                            pool: securitizationPoolContract.address,
+                            epochId: 3,
+                            batchId: 1,
+                        },
+                        jotContract.address,
+                        [lenderSignerA.address, lenderSignerB.address],
+                        [parseEther('0.5'), parseEther('1')],
+                        [parseEther('0.5'), parseEther('1')]
+                    )
                 ).to.be.revertedWith(
                     `AccessControl: account ${poolCreatorSigner.address.toLowerCase()} is missing role ${BACKEND_ADMIN}`
                 );
@@ -741,28 +752,40 @@ describe('NoteTokenVault', () => {
             });
             it('JOT: should revert if exceed max JOT redeem amount', async () => {
                 await expect(
-                    noteTokenVault
-                        .connect(backendAdminSigner)
-                        .preDistribute(
-                            securitizationPoolContract.address,
-                            maxReserveForJOTRedeem.add(parseEther('0.00001')),
-                            [jotContract.address],
-                            [parseEther('2.83')]
-                        )
+                    noteTokenVault.connect(backendAdminSigner).preDistribute(
+                        {
+                            pool: securitizationPoolContract.address,
+                            epochId: 3,
+                            batchId: 1,
+                        },
+                        securitizationPoolContract.address,
+                        parseEther('0'),
+                        maxReserveForJOTRedeem.add(parseEther('0.00001')),
+                        [jotContract.address],
+                        [parseEther('2.83')]
+                    )
                 ).to.revertedWith('NoteTokenVault: Exceeds MinFirstLoss');
             });
             it('JOT: should run successfully', async () => {
                 // Disburse $2.83 for JOT
-                await noteTokenVault
-                    .connect(backendAdminSigner)
-                    .preDistribute(
-                        securitizationPoolContract.address,
-                        parseEther('2.83'),
-                        [jotContract.address],
-                        [parseEther('1.5')]
-                    );
-                await noteTokenVault.connect(backendAdminSigner).disburseAll(
+                await noteTokenVault.connect(backendAdminSigner).preDistribute(
+                    {
+                        pool: securitizationPoolContract.address,
+                        epochId: 4,
+                        batchId: 1,
+                    },
                     securitizationPoolContract.address,
+                    parseEther('0'),
+                    parseEther('2.83'),
+                    [jotContract.address],
+                    [parseEther('1.5')]
+                );
+                await noteTokenVault.connect(backendAdminSigner).disburseAll(
+                    {
+                        pool: securitizationPoolContract.address,
+                        epochId: 4,
+                        batchId: 1,
+                    },
                     jotContract.address,
                     [lenderSignerA.address, lenderSignerB.address, lenderSignerC.address],
                     [parseEther('0.83'), parseEther('1'), parseEther('1')], // Total: $0.84 + $1.00 + $1.00 = $2.83

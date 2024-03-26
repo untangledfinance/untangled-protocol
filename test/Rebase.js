@@ -649,10 +649,32 @@ describe('Rebase Logic', () => {
             expect(debtAndBalance[0]).to.closeTo(parseEther('79.572306'), parseEther('0.000001'));
             expect(debtAndBalance[1]).to.closeTo(parseEther('18'), parseEther('0.000001'));
 
+
             // ACTION: CHANGE RISK SCORE THE COLLATERAL
             await securitizationPoolContract
                 .connect(poolCreatorSigner)
                 .updateAssetRiskScore(tokenIds[0], 2, { gasLimit: 12500000 });
+
+            // ACTION: WITHDRAW SOT WITH VALUE OF 10 USD
+            const sotLenderBalance = await sotToken.balanceOf(lenderSigner.address);
+            await sotToken.connect(lenderSigner).transfer(noteTokenVault.address, sotLenderBalance);
+            let withdrawAmount = parseEther('10');
+            let tokenBurnAmount = parseEther('10').mul(parseEther('1')).div(tokenPrice[1]);
+            await noteTokenVault
+                .connect(backendAdminSigner)
+                .preDistribute(
+                    securitizationPoolContract.address,
+                    parseEther('0'),
+                    withdrawAmount,
+                    [sotToken.address],
+                    [tokenBurnAmount]
+                );
+
+            // Price still the same after rebase
+            tokenPrice = await securitizationPoolContract.calcTokenPrices();
+            expect(tokenPrice[0]).to.closeTo(parseEther('1.537443'), parseEther('0.000001'));
+            expect(tokenPrice[1]).to.closeTo(parseEther('1.084136'), parseEther('0.000001'));
+
 
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();

@@ -71,16 +71,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return _poolStorage.nftAssets.length;
     }
 
-    /// @notice A view function that returns an array of token asset addresses
-    function getTokenAssetAddresses() external view returns (address[] memory) {
-        return _poolStorage.tokenAssetAddresses;
-    }
-
-    /// @notice A view function that returns the length of the token asset addresses array
-    function getTokenAssetAddressesLength() external view returns (uint256) {
-        return _poolStorage.tokenAssetAddresses.length;
-    }
-
     /// @notice Riks scores length
     /// @return the length of the risk scores array
     function getRiskScoresLength() external view returns (uint256) {
@@ -93,10 +83,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     function nftAssets(uint256 idx) external view returns (DataTypes.NFTAsset memory) {
         return _poolStorage.nftAssets[idx];
-    }
-
-    function tokenAssetAddresses(uint256 idx) external view returns (address) {
-        return _poolStorage.tokenAssetAddresses[idx];
     }
 
     /// @notice sets up the risk scores for the contract for pool
@@ -142,21 +128,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     ) external whenNotPaused returns (uint256) {
         registry.requireLoanKernel(_msgSender());
         return PoolAssetLogic.collectAssets(_poolStorage, tokenIds, loanEntries);
-    }
-
-    /// @notice collects ERC20 assets from specified senders
-    function collectERC20Asset(address tokenAddresss) external whenNotPaused {
-        registry.requireSecuritizationManager(_msgSender());
-        PoolAssetLogic.collectERC20Asset(_poolStorage, tokenAddresss);
-    }
-
-    /// @notice withdraws ERC20 assets from the contract and transfers them to recipients\ound
-    function withdrawERC20Assets(
-        address[] calldata tokenAddresses,
-        address[] calldata recipients,
-        uint256[] calldata amounts
-    ) external whenNotPaused nonReentrant requirePoolAdminOrOwner {
-        PoolAssetLogic.withdrawERC20Assets(_poolStorage.existsTokenAssetAddress, tokenAddresses, recipients, amounts);
     }
 
     /// @dev Trigger set up opening block timestamp
@@ -245,6 +216,10 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     function currentNAVAsset(bytes32 tokenId) external view returns (uint256) {
         return GenericLogic.currentNAVAsset(_poolStorage, tokenId);
+    }
+
+    function getReserves() external view returns (uint256, uint256) {
+        return (_poolStorage.incomeReserve, _poolStorage.capitalReserve);
     }
 
     function futureValue(bytes32 nft_) external view returns (uint256) {
@@ -341,10 +316,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     function underlyingCurrency() external view returns (address) {
         return _poolStorage.underlyingCurrency;
-    }
-
-    function paidPrincipalAmountSOT() external view returns (uint256) {
-        return _poolStorage.paidPrincipalAmountSOT;
     }
 
     function reserve() external view returns (uint256) {

@@ -151,9 +151,19 @@ library TGELogic {
         emit UpdateInterestRateSot(_newRate);
     }
 
-    function increaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {
+    function increaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) public {
         _poolStorage.capitalReserve = _poolStorage.capitalReserve + currencyAmount;
         emit IncreaseCapitalReserve(currencyAmount, _poolStorage.capitalReserve);
+    }
+
+    function contributeToCapitalReserve(
+        DataTypes.Storage storage _poolStorage,
+        address contributor,
+        uint256 currencyAmount
+    ) external {
+        TransferHelper.safeTransferFrom(_poolStorage.underlyingCurrency, contributor, _poolStorage.pot, currencyAmount);
+
+        increaseCapitalReserve(_poolStorage, currencyAmount);
     }
 
     function decreaseCapitalReserve(DataTypes.Storage storage _poolStorage, uint256 currencyAmount) external {

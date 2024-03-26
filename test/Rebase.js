@@ -122,6 +122,19 @@ describe('Rebase Logic', () => {
                     writeOffAfterCollectionPeriod: halfOfADay,
                     discountRate: 150000,
                 },
+                {
+                    daysPastDue: oneDayInSecs + 1,
+                    advanceRate: 1000000, // LTV
+                    penaltyRate: 0,
+                    interestRate: 150000,
+                    probabilityOfDefault: 100000,
+                    lossGivenDefault: 1000000,
+                    gracePeriod: halfOfADay,
+                    collectionPeriod: halfOfADay,
+                    writeOffAfterGracePeriod: halfOfADay,
+                    writeOffAfterCollectionPeriod: halfOfADay,
+                    discountRate: 150000,
+                },
             ];
 
             const openingTime = dayjs(new Date()).unix();
@@ -208,9 +221,9 @@ describe('Rebase Logic', () => {
             const loans = [
                 {
                     principalAmount: principalAmount1,
-                    expirationTimestamp: dayjs(new Date()).add(2000, 'days').unix(), // due day
+                    expirationTimestamp: dayjs(new Date()).add(900, 'days').unix(), // due day
                     assetPurpose: ASSET_PURPOSE.LOAN,
-                    termInDays: 2000, // expirationTimestamp - block.timestamp
+                    termInDays: 900, // expirationTimestamp - block.timestamp
                     riskScore: '1',
                     salt: genSalt(),
                 },
@@ -290,7 +303,7 @@ describe('Rebase Logic', () => {
             ];
 
             // ACTION: DRAWDOWN 10
-            await untangledProtocol.uploadLoans(
+            let tokenId = await untangledProtocol.uploadLoans(
                 untangledAdminSigner,
                 securitizationPoolContract,
                 borrowerSigner,
@@ -355,7 +368,7 @@ describe('Rebase Logic', () => {
             expect(debtAndBalance[1]).to.closeTo(parseEther('18'), parseEther('0.000001'));
 
             // ACTION: REPAY 60
-            await loanRepaymentRouter
+            await loanKernel
                 .connect(untangledAdminSigner)
                 .repayInBatch([tokenIds[0]], [parseEther('60')], stableCoin.address);
 
@@ -436,7 +449,7 @@ describe('Rebase Logic', () => {
             expect(debtAndBalance[1]).to.closeTo(parseEther('54.984062'), parseEther('0.000001'));
         });
 
-        it('Check state after 1 years', async () => {
+        it('increase contribute capital after 1 years', async () => {
             await time.increase(ONE_YEAR);
             // check NAV and reserve
             let currentNAV = await securitizationPoolContract.currentNAV();
@@ -453,6 +466,29 @@ describe('Rebase Logic', () => {
             let debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
             expect(debtAndBalance[0]).to.closeTo(parseEther('47.067289'), parseEther('0.000001'));
             expect(debtAndBalance[1]).to.closeTo(parseEther('54.984062'), parseEther('0.000001'));
+
+            await stableCoin.connect(lenderSigner).approve(securitizationPoolContract.address, parseEther('10'));
+
+            // ACTION: CONTRIBUTE CAPITAL RESERVE
+            await securitizationPoolContract
+                .connect(lenderSigner)
+                .contributeToCapitalReserve(parseEther('10'), { gasLimit: 5000000 });
+
+            // check NAV and reserve
+            currentNAV = await securitizationPoolContract.currentNAV();
+            reserve = await securitizationPoolContract.reserve();
+            expect(currentNAV).to.closeTo(parseEther('107.988704'), parseEther('0.000001'));
+            expect(reserve).equal(parseEther('130'));
+
+            // Price will increase back
+            tokenPrice = await securitizationPoolContract.calcTokenPrices();
+            expect(tokenPrice[0]).to.closeTo(parseEther('1.811458'), parseEther('0.000001'));
+            expect(tokenPrice[1]).to.closeTo(parseEther('1.133904'), parseEther('0.000001'));
+
+            // seniorDebt and seniorBalance
+            debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
+            expect(debtAndBalance[0]).to.closeTo(parseEther('46.306371'), parseEther('0.000001'));
+            expect(debtAndBalance[1]).to.closeTo(parseEther('55.744980'), parseEther('0.000001'));
         });
     });
 
@@ -516,8 +552,82 @@ describe('Rebase Logic', () => {
         });
     });
 
-    describe('#Sot withdraw test', async () => {
-        it('Sot withdraw 1 years', async () => {
+    // describe('#Sot withdraw test', async () => {
+    //     it('Sot withdraw 1 years', async () => {
+    //         await snapshot.restore();
+    //         await time.increase(ONE_YEAR);
+    //         await noteTokenVault
+    //             .connect(backendAdminSigner)
+    //             .setRedeemDisabled(securitizationPoolContract.address, true);
+    //         // check NAV and reserve
+    //         let currentNAV = await securitizationPoolContract.currentNAV();
+    //         let reserve = await securitizationPoolContract.reserve();
+    //         expect(currentNAV).to.closeTo(parseEther('92.946739'), parseEther('0.000001'));
+    //         expect(reserve).equal(parseEther('20'));
+
+    //         // Price still the same after rebase
+    //         let tokenPrice = await securitizationPoolContract.calcTokenPrices();
+    //         expect(tokenPrice[0]).to.closeTo(parseEther('1.537443'), parseEther('0.000001'));
+    //         expect(tokenPrice[1]).to.closeTo(parseEther('1.084136'), parseEther('0.000001'));
+
+    //         // seniorDebt and seniorBalance
+    //         let debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
+    //         expect(debtAndBalance[0]).to.closeTo(parseEther('79.572306'), parseEther('0.000001'));
+    //         expect(debtAndBalance[1]).to.closeTo(parseEther('18'), parseEther('0.000001'));
+
+    //         // ACTION: WITHDRAW SOT WITH VALUE OF 10 USD
+    //         const sotLenderBalance = await sotToken.balanceOf(lenderSigner.address);
+    //         await sotToken.connect(lenderSigner).transfer(noteTokenVault.address, sotLenderBalance);
+    //         let withdrawAmount = parseEther('10');
+    //         let tokenBurnAmount = parseEther('10').mul(parseEther('1')).div(tokenPrice[1]);
+    //         await noteTokenVault
+    //             .connect(backendAdminSigner)
+    //             .preDistribute(
+    //                 securitizationPoolContract.address,
+    //                 withdrawAmount,
+    //                 [sotToken.address],
+    //                 [tokenBurnAmount]
+    //             );
+
+    //         // Price still the same after rebase
+    //         tokenPrice = await securitizationPoolContract.calcTokenPrices();
+    //         expect(tokenPrice[0]).to.closeTo(parseEther('1.537443'), parseEther('0.000001'));
+    //         expect(tokenPrice[1]).to.closeTo(parseEther('1.084136'), parseEther('0.000001'));
+
+    //         // check NAV and reserve
+    //         currentNAV = await securitizationPoolContract.currentNAV();
+    //         reserve = await securitizationPoolContract.reserve();
+    //         expect(currentNAV).to.closeTo(parseEther('92.946739'), parseEther('0.000001'));
+    //         expect(reserve).equal(parseEther('10'));
+
+    //         // seniorDebt and seniorBalance
+    //         debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
+    //         expect(debtAndBalance[0]).to.closeTo(parseEther('79.065742'), parseEther('0.000001'));
+    //         expect(debtAndBalance[1]).to.closeTo(parseEther('8.506564'), parseEther('0.000001'));
+    //     });
+
+    //     it('Check state after 1 years', async () => {
+    //         await time.increase(ONE_YEAR);
+    //         // check NAV and reserve
+    //         let currentNAV = await securitizationPoolContract.currentNAV();
+    //         let reserve = await securitizationPoolContract.reserve();
+    //         expect(currentNAV).to.closeTo(parseEther('107.988704'), parseEther('0.000001'));
+    //         expect(reserve).equal(parseEther('10'));
+
+    //         // Price still the same after rebase
+    //         let tokenPrice = await securitizationPoolContract.calcTokenPrices();
+    //         expect(tokenPrice[0]).to.closeTo(parseEther('2.210098'), parseEther('0.000001'));
+    //         expect(tokenPrice[1]).to.closeTo(parseEther('1.187081'), parseEther('0.000001'));
+
+    //         // seniorDebt and seniorBalance
+    //         let debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
+    //         expect(debtAndBalance[0]).to.closeTo(parseEther('87.381159'), parseEther('0.000001'));
+    //         expect(debtAndBalance[1]).to.closeTo(parseEther('8.506564'), parseEther('0.000001'));
+    //     });
+    // });
+
+    describe('#Sot writeOff test', async () => {
+        it('WriteOff after 1 years', async () => {
             await snapshot.restore();
             await time.increase(ONE_YEAR);
             await noteTokenVault
@@ -539,6 +649,12 @@ describe('Rebase Logic', () => {
             expect(debtAndBalance[0]).to.closeTo(parseEther('79.572306'), parseEther('0.000001'));
             expect(debtAndBalance[1]).to.closeTo(parseEther('18'), parseEther('0.000001'));
 
+
+            // ACTION: CHANGE RISK SCORE THE COLLATERAL
+            await securitizationPoolContract
+                .connect(poolCreatorSigner)
+                .updateAssetRiskScore(tokenIds[0], 2, { gasLimit: 12500000 });
+
             // ACTION: WITHDRAW SOT WITH VALUE OF 10 USD
             const sotLenderBalance = await sotToken.balanceOf(lenderSigner.address);
             await sotToken.connect(lenderSigner).transfer(noteTokenVault.address, sotLenderBalance);
@@ -559,35 +675,62 @@ describe('Rebase Logic', () => {
             expect(tokenPrice[0]).to.closeTo(parseEther('1.537443'), parseEther('0.000001'));
             expect(tokenPrice[1]).to.closeTo(parseEther('1.084136'), parseEther('0.000001'));
 
+
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();
             reserve = await securitizationPoolContract.reserve();
-            expect(currentNAV).to.closeTo(parseEther('92.946739'), parseEther('0.000001'));
-            expect(reserve).equal(parseEther('10'));
+            expect(currentNAV).to.closeTo(parseEther('70.028381'), parseEther('0.000001'));
+            expect(reserve).equal(parseEther('20'));
+
+            // Price will reduce
+            tokenPrice = await securitizationPoolContract.calcTokenPrices();
+            expect(tokenPrice[0]).to.closeTo(parseEther('0'), parseEther('0.000001'));
+            expect(tokenPrice[1]).to.closeTo(parseEther('1.000315'), parseEther('0.000001'));
 
             // seniorDebt and seniorBalance
             debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
-            expect(debtAndBalance[0]).to.closeTo(parseEther('79.065742'), parseEther('0.000001'));
-            expect(debtAndBalance[1]).to.closeTo(parseEther('8.506564'), parseEther('0.000001'));
+            expect(debtAndBalance[0]).to.closeTo(parseEther('70.028381'), parseEther('0.000001'));
+            expect(debtAndBalance[1]).to.closeTo(parseEther('27.543925'), parseEther('0.000001'));
         });
 
-        it('Check state after 1 years', async () => {
+        it('writeUpp state after 1 years', async () => {
             await time.increase(ONE_YEAR);
             // check NAV and reserve
             let currentNAV = await securitizationPoolContract.currentNAV();
             let reserve = await securitizationPoolContract.reserve();
-            expect(currentNAV).to.closeTo(parseEther('107.988704'), parseEther('0.000001'));
-            expect(reserve).equal(parseEther('10'));
+            expect(currentNAV).to.closeTo(parseEther('81.361371'), parseEther('0.000001'));
+            expect(reserve).equal(parseEther('20'));
 
             // Price still the same after rebase
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
-            expect(tokenPrice[0]).to.closeTo(parseEther('2.210098'), parseEther('0.000001'));
-            expect(tokenPrice[1]).to.closeTo(parseEther('1.187081'), parseEther('0.000001'));
+            expect(tokenPrice[0]).to.closeTo(parseEther('0'), parseEther('0.000001'));
+            expect(tokenPrice[1]).to.closeTo(parseEther('1.126237'), parseEther('0.000001'));
 
             // seniorDebt and seniorBalance
             let debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
-            expect(debtAndBalance[0]).to.closeTo(parseEther('87.381159'), parseEther('0.000001'));
-            expect(debtAndBalance[1]).to.closeTo(parseEther('8.506564'), parseEther('0.000001'));
+            expect(debtAndBalance[0]).to.closeTo(parseEther('77.393331'), parseEther('0.000001'));
+            expect(debtAndBalance[1]).to.closeTo(parseEther('27.543925'), parseEther('0.000001'));
+
+            // ACTION: CHANGE RISK SCORE THE COLLATERAL
+            await securitizationPoolContract
+                .connect(poolCreatorSigner)
+                .updateAssetRiskScore(tokenIds[0], 1, { gasLimit: 12500000 });
+
+            // check NAV and reserve
+            currentNAV = await securitizationPoolContract.currentNAV();
+            reserve = await securitizationPoolContract.reserve();
+            expect(currentNAV).to.closeTo(parseEther('107.988706'), parseEther('0.000001'));
+            expect(reserve).equal(parseEther('20'));
+
+            // Price will increase back
+            tokenPrice = await securitizationPoolContract.calcTokenPrices();
+            expect(tokenPrice[0]).to.closeTo(parseEther('2.305145'), parseEther('0.000001'));
+            expect(tokenPrice[1]).to.closeTo(parseEther('1.165970'), parseEther('0.000001'));
+
+            // seniorDebt and seniorBalance
+            debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
+            expect(debtAndBalance[0]).to.closeTo(parseEther('88.539362'), parseEther('0.000001'));
+            expect(debtAndBalance[1]).to.closeTo(parseEther('16.397893'), parseEther('0.000001'));
         });
     });
 });

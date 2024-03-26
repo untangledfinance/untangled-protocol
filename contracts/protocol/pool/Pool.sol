@@ -236,6 +236,9 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) external onlyRole(POOL_ADMIN_ROLE) {
         PoolNAVLogic.updateAssetRiskScore(_poolStorage, nftID_, risk_);
+
+        // rebase
+        rebase();
     }
 
     /// @notice retrieves loan information
@@ -271,6 +274,13 @@ contract Pool is IPool, PoolStorage, UntangledBase {
             'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
         TGELogic.increaseCapitalReserve(_poolStorage, currencyAmount);
+    }
+
+    function contributeToCapitalReserve(uint256 amount) external whenNotPaused {
+        TGELogic.contributeToCapitalReserve(_poolStorage, msg.sender, amount);
+
+        // rebase
+        rebase();
     }
 
     /// @dev trigger update reserve

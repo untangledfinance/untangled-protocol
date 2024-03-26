@@ -46,7 +46,6 @@ async function createSecuritizationPool(
 
         .newPoolInstance(
             salt,
-
             signer.address,
             utils.defaultAbiCoder.encode(
                 [
@@ -113,7 +112,7 @@ async function setupRiskScore(signer, securitizationPoolContract, riskScores) {
 
     return securitizationPoolContract
         .connect(signer)
-        .setupRiskScores(daysPastDues, ratesAndDefaults, periodsAndWriteOffs);
+        .setupRiskScores(daysPastDues, ratesAndDefaults, periodsAndWriteOffs, { gasLimit: 10000000 });
 }
 
 async function fillDebtOrder(

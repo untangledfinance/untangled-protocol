@@ -145,21 +145,8 @@ describe('Rebase Logic', () => {
             const timeInterval = 1 * 24 * 3600; // seconds
             const amountChangeEachInterval = 0;
             const prefixOfNoteTokenSaleName = 'Ticker_';
-            const sotInfo = {
-                issuerTokenController: untangledAdminSigner.address,
-                saleType: SaleType.MINTED_INCREASING_INTEREST,
-                minBidAmount: 0,
-                openingTime,
-                closingTime,
-                rate,
-                cap: totalCapOfToken,
-                timeInterval,
-                amountChangeEachInterval,
-                ticker: prefixOfNoteTokenSaleName,
-                interestRate,
-            };
-
             const initialJOTAmount = parseEther('1');
+            const sotInfo = undefined;
             const jotInfo = {
                 issuerTokenController: untangledAdminSigner.address,
                 minBidAmount: 0,
@@ -180,9 +167,7 @@ describe('Rebase Logic', () => {
                 jotInfo
             );
             securitizationPoolContract = await getPoolByAddress(poolAddress);
-            sotTGE = await ethers.getContractAt('MintedNormalTGE', sotCreated.sotTGEAddress);
             jotTGE = await ethers.getContractAt('MintedNormalTGE', jotCreated.jotTGEAddress);
-            sotToken = await ethers.getContractAt('NoteToken', await sotTGE.token());
             jotToken = await ethers.getContractAt('NoteToken', await jotTGE.token());
 
             await noteTokenVault.connect(untangledAdminSigner).grantRole(BACKEND_ADMIN, backendAdminSigner.address);
@@ -239,7 +224,7 @@ describe('Rebase Logic', () => {
 
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).equal(parseEther('1'));
-            expect(tokenPrice[1]).equal(parseEther('1'));
+            expect(tokenPrice[1]).equal(parseEther('0'));
 
             // ACTION: DRAWDOWN 80
             tokenIds = await untangledProtocol.uploadLoans(
@@ -259,7 +244,7 @@ describe('Rebase Logic', () => {
             // Price still the same after rebase
             tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).equal(parseEther('1'));
-            expect(tokenPrice[1]).equal(parseEther('1'));
+            expect(tokenPrice[1]).equal(parseEther('0'));
 
             // seniorDebt and seniorBalance
             let debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
@@ -267,6 +252,32 @@ describe('Rebase Logic', () => {
             expect(debtAndBalance[1]).equal(parseEther('0'));
 
             snapshot = await takeSnapshot();
+        });
+
+        it('Test rebase after an year', async () => {
+            await time.increase(ONE_YEAR);
+
+            tokenPrice = await securitizationPoolContract.calcTokenPrices();
+            expect(tokenPrice[0]).to.closeTo(parseEther('1.129467'), parseEther('0.000001'));
+            expect(tokenPrice[1]).equal(parseEther('0'));
+
+            await securitizationPoolContract.connect(poolCreatorSigner).rebase();
+
+            // check NAV and reserve
+            currentNAV = await securitizationPoolContract.currentNAV();
+            expect(currentNAV).to.closeTo(parseEther('92.946739'), parseEther('0.000001'));
+            reserve = await securitizationPoolContract.reserve();
+            expect(reserve).equal(parseEther('20'));
+
+            // Price still the same after rebase
+            tokenPrice = await securitizationPoolContract.calcTokenPrices();
+            expect(tokenPrice[0]).to.closeTo(parseEther('1.129467'), parseEther('0.000001'));
+            expect(tokenPrice[1]).equal(parseEther('0'));
+
+            // seniorDebt and seniorBalance
+            let debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
+            expect(debtAndBalance[0]).equal(parseEther('0'));
+            expect(debtAndBalance[1]).equal(parseEther('0'));
         });
     });
 });

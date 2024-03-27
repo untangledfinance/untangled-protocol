@@ -100,10 +100,16 @@ async function createFullPool(signer, poolParams, riskScores, sotInfo, jotInfo) 
     );
     const securitizationPoolContract = await getPoolByAddress(poolAddress);
     await setupRiskScore.call(this, signer, securitizationPoolContract, riskScores);
-    const sotCreated =
-        sotInfo && (await initSOTSale.call(this, signer, { ...sotInfo, pool: securitizationPoolContract.address }));
-    const jotCreated =
-        jotInfo && (await initJOTSale.call(this, signer, { ...jotInfo, pool: securitizationPoolContract.address }));
+    let sotCreated;
+    let jotCreated;
+    if (sotInfo) {
+        sotCreated =
+            sotInfo && (await initSOTSale.call(this, signer, { ...sotInfo, pool: securitizationPoolContract.address }));
+    }
+    if (jotInfo) {
+        jotCreated =
+            jotInfo && (await initJOTSale.call(this, signer, { ...jotInfo, pool: securitizationPoolContract.address }));
+    }
     return [poolAddress, sotCreated, jotCreated];
 }
 

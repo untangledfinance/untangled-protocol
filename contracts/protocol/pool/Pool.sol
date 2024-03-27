@@ -436,15 +436,28 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     function calcTokenPrices() external view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice) {
         address jotTokenAddress = TGELogic.jotToken(_poolStorage);
         address sotTokenAddress = TGELogic.sotToken(_poolStorage);
-        uint256 noteTokenDecimal = (10 ** INoteToken(sotTokenAddress).decimals());
+        uint256 noteTokenDecimal = (10 ** INoteToken(jotTokenAddress).decimals());
+
+        uint256 jotTokenSupply;
+        uint256 sotTokenSupply;
+
+        if (jotTokenAddress != address(0)) {
+            jotTokenSupply = INoteToken(jotTokenAddress).totalSupply();
+        }
+
+        if (sotTokenAddress != address(0)) {
+            sotTokenSupply = INoteToken(sotTokenAddress).totalSupply();
+        }
+
         (uint256 _juniorTokenPrice, uint256 _seniorTokenPrice) = RebaseLogic.calcTokenPrices(
             GenericLogic.currentNAV(_poolStorage),
             GenericLogic.reserve(_poolStorage),
             RebaseLogic.seniorDebt(_poolStorage),
             _poolStorage.seniorBalance,
-            INoteToken(jotTokenAddress).totalSupply(),
-            INoteToken(sotTokenAddress).totalSupply()
+            jotTokenSupply,
+            sotTokenSupply
         );
+        
         return ((_juniorTokenPrice * noteTokenDecimal) / ONE, (_seniorTokenPrice * noteTokenDecimal) / ONE);
     }
 

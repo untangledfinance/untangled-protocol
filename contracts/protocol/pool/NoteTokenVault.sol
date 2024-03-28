@@ -126,17 +126,16 @@ contract NoteTokenVault is
 
     function preDistribute(
         EpochParam calldata epochParam,
-        address poolAddress,
         uint256 incomeAmount,
         uint256 capitalAmount,
         address[] calldata noteTokenAddresses,
         uint256[] calldata totalRedeemedNoteAmounts
     ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
         require(
-            !epochPreDistributed[poolAddress][epochParam.epochId],
+            !epochPreDistributed[epochParam.pool][epochParam.epochId],
             'NoteTokenVault: Epoch have been pre distributed'
         );
-        IPool pool = IPool(poolAddress);
+        IPool pool = IPool(epochParam.pool);
 
         (, uint256 sotTokenPrice) = pool.calcTokenPrices();
         uint256 totalSotRedeem;
@@ -156,9 +155,9 @@ contract NoteTokenVault is
             pool.changeSeniorAsset(0, (sotTokenPrice * totalSotRedeem) / 10 ** decimals);
         }
         require(pool.isMinFirstLossValid(), 'NoteTokenVault: Exceeds MinFirstLoss');
-        epochPreDistributed[poolAddress][epochParam.epochId] = true;
+        epochPreDistributed[epochParam.pool][epochParam.epochId] = true;
         emit PreDistribute(
-            poolAddress,
+            epochParam.pool,
             epochParam,
             incomeAmount,
             capitalAmount,

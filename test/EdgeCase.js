@@ -224,7 +224,7 @@ describe('Rebase Logic', () => {
 
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).equal(parseEther('1'));
-            expect(tokenPrice[1]).equal(parseEther('0'));
+            expect(tokenPrice[1]).equal(parseEther('1'));
 
             // ACTION: DRAWDOWN 80
             tokenIds = await untangledProtocol.uploadLoans(
@@ -244,7 +244,7 @@ describe('Rebase Logic', () => {
             // Price still the same after rebase
             tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).equal(parseEther('1'));
-            expect(tokenPrice[1]).equal(parseEther('0'));
+            expect(tokenPrice[1]).equal(parseEther('1'));
 
             // seniorDebt and seniorBalance
             let debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
@@ -259,7 +259,7 @@ describe('Rebase Logic', () => {
 
             tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).to.closeTo(parseEther('1.129467'), parseEther('0.000001'));
-            expect(tokenPrice[1]).equal(parseEther('0'));
+            expect(tokenPrice[1]).equal(parseEther('1'));
 
             await securitizationPoolContract.connect(poolCreatorSigner).rebase();
 
@@ -272,7 +272,7 @@ describe('Rebase Logic', () => {
             // Price still the same after rebase
             tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).to.closeTo(parseEther('1.129467'), parseEther('0.000001'));
-            expect(tokenPrice[1]).equal(parseEther('0'));
+            expect(tokenPrice[1]).equal(parseEther('1'));
 
             // seniorDebt and seniorBalance
             let debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();

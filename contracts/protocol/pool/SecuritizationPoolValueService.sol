@@ -210,11 +210,22 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         }
     }
 
+    /**
+     * @dev This function calculates and returns the price of a specified token in a pool.
+     *
+     * @param pool The address of the pool contract from which to calculate the token prices.
+     * @param tokenAddress The address of the token for which to calculate the price.
+     *
+     * @return uint256 Returns the price of the given token. If the token is not found or any error occurs, it returns 0.
+     */
     function calcTokenPrice(address pool, address tokenAddress) public view returns (uint256) {
         IPool securitizationPool = IPool(pool);
         (uint256 jotTokenPrice, uint256 sotTokenPrice) = IPool(pool).calcTokenPrices();
+
         if (tokenAddress == securitizationPool.sotToken()) return sotTokenPrice;
         if (tokenAddress == securitizationPool.jotToken()) return jotTokenPrice;
+
+        // If token is not found, return 0
         return 0;
     }
 

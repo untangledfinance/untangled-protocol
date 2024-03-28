@@ -457,9 +457,13 @@ contract Pool is IPool, PoolStorage, UntangledBase {
             jotTokenSupply,
             sotTokenSupply
         );
-        
+
         return ((_juniorTokenPrice * noteTokenDecimal) / ONE, (_seniorTokenPrice * noteTokenDecimal) / ONE);
     }
+
+    /// @notice Calculate junior ratio based on current NAV, reserve and senior debt/balance.
+    /// @dev Uses RebaseLogic's calcJuniorRatio method to calculate the junior ratio.
+    /// @return juniorRatio The calculated junior ratio as a uint256 number.
 
     function calcJuniorRatio() public view returns (uint256 juniorRatio) {
         return

@@ -204,9 +204,6 @@ library RebaseLogic {
         if ((_nav == 0 && _reserve == 0) || _sotTotalSupply <= 2) {
             // we are using a tolerance of 2 here, as there can be minimal supply leftovers after all redemptions due to rounding
             // initial token price at start 1.00
-            if(_sotTotalSupply == 0){
-                return 0;
-            }
             return ONE;
         }
 

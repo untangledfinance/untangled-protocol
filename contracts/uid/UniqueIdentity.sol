@@ -5,7 +5,7 @@ import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/crypto
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import {ERC1155PresetPauserUpgradeable} from '../external/ERC1155PresetPauserUpgradeable.sol';
 import {IUniqueIdentity} from '../interfaces/IUniqueIdentity.sol';
-import {OWNER_ROLE ,SIGNER_ROLE , SUPER_ADMIN_ROLE} from '../libraries/DataTypes.sol';
+import {OWNER_ROLE, SIGNER_ROLE, SUPER_ADMIN_ROLE} from '../libraries/DataTypes.sol';
 /**
  * @title UniqueIdentity
  * @notice UniqueIdentity is an ERC1155-compliant contract for representing
@@ -14,7 +14,6 @@ import {OWNER_ROLE ,SIGNER_ROLE , SUPER_ADMIN_ROLE} from '../libraries/DataTypes
  */
 
 contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
-
     uint256 public constant ID_TYPE_0 = 0; // non-US individual
     uint256 public constant ID_TYPE_1 = 1; // US individual
     uint256 public constant ID_TYPE_2 = 2; // non-US entity
@@ -190,7 +189,7 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
     // unlock
     function unlockWrongToken(address token) public onlyAdmin {
         if (token == address(0)) {
-            (bool success, ) = payable(_msgSender()).call{value: IERC20Upgradeable(token).balanceOf(address(this))}('');
+            (bool success, ) = payable(_msgSender()).call{value: address(this).balance}('');
             require(success, 'Transfer failed.');
         } else {
             require(

@@ -196,6 +196,11 @@ describe('Rebase Logic', () => {
             expect(debtAndBalance[0]).equal(parseEther('0'));
             expect(debtAndBalance[1]).equal(parseEther('90'));
 
+            // income/capital
+            let reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).equal(parseEther('0'));
+            expect(reserve[1]).equal(parseEther('100'));
+
             let ratio = await securitizationPoolContract.calcJuniorRatio();
             expect(ratio).equal(BigNumber.from(100000));
 
@@ -235,8 +240,11 @@ describe('Rebase Logic', () => {
 
             let currentNAV = await securitizationPoolContract.currentNAV();
             expect(currentNAV).equal(parseEther('0'));
-            let reserve = await securitizationPoolContract.reserve();
-            expect(reserve).equal(parseEther('100'));
+
+            // income/capital
+            let reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).equal(parseEther('0'));
+            expect(reserve[1]).equal(parseEther('100'));
 
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).equal(parseEther('1'));
@@ -254,8 +262,10 @@ describe('Rebase Logic', () => {
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();
             expect(currentNAV).equal(parseEther('80'));
-            reserve = await securitizationPoolContract.reserve();
-            expect(reserve).equal(parseEther('20'));
+            // income/capital
+            reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).equal(parseEther('0'));
+            expect(reserve[1]).equal(parseEther('20'));
 
             // Price still the same after rebase
             tokenPrice = await securitizationPoolContract.calcTokenPrices();
@@ -277,9 +287,10 @@ describe('Rebase Logic', () => {
             await time.increase(ONE_YEAR);
             // check NAV and reserve
             let currentNAV = await securitizationPoolContract.currentNAV();
-            let reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('92.946739'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('20'));
+            let reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).equal(parseEther('0'));
+            expect(reserve[1]).equal(parseEther('20'));
 
             // Price still the same after rebase
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
@@ -317,9 +328,11 @@ describe('Rebase Logic', () => {
             expect(tokenPrice[1]).to.closeTo(parseEther('1.084136'), parseEther('0.00001'));
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();
-            reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('102.946739'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('10'));
+            // income/capital
+            reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).equal(parseEther('0'));
+            expect(reserve[1]).equal(parseEther('10'));
 
             // seniorDebt and seniorBalance
             debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
@@ -331,9 +344,11 @@ describe('Rebase Logic', () => {
             await time.increase(ONE_YEAR);
             // check NAV and reserve
             let currentNAV = await securitizationPoolContract.currentNAV();
-            let reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('119.607047'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('10'));
+            // income/capital
+            let reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).equal(parseEther('0'));
+            expect(reserve[1]).equal(parseEther('10'));
 
             // Price still the same after rebase
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
@@ -379,9 +394,11 @@ describe('Rebase Logic', () => {
 
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();
-            reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('32.946739'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('80'));
+            // income/capital
+            reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).to.closeTo(parseEther('12.94673'), parseEther('0.00001'));
+            expect(reserve[1]).to.closeTo(parseEther('67.05326'), parseEther('0.00001'));
 
             // seniorDebt and seniorBalance
             debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
@@ -393,9 +410,11 @@ describe('Rebase Logic', () => {
             await time.increase(ONE_YEAR);
             // check NAV and reserve
             let currentNAV = await securitizationPoolContract.currentNAV();
-            let reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('38.278650'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('80'));
+            // income/capital
+            let reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).to.closeTo(parseEther('12.94673'), parseEther('0.00001'));
+            expect(reserve[1]).to.closeTo(parseEther('67.05326'), parseEther('0.00001'));
 
             // Price still the same after rebase
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
@@ -439,9 +458,11 @@ describe('Rebase Logic', () => {
 
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();
-            reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('92.946739'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('120'));
+            // income/capital
+            reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).to.closeTo(parseEther('0'), parseEther('0.00001'));
+            expect(reserve[1]).to.closeTo(parseEther('120'), parseEther('0.00001'));
 
             // seniorDebt and seniorBalance
             debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
@@ -476,9 +497,11 @@ describe('Rebase Logic', () => {
 
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();
-            reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('107.988704'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('130'));
+            // income/capital
+            reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).to.closeTo(parseEther('0'), parseEther('0.00001'));
+            expect(reserve[1]).to.closeTo(parseEther('130'), parseEther('0.00001'));
 
             // Price will increase back
             tokenPrice = await securitizationPoolContract.calcTokenPrices();
@@ -522,9 +545,11 @@ describe('Rebase Logic', () => {
 
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();
-            reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('92.946739'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('120'));
+            // income/capital
+            reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).to.closeTo(parseEther('0'), parseEther('0.00001'));
+            expect(reserve[1]).to.closeTo(parseEther('120'), parseEther('0.00001'));
 
             // seniorDebt and seniorBalance
             debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();
@@ -599,9 +624,11 @@ describe('Rebase Logic', () => {
 
             // check NAV and reserve
             currentNAV = await securitizationPoolContract.currentNAV();
-            reserve = await securitizationPoolContract.reserve();
             expect(currentNAV).to.closeTo(parseEther('92.946739'), parseEther('0.00001'));
-            expect(reserve).equal(parseEther('10'));
+            // income/capital
+            reserve = await securitizationPoolContract.getReserves();
+            expect(reserve[0]).to.closeTo(parseEther('0'), parseEther('0.00001'));
+            expect(reserve[1]).to.closeTo(parseEther('10'), parseEther('0.00001'));
 
             // seniorDebt and seniorBalance
             debtAndBalance = await securitizationPoolContract.seniorDebtAndBalance();

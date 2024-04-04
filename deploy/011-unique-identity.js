@@ -1,5 +1,5 @@
 const { networks } = require('../networks');
-
+const { utils } = require('ethers');
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, execute, get, read } = deployments;
     const { deployer } = await getNamedAccounts();
@@ -21,8 +21,8 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const kycAdmin = network.config.kycAdmin;
     const superAdmin = network.config.superAdmin;
+    const SIGNER_ROLE = utils.keccak256(Buffer.from('SIGNER_ROLE'));
 
-    const SIGNER_ROLE = await read('UniqueIdentity', 'SIGNER_ROLE');
     await execute(
         'UniqueIdentity',
         {

@@ -376,7 +376,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                     'LoanKernel: Invalid LAT Token Id'
                 );
 
-                DataTypes.LoanEntry memory newLoan = DataTypes.LoanEntry({
+                loans[j] = DataTypes.LoanEntry({
                     debtor: debtOrder.issuance.debtors[x],
                     principalTokenAddress: debtOrder.principalTokenAddress,
                     termsParam: fillDebtOrderParam.termsContractParameters[x],
@@ -386,7 +386,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
                     assetPurpose: Configuration.ASSET_PURPOSE(debtOrder.assetPurpose),
                     riskScore: debtOrder.riskScores[x]
                 });
-                loans[j] = newLoan;
 
                 x = UntangledMath.uncheckedInc(x);
             }

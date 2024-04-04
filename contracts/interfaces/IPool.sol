@@ -36,8 +36,6 @@ interface IPool {
 
     function disburse(address usr, uint256 currencyAmount) external;
 
-    function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory);
-
     function increaseCapitalReserve(uint256 currencyAmount) external;
 
     function increaseTotalAssetRepaidCurrency(uint256 amount) external;

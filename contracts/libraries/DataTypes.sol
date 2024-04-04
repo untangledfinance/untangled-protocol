@@ -190,4 +190,12 @@ library DataTypes {
         address validator;
         bytes validateSignature;
     }
+
+    struct AssetMetadataQ4 {
+        uint16 monthOnBook;
+        uint16 interestRateAdj;
+        uint16 term;
+        uint16 originalPrincipalBalance;
+        uint16 outstandingPrincipalBalance;
+    }
 }

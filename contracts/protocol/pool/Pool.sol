@@ -14,17 +14,20 @@ import {TGELogic} from '../../libraries/logic/TGELogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {RebaseLogic} from '../../libraries/logic/RebaseLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-
+import {CreditOracleConsumerBase} from '../oracle/CreditOracleConsumerBase.sol';
+import {CreditOracleCoordinator} from '../oracle/CreditOracleCooridinator.sol';
 /**
  * @title Untangled's SecuritizationPool contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
  *  Automatically invests across borrower pools using an adjustable strategy.
  * @author Untangled Team
  */
-contract Pool is IPool, PoolStorage, UntangledBase {
+contract Pool is IPool, PoolStorage, UntangledBase, CreditOracleConsumerBase {
     using ConfigHelper for Registry;
 
     Registry public registry;
+    DataTypes.AssetMetadataQ4 public assetMetadataQ4;
+    error LengthMisMatch();
 
     event InsertNFTAsset(address token, uint256 tokenId);
     event Repay(address poolAddress, uint256 increaseInterestRepay, uint256 increasePrincipalRepay, uint256 timestamp);
@@ -79,6 +82,38 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     function riskScores(uint256 index) external view returns (DataTypes.RiskScore memory) {
         return _poolStorage.riskScores[index];
+    }
+
+    function getPD() external onlyAdmin {
+        DataTypes.AssetMetadataQ4 memory assetQ4 = assetMetadataQ4;
+        CreditOracleCoordinator(coordinator).requestCredit(
+            assetQ4.monthOnBook,
+            assetQ4.interestRateAdj,
+            assetQ4.term,
+            assetQ4.originalPrincipalBalance,
+            assetQ4.outstandingPrincipalBalance
+        );
+    }
+
+    function _fulfillCredit(uint256[] memory pubInputs, uint256 loan) internal override {
+        // need to check some requirement
+        if (pubInputs.length != 8) revert LengthMisMatch();
+        uint32 probabilityOfDefault = uint32(pubInputs[6]);
+        _updateRiskScore(loan, probabilityOfDefault);
+    }
+
+    function _updateRiskScore(uint256 loan, uint32 newPD) internal {
+        bytes32 nftID = GenericLogic.nftID(loan);
+        DataTypes.NFTDetails memory nftDetails = GenericLogic.getAsset(_poolStorage, nftID);
+        DataTypes.RiskScore memory newRiskParam = GenericLogic.getRiskScoreByIdx(
+            _poolStorage.riskScores,
+            nftDetails.risk
+        );
+        newRiskParam.probabilityOfDefault = newPD;
+        _poolStorage.riskScores.push(newRiskParam);
+        uint128 newRiskParamIdx = uint128(_poolStorage.riskScores.length - 1);
+        _poolStorage.details[nftID].risk = newRiskParamIdx;
+        rebase();
     }
 
     function nftAssets(uint256 idx) external view returns (DataTypes.NFTAsset memory) {
@@ -218,18 +253,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return GenericLogic.currentNAVAsset(_poolStorage, tokenId);
     }
 
-    function getReserves() external view returns (uint256, uint256) {
-        return (_poolStorage.incomeReserve, _poolStorage.capitalReserve);
-    }
-
-    function futureValue(bytes32 nft_) external view returns (uint256) {
-        return uint256(_poolStorage.details[nft_].futureValue);
-    }
-
-    function maturityDate(bytes32 nft_) external view returns (uint256) {
-        return uint256(_poolStorage.details[nft_].maturityDate);
-    }
-
     function discountRate() external view returns (uint256) {
         return uint256(_poolStorage.discountRate);
     }
@@ -239,11 +262,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
         // rebase
         rebase();
-    }
-
-    /// @notice retrieves loan information
-    function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory) {
-        return _poolStorage.details[agreementId];
     }
 
     /*==================== TGE ====================*/

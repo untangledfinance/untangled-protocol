@@ -26,7 +26,6 @@ contract Pool is IPool, PoolStorage, UntangledBase, CreditOracleConsumerBase {
     using ConfigHelper for Registry;
 
     Registry public registry;
-    DataTypes.AssetMetadataQ4 public assetMetadataQ4;
     error LengthMisMatch();
 
     event InsertNFTAsset(address token, uint256 tokenId);
@@ -84,18 +83,27 @@ contract Pool is IPool, PoolStorage, UntangledBase, CreditOracleConsumerBase {
         return _poolStorage.riskScores[index];
     }
 
-    function getPD() external onlyAdmin {
-        DataTypes.AssetMetadataQ4 memory assetQ4 = assetMetadataQ4;
+    function setCoordinator(address _coordinator) public {
+        coordinator = _coordinator;
+    }
+
+    function getPD(
+        uint16 monthOnBook,
+        uint16 interestRateAdj,
+        uint16 term,
+        uint16 originalPrincipalBalance,
+        uint16 outstandingPrincipalBalance
+    ) external onlyAdmin {
         CreditOracleCoordinator(coordinator).requestCredit(
-            assetQ4.monthOnBook,
-            assetQ4.interestRateAdj,
-            assetQ4.term,
-            assetQ4.originalPrincipalBalance,
-            assetQ4.outstandingPrincipalBalance
+            monthOnBook,
+            interestRateAdj,
+            term,
+            originalPrincipalBalance,
+            outstandingPrincipalBalance
         );
     }
 
-    function _fulfillCredit(uint256[] memory pubInputs, uint256 loan) internal override {
+    function _fulfillCredit(uint256 loan, uint256[] memory pubInputs) internal override {
         // need to check some requirement
         if (pubInputs.length != 8) revert LengthMisMatch();
         uint32 probabilityOfDefault = uint32(pubInputs[6]);

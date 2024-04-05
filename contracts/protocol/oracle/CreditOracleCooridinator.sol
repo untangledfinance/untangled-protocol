@@ -45,7 +45,7 @@ contract CreditOracleCoordinator is ILogAutomation {
     // for current testnet
     function fulfillProof(address sender, bytes calldata proof, uint256[] calldata pubInputs, uint256 loan) external {
         if (!IHalo2Verifier(verifier).verifyProof(proof, pubInputs)) revert InvalidProof();
-        CreditOracleConsumerBase(sender).rawFulfillCredit(pubInputs, loan);
+        CreditOracleConsumerBase(sender).rawFulfillCredit(loan, pubInputs);
         emit FulfillProof(sender, proof, pubInputs);
     }
 
@@ -84,7 +84,7 @@ contract CreditOracleCoordinator is ILogAutomation {
     function performUpkeep(bytes calldata performData) external {
         // need check condition later
         (address to, uint256 loan, uint256[] memory pubInputs) = abi.decode(performData, (address, uint256, uint256[]));
-        CreditOracleConsumerBase(to).rawFulfillCredit(pubInputs, loan);
+        CreditOracleConsumerBase(to).rawFulfillCredit(loan, pubInputs);
         emit PerformUpkeep(to, performData);
     }
 }

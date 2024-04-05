@@ -6,12 +6,12 @@ abstract contract CreditOracleConsumerBase {
 
     address internal coordinator;
 
-    function _fulfillCredit(uint256[] memory pubInputs, uint256 loan) internal virtual;
+    function _fulfillCredit(uint256 loanID, uint256[] memory pubInputs) internal virtual;
 
-    function rawFulfillCredit(uint256[] memory pubInputs, uint256 loan) external {
+    function rawFulfillCredit(uint256 loanID, uint256[] memory pubInputs) external {
         if (msg.sender != coordinator) {
             revert OnlyCoordinatorCanFulfill(msg.sender, coordinator);
         }
-        _fulfillCredit(pubInputs, loan);
+        _fulfillCredit(loanID, pubInputs);
     }
 }

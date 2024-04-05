@@ -1,4 +1,4 @@
-const { deployProxy } = require('./deployHelper');
+const { deployProxy } = require('./helper/deployHelper');
 
 module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, execute, get } = deployments;

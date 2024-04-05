@@ -56,7 +56,7 @@ module.exports = {
                 mnemonic: MNEMONIC,
             },
             kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
-
+            superAdmin: '0x4363daA50a24eb451acdF7DA963233F6b78fc2c9',
             // forking: {
             //     url: 'https://alfajores-forno.celo-testnet.org',
             //     // url: 'https://rpc.ankr.com/polygon',
@@ -111,6 +111,15 @@ module.exports = {
             accounts,
             loggingEnabled: true,
             url: `https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161`,
+        },
+        arbSepolia: {
+            saveDeployments: true,
+            accounts: accounts,
+            loggingEnabled: true,
+            url: 'https://public.stackup.sh/api/v1/node/arbitrum-sepolia',
+            kycAdmin: '0x4363daA50a24eb451acdF7DA963233F6b78fc2c9',
+            superAdmin: '0x4363daA50a24eb451acdF7DA963233F6b78fc2c9',
+            beAdmin: '0x4363daA50a24eb451acdF7DA963233F6b78fc2c9',
         },
         ...networks,
     },

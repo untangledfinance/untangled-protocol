@@ -7,13 +7,12 @@ import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.
 import '@openzeppelin/contracts/interfaces/IERC20.sol';
 import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
 import {UntangledBase} from '../base/UntangledBase.sol';
-import {POOL_ADMIN_ROLE} from '../libraries/DataTypes.sol';
+import {POOL_ADMIN_ROLE, ONE} from '../libraries/DataTypes.sol';
 import '../interfaces/INoteTokenManager.sol';
 import '../interfaces/INoteToken.sol';
 import '../interfaces/IPool.sol';
 import '../interfaces/IEpochExecutor.sol';
 import '../libraries/Math.sol';
-import '../libraries/logic/GenericLogic.sol';
 import '../libraries/ConfigHelper.sol';
 import '../libraries/Configuration.sol';
 
@@ -27,8 +26,12 @@ contract NoteTokenManager is
     using ConfigHelper for Registry;
     Registry public registry;
 
+    event InvestOrder(address pool, address from, uint256 amount);
+    event WithdrawOrder(address pool, address from, uint256 amount);
     mapping(address => uint256) public totalWithdraw;
     mapping(address => uint256) public totalInvest;
+    mapping(address => uint256) public totalIncomeWithdraw;
+    mapping(address => uint256) public totalValueRaised;
 
     mapping(address => NoteTokenInfor) public tokenInfor;
 
@@ -45,22 +48,39 @@ contract NoteTokenManager is
     IERC20 public currency;
 
     modifier onlyPoolAdmin(address pool) {
-        require(msg.sender == poolAdmin[pool], 'only pool admin');
+        _onlyPoolAdmin(pool);
         _;
+    }
+
+    modifier onlyEpochExecutor() {
+        _onlyEpochExecutor();
+        _;
+    }
+
+    function _onlyEpochExecutor() internal view {
+        require(msg.sender == address(epochExecutor), 'only epoch executor');
+    }
+
+    function _onlyPoolAdmin(address pool) internal view {
+        require(msg.sender == poolAdmin[pool], 'only pool admin');
     }
 
     function _incrementNonce(address account) internal {
         nonces[account] += 1;
     }
 
-    function initialize(Registry registry_, address epochExecutor_, address currency_) public initializer {
+    function initialize(Registry registry_, address currency_) public initializer {
         __Pausable_init_unchained();
         __ReentrancyGuard_init_unchained();
         __AccessControlEnumerable_init_unchained();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         registry = registry_;
-        epochExecutor = IEpochExecutor(epochExecutor_);
         currency = IERC20(currency_);
+    }
+
+    function setUpEpochExecutor() public {
+        require(address(registry.getEpochExecutor()) != address(0), 'no epoch executor found');
+        epochExecutor = registry.getEpochExecutor();
     }
 
     function setUpPoolAdmin(address admin) external {
@@ -74,43 +94,68 @@ contract NoteTokenManager is
         emit NewTokenAdded(pool, tokenAddress, block.timestamp);
     }
 
-    function investOrder(address pool, address user, uint256 newInvestAmount) public {
+    // only KYCed users
+    function investOrder(address pool, uint256 newInvestAmount) public {
         require(tokenInfor[pool].tokenAddress != address(0), 'NoteTokenManager: No note token found');
         require(newInvestAmount >= tokenInfor[pool].minBidAmount, 'NoteTokenManager: invest amount is too low');
-        orders[pool][user].orderedInEpoch = epochExecutor.currentEpoch(pool);
-        uint256 currentInvestAmount = orders[pool][user].investCurrencyAmount;
-        orders[pool][user].investCurrencyAmount = newInvestAmount;
+        orders[pool][msg.sender].orderedInEpoch = epochExecutor.currentEpoch(pool);
+        uint256 currentInvestAmount = orders[pool][msg.sender].investCurrencyAmount;
+        orders[pool][msg.sender].investCurrencyAmount = newInvestAmount;
         totalInvest[pool] = Math.safeAdd(Math.safeSub(totalInvest[pool], currentInvestAmount), newInvestAmount);
         if (newInvestAmount > currentInvestAmount) {
             require(
-                currency.transferFrom(user, IPool(pool).pot(), Math.safeSub(newInvestAmount, currentInvestAmount)),
+                currency.transferFrom(
+                    msg.sender,
+                    IPool(pool).pot(),
+                    Math.safeSub(newInvestAmount, currentInvestAmount)
+                ),
                 'NoteTokenManager: currency transfer failed'
             );
             return;
         } else if (newInvestAmount < currentInvestAmount) {
-            currency.transferFrom(IPool(pool).pot(), user, Math.safeSub(currentInvestAmount, newInvestAmount));
+            currency.transferFrom(IPool(pool).pot(), msg.sender, Math.safeSub(currentInvestAmount, newInvestAmount));
         }
+        emit InvestOrder(pool, msg.sender, newInvestAmount);
     }
 
-    function withdrawOrder(address pool, address user, uint256 newWithdrawAmount) public {
-        require(tokenInfor[pool].tokenAddress != address(0), 'NoteTokenManager: No note token found');
-        orders[pool][user].orderedInEpoch = epochExecutor.currentEpoch(pool);
-        uint256 currentWithdrawAmount = orders[pool][user].withdrawTokenAmount;
-        orders[pool][user].withdrawTokenAmount = newWithdrawAmount;
+    // only KYCed users
+    function withdrawOrder(address pool, uint256 newWithdrawAmount) public {
+        address tokenAddress = tokenInfor[pool].tokenAddress;
+        require(tokenAddress != address(0), 'NoteTokenManager: No note token found');
+        orders[pool][msg.sender].orderedInEpoch = epochExecutor.currentEpoch(pool);
+        uint256 userIncomeBalance = INoteToken(tokenAddress).getUserIncome(msg.sender);
+        uint256 currentWithdrawAmount = orders[pool][msg.sender].withdrawTokenAmount;
+        uint256 currentIncomeWithdraw = orders[pool][msg.sender].withdrawIncomeTokenAmount;
+        if (newWithdrawAmount > userIncomeBalance) {
+            totalIncomeWithdraw[pool] = Math.safeAdd(
+                Math.safeSub(totalIncomeWithdraw[pool], currentIncomeWithdraw),
+                userIncomeBalance
+            );
+            orders[pool][msg.sender].withdrawIncomeTokenAmount = userIncomeBalance;
+        } else {
+            totalIncomeWithdraw[pool] = Math.safeAdd(
+                Math.safeSub(totalIncomeWithdraw[pool], currentIncomeWithdraw),
+                newWithdrawAmount
+            );
+            orders[pool][msg.sender].withdrawIncomeTokenAmount = newWithdrawAmount;
+        }
+        orders[pool][msg.sender].withdrawTokenAmount = newWithdrawAmount;
+
         totalWithdraw[pool] = Math.safeAdd(Math.safeSub(totalWithdraw[pool], currentWithdrawAmount), newWithdrawAmount);
         if (newWithdrawAmount > currentWithdrawAmount) {
-            INoteToken(tokenInfor[pool].tokenAddress).transfer(
+            INoteToken(tokenAddress).transfer(
                 IPool(pool).pot(),
                 Math.safeSub(newWithdrawAmount, currentWithdrawAmount)
             );
             return;
         } else if (newWithdrawAmount < currentWithdrawAmount) {
-            INoteToken(tokenInfor[pool].tokenAddress).transferFrom(
+            INoteToken(tokenAddress).transferFrom(
                 IPool(pool).pot(),
-                user,
+                msg.sender,
                 Math.safeSub(currentWithdrawAmount, newWithdrawAmount)
             );
         }
+        emit WithdrawOrder(pool, msg.sender, newWithdrawAmount);
     }
 
     function calcDisburse(
@@ -123,7 +168,8 @@ contract NoteTokenManager is
             uint256 payoutCurrencyAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
-            uint256 remainingWithdrawToken
+            uint256 remainingWithdrawToken,
+            uint256 remainingIncomeWithdrawToken
         )
     {
         return calcDisburse(pool, user, epochExecutor.lastEpochExecuted(pool));
@@ -140,33 +186,34 @@ contract NoteTokenManager is
             uint256 payoutCurrencyAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
-            uint256 remainingWithdrawToken
+            uint256 remainingWithdrawToken,
+            uint256 remainingIncomeWithdrawToken
         )
     {
         uint256 epochIdx = orders[pool][user].orderedInEpoch;
-        uint256 lastEpochExecuted = epochExecutor.lastEpochExecuted(pool);
         // no disburse possible in epoch
-        if (epochIdx == lastEpochExecuted) {
+        if (epochIdx == epochExecutor.lastEpochExecuted(pool)) {
             return (
                 payoutCurrencyAmount,
                 payoutTokenAmount,
                 orders[pool][user].investCurrencyAmount,
-                orders[pool][user].withdrawTokenAmount
+                orders[pool][user].withdrawTokenAmount,
+                orders[pool][user].withdrawIncomeTokenAmount
             );
         }
 
-        if (endEpoch > lastEpochExecuted) {
-            endEpoch = lastEpochExecuted;
+        if (endEpoch > epochExecutor.lastEpochExecuted(pool)) {
+            endEpoch = epochExecutor.lastEpochExecuted(pool);
         }
 
         remainingInvestCurrency = orders[pool][user].investCurrencyAmount;
         remainingWithdrawToken = orders[pool][user].withdrawTokenAmount;
-
+        remainingIncomeWithdrawToken = orders[pool][user].withdrawIncomeTokenAmount;
         uint256 amount = 0;
 
         while (epochIdx <= endEpoch && (remainingInvestCurrency != 0 || remainingWithdrawToken != 0)) {
             if (remainingInvestCurrency != 0) {
-                amount = Math.rmul(remainingInvestCurrency, epochs[pool][epochIdx].investFullfillment);
+                amount = Math.rmul(remainingInvestCurrency, epochs[pool][epochIdx].investFulfillment);
                 if (amount != 0) {
                     payoutTokenAmount = Math.safeAdd(
                         payoutTokenAmount,
@@ -176,18 +223,46 @@ contract NoteTokenManager is
                 }
             }
             if (remainingWithdrawToken != 0) {
-                amount = Math.rmul(remainingWithdrawToken, epochs[pool][epochIdx].withdrawFulfillment);
-                if (amount != 0) {
-                    payoutCurrencyAmount = Math.safeAdd(
-                        payoutCurrencyAmount,
-                        Math.rmul(amount, epochs[pool][epochIdx].price)
+                // user have income withdrawal and have withdrawal fulfillment < 100%
+                if (remainingIncomeWithdrawToken != 0 && epochs[pool][epochIdx].withdrawIncomeFulfillment != ONE) {
+                    amount = Math.rmul(remainingIncomeWithdrawToken, epochs[pool][epochIdx].withdrawIncomeFulfillment);
+                    if (amount != 0) {
+                        payoutCurrencyAmount = Math.safeAdd(
+                            payoutCurrencyAmount,
+                            Math.rmul(amount, epochs[pool][epochIdx].price)
+                        );
+                        remainingIncomeWithdrawToken = Math.safeSub(remainingIncomeWithdrawToken, amount);
+                        remainingWithdrawToken = Math.safeSub(remainingWithdrawToken, amount);
+                    }
+                } else {
+                    // all income can be withdraw or user don't have income withdrawal
+                    // total withdrawal = totalIncomeWithdrawal + capitalFulfillment * totalCapitalWithdrawal
+                    amount = Math.safeAdd(
+                        Math.rmul(
+                            Math.safeSub(remainingWithdrawToken, remainingIncomeWithdrawToken), // calculate remaining capital withdrawal
+                            epochs[pool][epochIdx].withdrawCapitalFulfillment
+                        ),
+                        remainingIncomeWithdrawToken
                     );
-                    remainingWithdrawToken = Math.safeSub(remainingWithdrawToken, amount);
+                    if (amount != 0) {
+                        payoutCurrencyAmount = Math.safeAdd(
+                            payoutCurrencyAmount,
+                            Math.rmul(amount, epochs[pool][epochIdx].price)
+                        );
+                        remainingIncomeWithdrawToken = 0;
+                        remainingWithdrawToken = Math.safeSub(remainingWithdrawToken, amount);
+                    }
                 }
             }
             epochIdx = Math.safeAdd(epochIdx, 1);
         }
-        return (payoutCurrencyAmount, payoutTokenAmount, remainingInvestCurrency, remainingWithdrawToken);
+        return (
+            payoutCurrencyAmount,
+            payoutTokenAmount,
+            remainingInvestCurrency,
+            remainingWithdrawToken,
+            remainingIncomeWithdrawToken
+        );
     }
 
     function disburse(
@@ -199,7 +274,8 @@ contract NoteTokenManager is
             uint256 payoutCurrencyAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
-            uint256 remainingWithdrawToken
+            uint256 remainingWithdrawToken,
+            uint256 remainingIncomeWithdrawToken
         )
     {
         return disburse(pool, user, epochExecutor.lastEpochExecuted(pool));
@@ -215,7 +291,8 @@ contract NoteTokenManager is
             uint256 payoutCurrencyAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
-            uint256 remainingWithdrawToken
+            uint256 remainingWithdrawToken,
+            uint256 remainingIncomeWithdrawToken
         )
     {
         require(
@@ -226,33 +303,53 @@ contract NoteTokenManager is
         if (endEpoch > lastEpochExecuted) {
             endEpoch = lastEpochExecuted;
         }
-        (payoutCurrencyAmount, payoutTokenAmount, remainingInvestCurrency, remainingWithdrawToken) = calcDisburse(
-            pool,
-            user
-        );
-
+        (
+            payoutCurrencyAmount,
+            payoutTokenAmount,
+            remainingInvestCurrency,
+            remainingWithdrawToken,
+            remainingIncomeWithdrawToken
+        ) = calcDisburse(pool, user);
+        uint256 withdrawTokenAmount = orders[pool][user].withdrawTokenAmount - remainingWithdrawToken;
+        uint256 withdrawIncomeTokenAmount = orders[pool][user].withdrawIncomeTokenAmount - remainingIncomeWithdrawToken;
         orders[pool][user].investCurrencyAmount = remainingInvestCurrency;
         orders[pool][user].withdrawTokenAmount = remainingWithdrawToken;
+        orders[pool][user].withdrawIncomeTokenAmount = remainingIncomeWithdrawToken;
 
         orders[pool][user].orderedInEpoch = Math.safeAdd(endEpoch, 1);
 
         if (payoutCurrencyAmount > 0) {
             currency.transferFrom(IPool(pool).pot(), user, payoutCurrencyAmount);
+            INoteToken(tokenInfor[pool].tokenAddress).decreaseUserIncome(user, withdrawIncomeTokenAmount);
+            INoteToken(tokenInfor[pool].tokenAddress).decreaseUserPrinciple(user, withdrawTokenAmount);
         }
 
         if (payoutTokenAmount > 0) {
-            mint(pool, user, payoutTokenAmount);
+            INoteToken(tokenInfor[pool].tokenAddress).transferFrom(IPool(pool).pot(), user, payoutTokenAmount);
+            INoteToken(tokenInfor[pool].tokenAddress).increaseUserPrinciple(user, payoutTokenAmount);
         }
 
-        return (payoutCurrencyAmount, payoutTokenAmount, remainingInvestCurrency, remainingWithdrawToken);
+        return (
+            payoutCurrencyAmount,
+            payoutTokenAmount,
+            remainingInvestCurrency,
+            remainingWithdrawToken,
+            remainingIncomeWithdrawToken
+        );
     }
 
-    function closeEpoch(address pool) public returns (uint256 totalInvestCurrency_, uint256 totalWithdrawToken_) {
+    function closeEpoch(
+        address pool
+    )
+        public
+        onlyEpochExecutor
+        returns (uint256 totalInvestCurrency_, uint256 totalWithdrawToken_, uint256 totalIncomeWithdrawToken_)
+    {
         require(waitingForUpdate[pool] == false, 'NoteTokenManager: pool is closed');
         waitingForUpdate[pool] = true;
-        return (totalInvest[pool], totalWithdraw[pool]);
+        return (totalInvest[pool], totalWithdraw[pool], totalIncomeWithdraw[pool]);
     }
-
+    // only EpochExecutor
     function epochUpdate(
         address pool,
         uint256 epochID,
@@ -261,11 +358,11 @@ contract NoteTokenManager is
         uint256 tokenPrice_,
         uint256 epochInvestOrderCurrency,
         uint256 epochWithdrawOrderCurrency
-    ) public {
+    ) public onlyEpochExecutor returns (uint256 finalCapitalWithdrawCurrency, uint256 finalIncomeWithdrawCurrency) {
         require(waitingForUpdate[pool] == true, 'NoteTokenManager: epoch is not closed yet.');
         waitingForUpdate[pool] = false;
-        epochs[pool][epochID].investFullfillment = investFulfillment_;
-        epochs[pool][epochID].withdrawFulfillment = withdrawFulfillment_;
+        epochs[pool][epochID].investFulfillment = investFulfillment_;
+        epochs[pool][epochID].withdrawIncomeFulfillment = ONE;
         epochs[pool][epochID].price = tokenPrice_;
 
         uint256 withdrawInToken = 0;
@@ -277,13 +374,27 @@ contract NoteTokenManager is
 
         totalInvest[pool] = Math.safeAdd(
             Math.safeSub(totalInvest[pool], epochInvestOrderCurrency),
-            Math.rmul(epochInvestOrderCurrency, Math.safeSub(ONE, epochs[pool][epochID].investFullfillment))
+            Math.rmul(epochInvestOrderCurrency, Math.safeSub(ONE, investFulfillment_))
         );
 
-        totalWithdraw[pool] = Math.safeAdd(
-            Math.safeSub(totalWithdraw[pool], withdrawInToken),
-            Math.rmul(withdrawInToken, Math.safeSub(ONE, epochs[pool][epochID].withdrawFulfillment))
+        uint256 withdrawAmount = Math.rmul(withdrawInToken, withdrawFulfillment_);
+        _adjustTokenBalance(pool, Math.rmul(investInToken, investFulfillment_), withdrawAmount);
+
+        if (withdrawAmount < totalIncomeWithdraw[pool]) {
+            epochs[pool][epochID].withdrawIncomeFulfillment = Math.rdiv(withdrawInToken, totalIncomeWithdraw[pool]);
+            epochs[pool][epochID].withdrawCapitalFulfillment = 0;
+            totalIncomeWithdraw[pool] = Math.safeSub(totalIncomeWithdraw[pool], withdrawInToken);
+            return (0, epochWithdrawOrderCurrency);
+        }
+        address tempPool = pool;
+        epochs[tempPool][epochID].withdrawCapitalFulfillment = Math.rdiv(
+            Math.safeSub(withdrawAmount, totalIncomeWithdraw[tempPool]), // withdrawCapital = withdrawAmount - incomeWithdraw
+            Math.safeSub(totalWithdraw[tempPool], totalIncomeWithdraw[tempPool])
         );
+        finalIncomeWithdrawCurrency = totalIncomeWithdraw[tempPool];
+        finalCapitalWithdrawCurrency = Math.safeSub(epochWithdrawOrderCurrency, finalIncomeWithdrawCurrency);
+        totalIncomeWithdraw[tempPool] = 0;
+        totalWithdraw[tempPool] = Math.safeSub(totalWithdraw[tempPool], withdrawAmount);
     }
 
     function mint(address pool, address receiver, uint256 amount) public returns (uint256) {
@@ -294,5 +405,24 @@ contract NoteTokenManager is
 
     function getTokenAddress(address pool) public view returns (address) {
         return tokenInfor[pool].tokenAddress;
+    }
+
+    function getTotalValueRaised(address pool) public view returns (uint256) {
+        return totalValueRaised[pool];
+    }
+
+    function _adjustTokenBalance(address pool, uint256 epochInvestInToken, uint256 epochWithdrawInToken) internal {
+        uint256 delta;
+        if (epochWithdrawInToken > epochInvestInToken) {
+            delta = Math.safeSub(epochWithdrawInToken, epochWithdrawInToken);
+            INoteToken(tokenInfor[pool].tokenAddress).transferFrom(IPool(pool).pot(), address(this), delta);
+            INoteToken(tokenInfor[pool].tokenAddress).burn(delta);
+            return;
+        }
+
+        if (epochWithdrawInToken < epochInvestInToken) {
+            delta = Math.safeSub(epochInvestInToken, epochWithdrawInToken);
+            INoteToken(tokenInfor[pool].tokenAddress).mint(IPool(pool).pot(), delta);
+        }
     }
 }

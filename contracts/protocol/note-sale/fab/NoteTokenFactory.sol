@@ -12,7 +12,8 @@ import {MINTER_ROLE} from '../../../libraries/DataTypes.sol';
 contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
     using ConfigHelper for Registry;
 
-    bytes4 constant TOKEN_INIT_FUNC_SELECTOR = bytes4(keccak256('initialize(string,string,uint8,address,uint8)'));
+    bytes4 constant TOKEN_INIT_FUNC_SELECTOR =
+        bytes4(keccak256('initialize(string,string,uint8,address,address,uint8)'));
 
     Registry public registry;
 
@@ -60,12 +61,15 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
     ) external override whenNotPaused nonReentrant onlySecuritizationManager returns (address) {
         string memory name;
         string memory symbol;
+        address noteTokenManager;
         if (_noteTokenType == Configuration.NOTE_TOKEN_TYPE.SENIOR) {
             name = 'Senior Obligation Token';
             symbol = string.concat(ticker, '_SOT');
+            noteTokenManager = address(registry.getSeniorTokenManager());
         } else {
             name = 'Junior Obligation Token';
             symbol = string.concat(ticker, '_JOT');
+            noteTokenManager = address(registry.getJuniorTokenManager());
         }
 
         bytes memory _initialData = abi.encodeWithSelector(
@@ -74,6 +78,7 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
             symbol,
             _nDecimals,
             _poolAddress,
+            noteTokenManager,
             uint8(_noteTokenType)
         );
 

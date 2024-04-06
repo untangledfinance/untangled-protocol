@@ -46,7 +46,6 @@ async function createSecuritizationPool(
 
         .newPoolInstance(
             salt,
-
             signer.address,
             utils.defaultAbiCoder.encode(
                 [
@@ -280,6 +279,15 @@ async function initJOTSale(signer, saleParameters) {
 async function buyToken(signer, tgeAddress, currencyAmount) {
     await this.stableCoin.connect(signer).approve(tgeAddress, currencyAmount);
     return this.securitizationManager.connect(signer).buyTokens(tgeAddress, currencyAmount);
+}
+
+async function createInvestOrder(signer, noteTokenManager, amount) {
+    await this.stableCoin.connect(signer).approve(noteTokenManager, amount);
+    return this.noteTokenManager.connect(signer).investOrder(amount);
+}
+
+async function createWithdrawOrder(signer, noteTokenManager, amount) {
+    await this.token;
 }
 
 /**

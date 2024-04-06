@@ -46,7 +46,8 @@
     "hardhat-if-gen": "^0.0.3",
     "lodash": "4.17.21",
     "solidity-coverage": "0.8.4",
-    "truffle-contract-size": "2.0.1"
+    "truffle-contract-size": "2.0.1",
+    "viem": "^2.9.5"
   },
   "installConfig": {
     "hoistingLimits": "dependencies"

@@ -13,6 +13,7 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
     uint8 public constant PRECISION = 18;
 
     address internal _poolAddress;
+    address internal _noteTokenManager;
     Configuration.NOTE_TOKEN_TYPE internal _noteTokenType;
     uint8 internal _decimals;
 
@@ -31,6 +32,7 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
         string memory symbol,
         uint8 decimalsOfToken,
         address poolAddressOfToken,
+        address noteTokenManager,
         uint8 typeOfToken
     ) public initializer {
         __ERC20PresetMinterPauser_init(name, symbol);
@@ -39,6 +41,15 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
         _decimals = decimalsOfToken;
         _poolAddress = poolAddressOfToken;
         _noteTokenType = Configuration.NOTE_TOKEN_TYPE(typeOfToken);
+        _noteTokenManager = noteTokenManager;
+    }
+    modifier onlyNoteTokenManager() {
+        _onlyNoteTokenManager();
+        _;
+    }
+
+    function _onlyNoteTokenManager() internal view {
+        require(msg.sender == _noteTokenManager, 'only note token manager');
     }
 
     function poolAddress() external view returns (address) {
@@ -112,6 +123,10 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
         return incomes;
     }
 
+    function getUserIncome(address user) external view returns (uint256) {
+        return userCachedIncome[user] + _getUncachedIncomes(userCachedIncome[user], systemIndex, userIndexes[user]);
+    }
+
     /**
      * @dev Updates the user state related with his accrued rewards
      * @param user Address of the user
@@ -175,11 +190,7 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
         systemIndex += (usdAmount * PRECISION) / supply;
     }
 
-    function decreaseUserPrinciple(address[] calldata users, uint256[] calldata amounts) external {
-        require(
-            msg.sender == IPool(_poolAddress).registry().getAddress(uint8(Configuration.CONTRACT_TYPE.EPOCH_EXECUTOR)),
-            'Only epoch executor'
-        );
+    function decreaseUserPrinciple(address[] calldata users, uint256[] calldata amounts) external onlyNoteTokenManager {
         uint256 length = users.length;
         require(length == amounts.length, 'Invalid length');
         for (uint256 i; i < length; i++) {
@@ -188,12 +199,13 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
             userPrincipalAmounts[users[i]] -= amounts[i];
         }
     }
+    function decreaseUserPrinciple(address user, uint256 amount) external onlyNoteTokenManager {
+        uint256 userPrincipal = userPrincipalAmounts[user];
+        _updateCurrentUnclaimedIncome(user, userPrincipal);
+        userPrincipalAmounts[user] -= amount;
+    }
 
-    function decreaseUserIncome(address[] calldata users, uint256[] calldata amounts) external {
-        require(
-            msg.sender == IPool(_poolAddress).registry().getAddress(uint8(Configuration.CONTRACT_TYPE.EPOCH_EXECUTOR)),
-            'Only epoch executor'
-        );
+    function decreaseUserIncome(address[] calldata users, uint256[] calldata amounts) external onlyNoteTokenManager {
         uint256 length = users.length;
         require(length == amounts.length, 'Invalid length');
         for (uint256 i; i < length; i++) {
@@ -201,5 +213,17 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
             _updateCurrentUnclaimedIncome(users[i], userPrincipal);
             userCachedIncome[users[i]] -= amounts[i];
         }
+    }
+
+    function decreaseUserIncome(address user, uint256 amounts) external onlyNoteTokenManager {
+        uint256 userPrincipal = userPrincipalAmounts[user];
+        _updateCurrentUnclaimedIncome(user, userPrincipal);
+        userCachedIncome[user] -= amounts;
+    }
+
+    function increaseUserPrinciple(address user, uint256 amount) external onlyNoteTokenManager {
+        uint256 userPrincipal = userPrincipalAmounts[user];
+        _updateCurrentUnclaimedIncome(user, userPrincipal);
+        userPrincipalAmounts[user] += amount;
     }
 }

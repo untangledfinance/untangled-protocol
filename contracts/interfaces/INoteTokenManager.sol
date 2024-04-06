@@ -2,8 +2,9 @@
 pragma solidity 0.8.19;
 interface INoteTokenManager {
     struct Epoch {
-        uint256 withdrawFulfillment;
-        uint256 investFullfillment;
+        uint256 withdrawCapitalFulfillment;
+        uint256 withdrawIncomeFulfillment;
+        uint256 investFulfillment;
         uint256 price;
     }
 
@@ -11,6 +12,7 @@ interface INoteTokenManager {
         uint256 orderedInEpoch;
         uint256 investCurrencyAmount;
         uint256 withdrawTokenAmount;
+        uint256 withdrawIncomeTokenAmount;
     }
 
     struct NoteTokenInfor {
@@ -24,9 +26,9 @@ interface INoteTokenManager {
 
     function setupNewToken(address pool, address tokenAddress, uint256 minBidAmount) external;
 
-    function investOrder(address pool, address user, uint256 newInvestAmount) external;
+    function investOrder(address pool, uint256 newInvestAmount) external;
 
-    function withdrawOrder(address pool, address user, uint256 newWithdrawAmount) external;
+    function withdrawOrder(address pool, uint256 newWithdrawAmount) external;
 
     function calcDisburse(
         address pool,
@@ -38,7 +40,8 @@ interface INoteTokenManager {
             uint256 payoutCurrencyAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
-            uint256 remainingWithdrawToken
+            uint256 remainingCapitalWithdrawToken,
+            uint256 remainingIncomeWithdrawToken
         );
 
     function calcDisburse(
@@ -52,7 +55,8 @@ interface INoteTokenManager {
             uint256 payoutCurrencyAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
-            uint256 remainingWithdrawToken
+            uint256 remainingCapitalWithdrawToken,
+            uint256 remainingIncomeWithdrawToken
         );
 
     function disburse(
@@ -64,7 +68,8 @@ interface INoteTokenManager {
             uint256 payoutCurrencyAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
-            uint256 remainingWithdrawToken
+            uint256 remainingCapitalWithdrawToken,
+            uint256 remainingIncomeWithdrawToken
         );
 
     function disburse(
@@ -77,7 +82,8 @@ interface INoteTokenManager {
             uint256 payoutCurrencyAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
-            uint256 remainingWithdrawToken
+            uint256 remainingCapitalWithdrawToken,
+            uint256 remainingIncomeWithdrawToken
         );
 
     function epochUpdate(
@@ -88,8 +94,12 @@ interface INoteTokenManager {
         uint256 tokenPrice_,
         uint256 epochInvestOrderCurrency,
         uint256 epochWithdrawOrderCurrency
-    ) external;
+    ) external returns (uint256 finalCapitalWithdrawCurrency, uint256 finalIncomeWithdrawCurrency);
 
-    function closeEpoch(address pool) external returns (uint256 totalInvestCurrency_, uint256 totalWithdrawToken_);
+    function closeEpoch(
+        address pool
+    ) external returns (uint256 totalInvestCurrency_, uint256 totalWithdrawToken_, uint256 totalIncomeWithdrawToken_);
     function getTokenAddress(address pool) external view returns (address);
+
+    function getTotalValueRaised(address pool) external view returns (uint256);
 }

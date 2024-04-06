@@ -1,42 +1,73 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
+import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
+import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import '../interfaces/INoteTokenVault.sol';
 import '../interfaces/IEpochExecutor.sol';
 import '../interfaces/INoteTokenManager.sol';
 import '../interfaces/IPool.sol';
 import '../libraries/Math.sol';
+import '../libraries/ConfigHelper.sol';
 
-contract EpochExecutor is IEpochExecutor {
+contract EpochExecutor is
+    IEpochExecutor,
+    Initializable,
+    PausableUpgradeable,
+    AccessControlEnumerableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
+    uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
+
+    uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
     uint256 constant ONE = 10 ** 27;
     int256 public constant SUCCESS = 0;
     int256 public constant NEW_BEST = 0;
     int256 public constant ERR_CURRENCY_AVAILABLE = -1;
     int256 public constant ERR_MAX_ORDER = -2;
-    int256 public constant ERR_MAX_RESERVE = -3;
-    int256 public constant ERR_MIN_SENIOR_RATIO = -4;
+    int256 public constant ERR_DEBT_CEILING_REACHED = -3;
+    int256 public constant ERR_POOL_CLOSING = -4;
     int256 public constant ERR_MAX_SENIOR_RATIO = -5;
     int256 public constant ERR_NOT_NEW_BEST = -6;
-    int256 public constant ERR_POOL_CLOSING = -7;
-    uint256 public constant BIG_NUMBER = ONE * ONE;
     uint256 public constant WEIGHT_SENIOR_WITHDRAW = 1000000;
     uint256 public constant WEIGHT_JUNIOR_WITHDRAW = 100000;
     uint256 public constant WEIGHT_SENIOR_INVEST = 10000;
     uint256 public constant WEIGHT_JUNIOR_INVEST = 1000;
 
+    using ConfigHelper for Registry;
+    Registry public registry;
+
     modifier isNewEpoch(address pool) {
-        require(Math.safeSub(block.timestamp, epochInfor[pool].lastEpochClosed) >= epochInfor[pool].minimumEpochTime);
+        _isNewEpoch(pool);
         _;
     }
 
     INoteTokenManager public sotManager;
     INoteTokenManager public jotManager;
 
-    mapping(address => EpochInformation) public epochInfor;
-    mapping(address => uint256) public debtCeiling;
+    mapping(address => EpochInformation) epochInfor;
 
-    constructor(address sotManager_, address jotManager_) {
-        sotManager = INoteTokenManager(sotManager_);
-        jotManager = INoteTokenManager(jotManager_);
+    function initialize(Registry registry_) public initializer {
+        __Pausable_init_unchained();
+        __ReentrancyGuard_init_unchained();
+        __AccessControlEnumerable_init_unchained();
+        _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
+        registry = registry_;
+    }
+
+    function _isNewEpoch(address pool) internal view {
+        require(Math.safeSub(block.timestamp, epochInfor[pool].lastEpochClosed) >= epochInfor[pool].minimumEpochTime);
+    }
+    function setUpNoteTokenManger() public {
+        INoteTokenManager sotManager_ = registry.getSeniorTokenManager();
+        INoteTokenManager jotManager_ = registry.getJuniorTokenManager();
+        require(
+            address(sotManager_) != address(0) && address(jotManager_) != address(0),
+            'note token manager not fully set up'
+        );
+        sotManager = sotManager_;
+        jotManager = jotManager_;
     }
 
     function setupPool() public {
@@ -61,38 +92,47 @@ contract EpochExecutor is IEpochExecutor {
         }
     }
 
-    function closeEpoch(address pool) external isNewEpoch(pool) returns (bool epochExecuted) {
+    function closeEpoch(address pool) external returns (bool) {
+        _isNewEpoch(pool);
         require(epochInfor[pool].submitPeriod == false);
-        IPool _pool = IPool(pool);
+
         epochInfor[pool].lastEpochClosed = block.timestamp;
         epochInfor[pool].currentEpoch += 1;
+        epochInfor[pool].epochNAV = IPool(pool).currentNAV();
+        epochInfor[pool].epochReserve = IPool(pool).reserve();
+        epochInfor[pool].epochIncomeReserve = IPool(pool).incomeReserve();
 
-        (uint256 orderJuniorInvest, uint256 orderJuniorWithdraw) = jotManager.closeEpoch(pool);
-        (uint256 orderSeniorInvest, uint256 orderSeniorWithdraw) = sotManager.closeEpoch(pool);
-        (uint256 seniorDebt, uint256 seniorBalance) = _pool.seniorDebtAndBalance();
-        epochInfor[pool].epochSeniorAsset = Math.safeAdd(seniorDebt, seniorBalance);
+        {
+            (uint256 orderJuniorInvest, uint256 orderJuniorWithdraw, uint256 orderJuniorIncomeWithdraw) = jotManager
+                .closeEpoch(pool);
+            (uint256 orderSeniorInvest, uint256 orderSeniorWithdraw, uint256 orderSeniorIncomeWithdraw) = sotManager
+                .closeEpoch(pool);
 
-        epochInfor[pool].epochNAV = _pool.currentNAV();
-        epochInfor[pool].epochCapitalReserve = _pool.capitalReserve();
-        epochInfor[pool].epochIncomeReserve = _pool.incomeReserve();
+            (uint256 seniorDebt, uint256 seniorBalance) = IPool(pool).seniorDebtAndBalance();
+            epochInfor[pool].epochSeniorAsset = Math.safeAdd(seniorDebt, seniorBalance);
 
-        if (orderSeniorWithdraw == 0 && orderJuniorWithdraw == 0 && orderJuniorInvest == 0 && orderSeniorInvest == 0) {
-            jotManager.epochUpdate(pool, epochInfor[pool].currentEpoch, 0, 0, 0, 0, 0);
-            sotManager.epochUpdate(pool, epochInfor[pool].currentEpoch, 0, 0, 0, 0, 0);
+            if (
+                orderSeniorWithdraw == 0 && orderJuniorWithdraw == 0 && orderJuniorInvest == 0 && orderSeniorInvest == 0
+            ) {
+                jotManager.epochUpdate(pool, epochInfor[pool].currentEpoch, 0, 0, 0, 0, 0);
+                sotManager.epochUpdate(pool, epochInfor[pool].currentEpoch, 0, 0, 0, 0, 0);
+            }
+
+            (uint256 sotPrice, uint256 jotPrice) = IPool(pool).calcTokenPrices();
+            epochInfor[pool].sotPrice = sotPrice;
+            epochInfor[pool].jotPrice = jotPrice;
+
+            if (jotPrice == 0) {
+                epochInfor[pool].poolClosing = true;
+            }
+
+            epochInfor[pool].order.sotWithdraw = Math.rmul(orderSeniorWithdraw, sotPrice);
+            epochInfor[pool].order.jotWithdraw = Math.rmul(orderJuniorWithdraw, jotPrice);
+            epochInfor[pool].order.sotInvest = orderSeniorInvest;
+            epochInfor[pool].order.jotInvest = orderJuniorInvest;
+            epochInfor[pool].order.sotIncomeWithdraw = orderSeniorIncomeWithdraw;
+            epochInfor[pool].order.jotIncomeWithdraw = orderJuniorIncomeWithdraw;
         }
-
-        (uint256 sotPrice, uint256 jotPrice) = _pool.calcTokenPrices();
-        epochInfor[pool].sotPrice = sotPrice;
-        epochInfor[pool].jotPrice = jotPrice;
-
-        if (jotPrice == 0) {
-            epochInfor[pool].poolClosing = true;
-        }
-
-        epochInfor[pool].order.sotWithdraw = Math.rmul(orderSeniorWithdraw, sotPrice);
-        epochInfor[pool].order.jotWithdraw = Math.rmul(orderJuniorWithdraw, jotPrice);
-        epochInfor[pool].order.sotInvest = orderSeniorInvest;
-        epochInfor[pool].order.jotInvest = orderJuniorInvest;
 
         if (
             validate(
@@ -127,7 +167,7 @@ contract EpochExecutor is IEpochExecutor {
         return
             validate(
                 pool,
-                epochInfor[pool].epochCapitalReserve,
+                epochInfor[pool].epochReserve,
                 epochInfor[pool].epochNAV,
                 epochInfor[pool].epochSeniorAsset,
                 seniorWithdraw,
@@ -139,7 +179,7 @@ contract EpochExecutor is IEpochExecutor {
 
     function validate(
         address pool,
-        uint256 capitalReserve_,
+        uint256 reserve_,
         uint256 nav_,
         uint256 seniorAsset_,
         uint256 seniorInvest,
@@ -147,8 +187,7 @@ contract EpochExecutor is IEpochExecutor {
         uint256 juniorInvest,
         uint256 juniorWithdraw
     ) public view returns (int256) {
-        uint256 currencyAvailable = Math.safeAdd(Math.safeAdd(capitalReserve_, seniorInvest), juniorInvest);
-        // TO DO: calculate the withdrawal after subtract the income part
+        uint256 currencyAvailable = Math.safeAdd(Math.safeAdd(reserve_, seniorInvest), juniorInvest);
         uint256 currencyOut = Math.safeAdd(seniorWithdraw, juniorWithdraw);
         int256 err = validateCoreConstraints(
             pool,
@@ -194,6 +233,17 @@ contract EpochExecutor is IEpochExecutor {
         ) {
             return ERR_MAX_ORDER;
         }
+        // constraint 3: debt ceiling
+        uint256 totalValueRaised = Math.safeSub(
+            Math.safeAdd(
+                Math.safeAdd(sotManager.getTotalValueRaised(pool), jotManager.getTotalValueRaised(pool)),
+                Math.safeAdd(seniorInvest, juniorInvest)
+            ),
+            currencyOut
+        );
+        if (totalValueRaised >= IPool(pool).debtCeiling()) {
+            return ERR_DEBT_CEILING_REACHED;
+        }
         return SUCCESS;
     }
 
@@ -203,17 +253,24 @@ contract EpochExecutor is IEpochExecutor {
         uint256 seniorAsset,
         uint256 nav_
     ) public view returns (int256 err) {
-        // constraint 3: max capital reserve
-        if (reserve_ > debtCeiling[pool]) {
-            return ERR_MAX_RESERVE;
-        }
         uint256 assets = Math.safeAdd(nav_, reserve_);
         // constraint 4: min first loss
-        return validateMinFirstLoss(assets, seniorAsset);
+        return validateMinFirstLoss(pool, assets, seniorAsset);
     }
 
-    function validateMinFirstLoss(uint256 assets, uint256 seniorAsset) public view returns (int256) {
-        // TO DO: validate minFirstLoss
+    function validateMinFirstLoss(address pool, uint256 assets, uint256 seniorAsset) public view returns (int256) {
+        uint256 minFirstLossCushion = IPool(pool).minFirstLossCushion();
+        if (seniorAsset >= assets && minFirstLossCushion != 0) {
+            return ERR_MAX_SENIOR_RATIO;
+        }
+
+        if (seniorAsset == 0 && assets > 0) {
+            return SUCCESS;
+        }
+        if (Math.safeSub(ONE, Math.rdiv(seniorAsset, assets) * ONE_HUNDRED_PERCENT) / ONE < minFirstLossCushion) {
+            return ERR_MAX_SENIOR_RATIO;
+        }
+        return SUCCESS;
     }
 
     function submitSolution(
@@ -306,40 +363,62 @@ contract EpochExecutor is IEpochExecutor {
         uint256 epochID = Math.safeAdd(epochInfor[pool].lastEpochExecuted, 1);
         epochInfor[pool].submitPeriod = false;
 
-        sotManager.epochUpdate(
-            pool,
-            epochID,
-            _calcFullfillment(sotInvest, epochInfor[pool].order.sotInvest),
-            _calcFullfillment(sotWithdraw, epochInfor[pool].order.sotWithdraw),
-            epochInfor[pool].sotPrice,
-            epochInfor[pool].order.sotInvest,
-            epochInfor[pool].order.sotWithdraw
-        );
+        uint256 totalCapitalWithdraw = 0;
+        {
+            address tempPool = pool;
+            (uint256 sotCapitalWithdraw, uint256 sotIncomeWithdraw) = sotManager.epochUpdate(
+                pool,
+                epochID,
+                _calcFulfillment(sotInvest, epochInfor[tempPool].order.sotInvest),
+                _calcFulfillment(sotWithdraw, epochInfor[tempPool].order.sotWithdraw),
+                epochInfor[tempPool].sotPrice,
+                epochInfor[tempPool].order.sotInvest,
+                epochInfor[tempPool].order.sotWithdraw
+            );
 
-        IPool(pool).changeSeniorAsset(sotInvest, sotWithdraw);
+            IPool(tempPool).changeSeniorAsset(sotInvest, sotWithdraw);
 
-        jotManager.epochUpdate(
-            pool,
-            epochID,
-            _calcFullfillment(jotInvest, epochInfor[pool].order.jotInvest),
-            _calcFullfillment(jotWithdraw, epochInfor[pool].order.jotWithdraw),
-            epochInfor[pool].jotPrice,
-            epochInfor[pool].order.jotInvest,
-            epochInfor[pool].order.jotWithdraw
-        );
+            (uint256 jotCapitalWithdraw, uint256 jotIncomeWithdraw) = jotManager.epochUpdate(
+                tempPool,
+                epochID,
+                _calcFulfillment(jotInvest, epochInfor[tempPool].order.jotInvest),
+                _calcFulfillment(jotWithdraw, epochInfor[tempPool].order.jotWithdraw),
+                epochInfor[tempPool].jotPrice,
+                epochInfor[tempPool].order.jotInvest,
+                epochInfor[tempPool].order.jotWithdraw
+            );
+            totalCapitalWithdraw = Math.safeAdd(sotCapitalWithdraw, jotCapitalWithdraw);
+            IPool(tempPool).changeSeniorAsset(0, 0);
+            IPool(tempPool).decreaseIncomeReserve(Math.safeAdd(sotIncomeWithdraw, jotIncomeWithdraw));
+        }
 
-        uint256 newReserve = calcNewReserve(pool, sotWithdraw, jotWithdraw, sotInvest, jotInvest);
-        IPool(pool).changeSeniorAsset(0, 0);
+        uint256 totalInvest = Math.safeAdd(sotInvest, jotInvest);
 
-        // TO DO: change capital reserve
+        if (totalCapitalWithdraw < totalInvest) {
+            IPool(pool).increaseCapitalReserve(Math.safeSub(totalInvest, totalCapitalWithdraw));
+        } else {
+            IPool(pool).decreaseCapitalReserve(Math.safeSub(totalCapitalWithdraw, totalInvest));
+        }
 
-        epochInfor[pool].lastEpochExecuted = epochID;
         epochInfor[pool].minChallengePeriodEnd = 0;
         epochInfor[pool].bestSubScore = 0;
         epochInfor[pool].gotFullValidation = false;
     }
 
-    function _calcFullfillment(uint256 amount, uint256 totalOrder) public pure returns (uint256 percent) {
+    function executeEpoch(address pool) public {
+        require(
+            block.timestamp >= epochInfor[pool].minChallengePeriodEnd && epochInfor[pool].minChallengePeriodEnd != 0
+        );
+        _executeEpoch(
+            pool,
+            epochInfor[pool].bestSubmission.sotWithdraw,
+            epochInfor[pool].bestSubmission.jotWithdraw,
+            epochInfor[pool].bestSubmission.sotInvest,
+            epochInfor[pool].bestSubmission.jotInvest
+        );
+    }
+
+    function _calcFulfillment(uint256 amount, uint256 totalOrder) public pure returns (uint256 percent) {
         if (amount == 0 || totalOrder == 0) {
             return 0;
         }
@@ -353,12 +432,9 @@ contract EpochExecutor is IEpochExecutor {
         uint256 sotInvest,
         uint256 jotInvest
     ) public view returns (uint256) {
-        // TO DO: calculate the withdrawal after subtract income
-
-        // TO DO: calculate new income reserve
         return
             Math.safeSub(
-                Math.safeAdd(Math.safeAdd(epochInfor[pool].epochCapitalReserve, sotInvest), jotInvest),
+                Math.safeAdd(Math.safeAdd(epochInfor[pool].epochReserve, sotInvest), jotInvest),
                 Math.safeAdd(sotWithdraw, jotWithdraw)
             );
     }

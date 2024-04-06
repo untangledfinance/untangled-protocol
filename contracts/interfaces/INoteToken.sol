@@ -18,7 +18,15 @@ interface INoteToken is IERC20Upgradeable, IERC20MetadataUpgradeable, IPauseable
 
     function decreaseUserPrinciple(address[] calldata users, uint256[] calldata amounts) external;
 
+    function decreaseUserPrinciple(address users, uint256 amounts) external;
+
     function decreaseUserIncome(address[] calldata users, uint256[] calldata amounts) external;
 
+    function decreaseUserIncome(address users, uint256 amounts) external;
+
+    function increaseUserPrinciple(address users, uint256 amount) external;
+
     function getUserIncomes(address[] calldata users) external view returns (uint256[] memory);
+
+    function getUserIncome(address user) external view returns (uint256);
 }

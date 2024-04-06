@@ -325,13 +325,11 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     }
 
     function sotToken() public view returns (address) {
-        (address sotAddress, ) = registry.getEpochExecutor().getNoteTokenAddress(address(this));
-        return sotAddress;
+        return registry.getSeniorTokenManager().getTokenAddress(address(this));
     }
 
     function jotToken() public view returns (address) {
-        (, address jotAddress) = registry.getEpochExecutor().getNoteTokenAddress(address(this));
-        return jotAddress;
+        return registry.getJuniorTokenManager().getTokenAddress(address(this));
     }
 
     function underlyingCurrency() external view returns (address) {

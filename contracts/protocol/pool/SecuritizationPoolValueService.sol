@@ -129,12 +129,17 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
     ) public view returns (uint256, uint256, uint256) {
         IPool pool = IPool(poolAddress);
 
-        uint256 decimals = INoteToken(pool.sotToken()).decimals();
+        uint256 decimals = INoteToken(pool.jotToken()).decimals();
 
         (uint256 jotPrice, uint256 sotPrice) = pool.calcTokenPrices();
         uint256 reserve = pool.reserve();
         uint256 nav = pool.currentNAV();
         uint256 ableToWithdraw = Math.min(getApprovedReserved(poolAddress), reserve);
+
+        if (pool.sotToken() == address(0)) {
+            return (ableToWithdraw, 0, (ableToWithdraw * 10 ** decimals) / jotPrice);
+        }
+
         uint256 expectedSOTCurrencyAmount = (sotRequest * sotPrice) / 10 ** decimals;
 
         // When we withdraw all SOT in reserve/approved

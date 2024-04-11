@@ -5,7 +5,7 @@ task('check-pool', 'Check pool values').setAction(async (taskArgs, hre) => {
     const { deployments, ethers } = hre;
     const { get, read } = deployments;
     const [deployer] = await ethers.getSigners();
-    const poolAddress = '0x462918a5d282da81bf9545e6a8c1910a7852699b';
+    const poolAddress = '0xaf15cd107f86f905468e6b3de98fdf8abecf894f';
 
     const Registry = await ethers.getContractFactory('Registry');
     const registryContract = await get('Registry');
@@ -29,7 +29,19 @@ task('check-pool', 'Check pool values').setAction(async (taskArgs, hre) => {
     });
     const pool = await SecuritizationPool.attach(poolAddress);
 
-    const jotPrice = await poolService.getJOTTokenPrice(pool.address);
+    const getApprovedReserved = await poolService.getApprovedReserved(pool.address);
+    console.log('getApprovedReserved', getApprovedReserved);
+    const sotToken = await pool.sotToken();
+    console.log('sotToken', sotToken);
+    const jotToken = await pool.jotToken();
+    console.log('jotToken', jotToken);
+    const calcTokenPrices = await pool.calcTokenPrices();
+    console.log('calcTokenPrices', calcTokenPrices);
+    const reserve = await pool.reserve();
+    console.log('reserve', reserve);
+    const currentNAV = await pool.currentNAV();
+    console.log('currentNAV', currentNAV);
 
-    console.log(jotPrice);
+    const getMaxAvailableReserve = await poolService.getMaxAvailableReserve(pool.address, 0);
+    console.log('getMaxAvailableReserve', getMaxAvailableReserve);
 });

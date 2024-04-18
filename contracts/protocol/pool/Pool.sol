@@ -149,7 +149,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     }
 
     /*==================== NAV ====================*/
-    function writeOff(uint256 loan) public {
+    function writeOff(uint256 loan) public onlyRole(POOL_ADMIN_ROLE) {
         PoolNAVLogic.writeOff(_poolStorage, loan);
         // rebase
         rebase();
@@ -288,7 +288,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         require(
             _msgSender() == address(registry.getSecuritizationManager()) ||
                 _msgSender() == address(registry.getNoteTokenVault()),
-            'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
+            'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
         TGELogic.decreaseIncomeReserve(_poolStorage, currencyAmount);
     }
@@ -297,7 +297,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         require(
             _msgSender() == address(registry.getSecuritizationManager()) ||
                 _msgSender() == address(registry.getNoteTokenVault()),
-            'SecuritizationPool: Caller must be SecuritizationManager or DistributionOperator'
+            'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
         );
         TGELogic.decreaseCapitalReserve(_poolStorage, currencyAmount);
     }

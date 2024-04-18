@@ -190,7 +190,7 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
     // unlock
     function unlockWrongToken(address token) public onlyAdmin {
         if (token == address(0)) {
-            (bool success, ) = payable(_msgSender()).call{value: IERC20Upgradeable(token).balanceOf(address(this))}('');
+            (bool success, ) = payable(_msgSender()).call{value: address(this).balance}('');
             require(success, 'Transfer failed.');
         } else {
             require(

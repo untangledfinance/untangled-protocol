@@ -123,7 +123,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         uint8 saleType,
         string memory ticker,
         uint256 openingTime
-    ) internal whenNotPaused nonReentrant onlyPoolExisted(pool) doesSOTExist(pool) returns (address, address) {
+    ) internal whenNotPaused onlyPoolExisted(pool) doesSOTExist(pool) returns (address, address) {
         INoteTokenFactory noteTokenFactory = registry.getNoteTokenFactory();
         require(address(noteTokenFactory) != address(0), 'Note Token Factory was not registered');
         require(address(registry.getTokenGenerationEventFactory()) != address(0), 'TGE Factory was not registered');
@@ -157,7 +157,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
     /// @notice Sets up the token generation event (TGE) for the senior tranche (SOT) of a securitization pool with additional configuration parameters
     /// @param tgeParam Parameters for TGE
     /// @param interestRate Interest rate of the token
-    function setUpTGEForSOT(TGEParam memory tgeParam, uint32 interestRate) public onlyIssuer(tgeParam.pool) {
+    function setUpTGEForSOT(TGEParam memory tgeParam, uint32 interestRate) public whenNotPaused onlyIssuer(tgeParam.pool) {
         (address sotToken, address tgeAddress) = _initialTGEForSOT(
             tgeParam.issuerTokenController,
             tgeParam.pool,
@@ -177,7 +177,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
     /// @notice sets up the token generation event (TGE) for the junior tranche (JOT) of a securitization pool with additional configuration parameters
     /// @param tgeParam Parameters for TGE
     /// @param initialJOTAmount Minimum amount of JOT raised in currency before SOT can start
-    function setUpTGEForJOT(TGEParam memory tgeParam, uint256 initialJOTAmount) public onlyIssuer(tgeParam.pool) {
+    function setUpTGEForJOT(TGEParam memory tgeParam, uint256 initialJOTAmount) public whenNotPaused onlyIssuer(tgeParam.pool) {
         (address jotToken, address tgeAddress) = _initialTGEForJOT(
             tgeParam.issuerTokenController,
             tgeParam.pool,
@@ -200,7 +200,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         uint8 saleType,
         string memory ticker,
         uint256 openingTime
-    ) public whenNotPaused nonReentrant onlyPoolExisted(pool) doesJOTExist(pool) returns (address, address) {
+    ) internal whenNotPaused nonReentrant onlyPoolExisted(pool) doesJOTExist(pool) returns (address, address) {
         INoteTokenFactory noteTokenFactory = registry.getNoteTokenFactory();
         address underlyingCurrency = IPool(pool).underlyingCurrency();
         address jotToken = noteTokenFactory.createToken(
@@ -273,7 +273,7 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         return registry.getGo().goOnlyIdTypes(sender, allowedUIDTypes);
     }
 
-    function updateTgeInfo(TGEInfoParam[] calldata tgeInfos) public {
+    function updateTgeInfo(TGEInfoParam[] calldata tgeInfos) public whenNotPaused {
         for (uint i = 0; i < tgeInfos.length; i++) {
             require(
                 IAccessControlUpgradeable(IMintedNormalTGE(tgeInfos[i].tgeAddress).pool()).hasRole(

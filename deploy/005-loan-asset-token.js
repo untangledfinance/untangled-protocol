@@ -6,8 +6,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const registry = await deployments.get('Registry');
 
-    const tokenURI = 'https://staging-api.untangled.finance/api/v3/assets/';
+    // const tokenURI = 'https://staging-api.untangled.finance/api/v3/assets/';
     // const tokenURI = 'https://test-api.untangled.finance/api/v3/assets/';
+    const tokenURI = 'https://api.untangled.finance/api/v3/assets/';
 
     const loanAssetTokenProxy = await deployProxy(
         { getNamedAccounts, deployments },

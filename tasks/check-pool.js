@@ -5,7 +5,7 @@ task('check-pool', 'Check pool values').setAction(async (taskArgs, hre) => {
     const { deployments, ethers } = hre;
     const { get, read } = deployments;
     const [deployer] = await ethers.getSigners();
-    const poolAddress = '0xaf15cd107f86f905468e6b3de98fdf8abecf894f';
+    const poolAddress = '0xd79396a9E1c85bE663B7A5f0F80Ce19c7390bBA0';
 
     const Registry = await ethers.getContractFactory('Registry');
     const registryContract = await get('Registry');
@@ -42,6 +42,6 @@ task('check-pool', 'Check pool values').setAction(async (taskArgs, hre) => {
     const currentNAV = await pool.currentNAV();
     console.log('currentNAV', currentNAV);
 
-    const getMaxAvailableReserve = await poolService.getMaxAvailableReserve(pool.address, 0);
+    const getMaxAvailableReserve = await poolService.getMaxAvailableReserve(pool.address, 10000000000);
     console.log('getMaxAvailableReserve', getMaxAvailableReserve);
 });

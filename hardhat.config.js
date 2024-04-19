@@ -71,7 +71,10 @@ module.exports = {
             url: `https://forno.celo.org`,
             cusdToken: '0x765DE816845861e75A25fCA122bb6898B8B1282a',
             usdcToken: '0xef4229c8c3250c675f21bcefa42f58efbff6002a',
-            kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
+            kycAdmin: '0x98CF0e832b1E0D8A0f7866DfBaC2Bc66284B7d89',
+            superAdmin: '0x1E4c30A03d332201d1b9fe8c2CE8eDc69B0D391F',
+            beSigner: '0xC2bC8E795a59f8aba539C847D8Cf5ed3651327a6',
+            beAdmin: '0x82B9C1a888c3F12E01eC2564aD37E6bf51e50Ab8',
         },
         alfajores: {
             saveDeployments: true,

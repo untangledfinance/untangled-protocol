@@ -25,6 +25,7 @@ import {DataTypes, ONE_HUNDRED_PERCENT, ONE, WRITEOFF_RATE_GROUP_START} from '..
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
 import {GenericLogic} from './GenericLogic.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title Untangled's SecuritizaionPoolNAV contract

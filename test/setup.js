@@ -146,7 +146,7 @@ async function setup() {
     const [untangledAdminSigner] = await ethers.getSigners();
 
     const tokenFactory = await ethers.getContractFactory('TestERC20');
-    stableCoin = await tokenFactory.deploy('cUSD', 'cUSD', parseEther('100000'));
+    stableCoin = await tokenFactory.deploy('cUSD', 'cUSD', parseEther('10000000'));
 
     const Registry = await ethers.getContractFactory('Registry');
     registry = await upgrades.deployProxy(Registry, []);

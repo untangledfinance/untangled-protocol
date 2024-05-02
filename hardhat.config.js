@@ -109,6 +109,18 @@ module.exports = {
             beSigner: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
             beAdmin: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
         },
+        amoy: {
+            saveDeployments: true,
+            accounts: accounts,
+            loggingEnabled: true,
+            url: `https://rpc-amoy.polygon.technology`,
+            cusdToken: '',
+            usdcToken: '',
+            kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
+            superAdmin: '0x60e7b40B1f46971B800cd00200371fFd35c09Da9',
+            beSigner: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
+            beAdmin: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
+        },
         rinkeby: {
             saveDeployments: true,
             accounts,

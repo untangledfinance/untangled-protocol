@@ -132,6 +132,7 @@ module.exports = {
     etherscan: {
         apiKey: {
             alfajores: process.env.ALFAJORES_SCAN_API_KEY,
+            amoy: process.env.AMOY_SCAN_API_KEY,
             celo: process.env.CELO_SCAN_API_KEY,
             polygon_v2: process.env.POLYGON_SCAN_API_KEY,
         },
@@ -142,6 +143,14 @@ module.exports = {
                 urls: {
                     apiURL: 'https://api-alfajores.celoscan.io/api',
                     browserURL: 'https://api-alfajores.celoscan.io',
+                },
+            },
+            {
+                network: 'amoy',
+                chainId: 80001,
+                urls: {
+                    apiURL: 'https://api-amoy.polygonscan.com/api',
+                    browserURL: 'https://api-amoy.polygonscan.com',
                 },
             },
             {

@@ -57,12 +57,12 @@ module.exports = {
             },
             kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
 
-            // forking: {
-            //     url: 'https://alfajores-forno.celo-testnet.org',
-            //     // url: 'https://rpc.ankr.com/polygon',
-            //     blockNumber: 22829184,
-            // },
-            // chainId: 44787,
+            forking: {
+                // url: 'https://alfajores-forno.celo-testnet.org',
+                url: 'https://rpc-amoy.polygon.technology',
+                blockNumber: 6627500,
+            },
+            chainId: 80002,
         },
         celo: {
             saveDeployments: true,

@@ -24,7 +24,6 @@ import '../UnpackLoanParamtersLib.sol';
 import {DataTypes, ONE_HUNDRED_PERCENT, ONE, WRITEOFF_RATE_GROUP_START} from '../DataTypes.sol';
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
-import 'hardhat/console.sol';
 
 /**
  * @title Untangled's SecuritizaionPoolNAV contract
@@ -79,10 +78,13 @@ library GenericLogic {
         uint256 termLength
     ) internal view returns (uint256 recoveryRatePD_) {
         DataTypes.RiskScore memory riskParam = getRiskScoreByIdx(riskScores, riskID);
+
         return
-            Math.ONE -
-            (Math.ONE * riskParam.probabilityOfDefault * riskParam.lossGivenDefault * termLength) /
-            (ONE_HUNDRED_PERCENT * ONE_HUNDRED_PERCENT * 365 days);
+            Discounting.secureSub(
+                Math.ONE,
+                (Math.ONE * riskParam.probabilityOfDefault * riskParam.lossGivenDefault * termLength) /
+                    (ONE_HUNDRED_PERCENT * ONE_HUNDRED_PERCENT * 365 days)
+            );
     }
 
     /// @notice getter function for the borrowed amount
@@ -313,8 +315,6 @@ library GenericLogic {
                 _poolStorage.lastNAVUpdate,
                 maturityDate_
             );
-            console.log('future value: ', futureValue(_poolStorage, nftID_));
-            console.log('discount increase: ', discountIncrease_);
             latestDiscount_ = Math.safeAdd(latestDiscount_, discountIncrease_);
             _poolStorage.latestDiscountOfNavAssets[nftID_] = discountIncrease_;
         }
@@ -324,8 +324,6 @@ library GenericLogic {
             Math.safeSub(_poolStorage.latestNAV, _poolStorage.latestDiscount)
         );
         _poolStorage.latestDiscount = latestDiscount_;
-        console.log('latest NAV: ', _poolStorage.latestNAV);
-        console.log('latest discount: ', latestDiscount_);
         return _poolStorage.latestNAV;
     }
 

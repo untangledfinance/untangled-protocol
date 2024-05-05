@@ -23,7 +23,7 @@ const {
 } = require('./utils.js');
 const { BigNumber } = require('ethers');
 
-describe('riskscore-change', () => {
+describe('switching-riskscore', () => {
     let stableCoin,
         loanAssetTokenContract,
         loanKernel,
@@ -100,6 +100,32 @@ describe('riskscore-change', () => {
                     interestRate: 157000, // 15.7%
                     probabilityOfDefault: 1000, // 0.1%
                     lossGivenDefault: 250000, // 25%
+                    gracePeriod: halfOfADay,
+                    collectionPeriod: halfOfADay,
+                    writeOffAfterGracePeriod: halfOfADay,
+                    writeOffAfterCollectionPeriod: halfOfADay,
+                    discountRate: 157000, // 15.7%
+                },
+                {
+                    daysPastDue: 2 * oneDayInSecs,
+                    advanceRate: 1000000, // 100%
+                    penaltyRate: 900000, // 90%
+                    interestRate: 157000, // 15.7%
+                    probabilityOfDefault: 50000, // 5%
+                    lossGivenDefault: 500000, // 50%
+                    gracePeriod: halfOfADay,
+                    collectionPeriod: halfOfADay,
+                    writeOffAfterGracePeriod: halfOfADay,
+                    writeOffAfterCollectionPeriod: halfOfADay,
+                    discountRate: 157000, // 15.7%
+                },
+                {
+                    daysPastDue: 3 * oneDayInSecs,
+                    advanceRate: 1000000, // 100%
+                    penaltyRate: 900000, // 90%
+                    interestRate: 157000, // 15.7%
+                    probabilityOfDefault: 500000, // 50%
+                    lossGivenDefault: 1000000, // 100%
                     gracePeriod: halfOfADay,
                     collectionPeriod: halfOfADay,
                     writeOffAfterGracePeriod: halfOfADay,
@@ -209,26 +235,9 @@ describe('riskscore-change', () => {
             console.log('Before risk score change');
             console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAV()));
             console.log('total debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
-            const newRiskScores = [
-                {
-                    daysPastDue: oneDayInSecs,
-                    advanceRate: 1000000, // 100%
-                    penaltyRate: 900000, // 90%
-                    interestRate: 168800, // 16.88%
-                    probabilityOfDefault: 1000, // 0.1%
-                    lossGivenDefault: 250000, // 25%
-                    gracePeriod: halfOfADay,
-                    collectionPeriod: halfOfADay,
-                    writeOffAfterGracePeriod: halfOfADay,
-                    writeOffAfterCollectionPeriod: halfOfADay,
-                    discountRate: 168800, // 16.88%
-                },
-            ];
-            await untangledProtocol.setupRiskScore(poolCreatorSigner, securitizationPoolContract, newRiskScores);
-
             await securitizationPoolContract
                 .connect(poolCreatorSigner)
-                .updateAssetRiskScore(tokenIds[0], 1, { gasLimit: 10000000 });
+                .updateAssetRiskScore(tokenIds[0], 2, { gasLimit: 10000000 });
             console.log('===========================================');
             console.log('After riskscore change');
             console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAVAsset(tokenIds[0])));

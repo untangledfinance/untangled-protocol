@@ -25,7 +25,6 @@ import {DataTypes, ONE_HUNDRED_PERCENT, ONE, WRITEOFF_RATE_GROUP_START} from '..
 import {Math} from '../Math.sol';
 import {Discounting} from '../Discounting.sol';
 import {GenericLogic} from './GenericLogic.sol';
-import 'hardhat/console.sol';
 
 /**
  * @title Untangled's SecuritizaionPoolNAV contract
@@ -132,13 +131,7 @@ library PoolNAVLogic {
 
     function file(DataTypes.Storage storage _poolStorage, bytes32 name, uint256 value) public {
         if (name == 'discountRate') {
-            uint256 oldDiscountRate = _poolStorage.discountRate;
             _poolStorage.discountRate = Math.ONE + (value * Math.ONE) / (ONE_HUNDRED_PERCENT * 365 days);
-            // the nav needs to be re-calculated based on the new discount rate
-            // no need to recalculate it if initialized the first time
-            if (oldDiscountRate != 0) {
-                GenericLogic.reCalcNAV(_poolStorage);
-            }
         } else {
             revert('unknown config parameter');
         }
@@ -493,19 +486,7 @@ library PoolNAVLogic {
     }
 
     function updateAssetRiskScore(DataTypes.Storage storage _poolStorage, bytes32 nftID_, uint256 risk_) public {
-        uint256 nnow = Discounting.uniqueDayTimestamp(block.timestamp);
-
-        // no change in risk group
-        if (risk_ == GenericLogic.risk(_poolStorage, nftID_)) {
-            return;
-        }
-
         _poolStorage.details[nftID_].risk = GenericLogic.toUint128(risk_);
-
-        // update nav -> latestNAVUpdate = now
-        if (nnow > _poolStorage.lastNAVUpdate) {
-            GenericLogic.calcUpdateNAV(_poolStorage);
-        }
 
         // switch of collateral risk group results in new: ceiling, threshold and interest rate for existing loan
         // change to new rate interestRate immediately in pile if loan debt exists
@@ -533,19 +514,14 @@ library PoolNAVLogic {
         // Changing the risk group of an nft, might lead to a new interest rate for the dependant loan.
         // New interest rate leads to a future value.
         // recalculation required
+
+        uint256 lastNAVUpdate = Discounting.uniqueDayTimestamp(_poolStorage.lastNAVUpdate);
         {
             uint256 fvDecrease = GenericLogic.futureValue(_poolStorage, nftID_);
-
-            uint256 navDecrease = Discounting.calcDiscount(_poolStorage.discountRate, fvDecrease, nnow, maturityDate_);
-
+            uint256 navDecrease = _poolStorage.latestDiscountOfNavAssets[nftID_];
             _poolStorage.buckets[maturityDate_] = Math.safeSub(_poolStorage.buckets[maturityDate_], fvDecrease);
-
             _poolStorage.latestDiscount = Discounting.secureSub(_poolStorage.latestDiscount, navDecrease);
-            _poolStorage.latestDiscountOfNavAssets[nftID_] = Discounting.secureSub(
-                _poolStorage.latestDiscountOfNavAssets[nftID_],
-                navDecrease
-            );
-
+            _poolStorage.latestDiscountOfNavAssets[nftID_] = 0;
             _poolStorage.latestNAV = Discounting.secureSub(_poolStorage.latestNAV, navDecrease);
         }
 
@@ -561,19 +537,20 @@ library PoolNAVLogic {
                 GenericLogic.recoveryRatePD(
                     _poolStorage.riskScores,
                     risk_,
-                    nftDetail.expirationTimestamp - nftDetail.issuanceBlockTimestamp
+                    nftDetail.expirationTimestamp - block.timestamp
                 )
             )
         );
-
         uint256 fvIncrease = GenericLogic.futureValue(_poolStorage, nftID_);
-        uint256 navIncrease = Discounting.calcDiscount(_poolStorage.discountRate, fvIncrease, nnow, maturityDate_);
-
+        uint256 navIncrease = Discounting.calcDiscount(
+            _poolStorage.discountRate,
+            fvIncrease,
+            lastNAVUpdate,
+            maturityDate_
+        );
         _poolStorage.buckets[maturityDate_] = Math.safeAdd(_poolStorage.buckets[maturityDate_], fvIncrease);
-
         _poolStorage.latestDiscount = Math.safeAdd(_poolStorage.latestDiscount, navIncrease);
         _poolStorage.latestDiscountOfNavAssets[nftID_] += navIncrease;
-
         _poolStorage.latestNAV = Math.safeAdd(_poolStorage.latestNAV, navIncrease);
         emit UpdateAssetRiskScore(nftID_, risk_);
     }

@@ -24,7 +24,7 @@ pragma solidity 0.8.19;
 import './Math.sol';
 
 /// @notice Discounting contract without a state which defines the relevant formulas for the navfeed
-library Discounting{
+library Discounting {
     /// @notice calculates the discount for a given loan
     /// @param discountRate the discount rate
     /// @param fv the future value of the loan

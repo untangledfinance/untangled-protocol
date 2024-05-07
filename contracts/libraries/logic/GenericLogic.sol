@@ -78,10 +78,13 @@ library GenericLogic {
         uint256 termLength
     ) internal view returns (uint256 recoveryRatePD_) {
         DataTypes.RiskScore memory riskParam = getRiskScoreByIdx(riskScores, riskID);
+
         return
-            Math.ONE -
-            (Math.ONE * riskParam.probabilityOfDefault * riskParam.lossGivenDefault * termLength) /
-            (ONE_HUNDRED_PERCENT * ONE_HUNDRED_PERCENT * 365 days);
+            Discounting.secureSub(
+                Math.ONE,
+                (Math.ONE * riskParam.probabilityOfDefault * riskParam.lossGivenDefault * termLength) /
+                    (ONE_HUNDRED_PERCENT * ONE_HUNDRED_PERCENT * 365 days)
+            );
     }
 
     /// @notice getter function for the borrowed amount
@@ -185,7 +188,6 @@ library GenericLogic {
                 overdue = Math.safeAdd(overdue, b);
             }
         }
-
         return (
             // calculate current totalDiscount based on the previous totalDiscount (optimized calculation)
             // the overdue loans are incorrectly in this new result with their current PV and need to be removed
@@ -299,10 +301,10 @@ library GenericLogic {
         /// @notice re-calculates the totalDiscount in a non-optimized way based on lastNAVUpdate
         /// @return latestDiscount_ returns the total discount of the active loans
         uint256 latestDiscount_ = 0;
-        for (uint256 loanID = 1; loanID < _poolStorage.loanCount; loanID++) {
+        for (uint256 count = 0; count < _poolStorage.loanCount; count++) {
+            uint256 loanID = _poolStorage.nftAssets[count].tokenId;
             bytes32 nftID_ = nftID(loanID);
             uint256 maturityDate_ = maturityDate(_poolStorage, nftID_);
-
             if (maturityDate_ < _poolStorage.lastNAVUpdate) {
                 continue;
             }
@@ -322,7 +324,6 @@ library GenericLogic {
             Math.safeSub(_poolStorage.latestNAV, _poolStorage.latestDiscount)
         );
         _poolStorage.latestDiscount = latestDiscount_;
-
         return _poolStorage.latestNAV;
     }
 

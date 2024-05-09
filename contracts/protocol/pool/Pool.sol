@@ -234,11 +234,21 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return uint256(_poolStorage.discountRate);
     }
 
-    function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) external onlyRole(POOL_ADMIN_ROLE) {
+    function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) public onlyRole(POOL_ADMIN_ROLE) {
         PoolNAVLogic.updateAssetRiskScore(_poolStorage, nftID_, risk_);
 
         // rebase
         rebase();
+    }
+
+    function batchUpdateAssetRiskScore(
+        bytes32[] calldata nftIDs,
+        uint256[] calldata riskIDs
+    ) external onlyRole(POOL_ADMIN_ROLE) {
+        require(nftIDs.length == riskIDs.length, 'unmatch length');
+        for (uint8 i = 0; i <= nftIDs.length; i++) {
+            updateAssetRiskScore(nftIDs[i], riskIDs[i]);
+        }
     }
 
     /// @notice retrieves loan information

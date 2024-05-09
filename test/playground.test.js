@@ -168,84 +168,32 @@ describe('riskscore-change', () => {
         });
 
         it('drawdown $100,000', async () => {
-            const loans = [
-                {
-                    principalAmount: drawdownAmount,
-                    expirationTimestamp: (await time.latest()) + 3600 * 24 * 900,
-                    assetPurpose: ASSET_PURPOSE.LOAN,
-                    termInDays: 900,
-                    riskScore: '1',
-                    salt: genSalt(),
-                },
-            ];
-            await securitizationPoolContract
-                .connect(poolCreatorSigner)
-                .grantRole(ORIGINATOR_ROLE, untangledAdminSigner.address);
-            const { expectedLoansValue } = await untangledProtocol.getLoansValue(
-                untangledAdminSigner,
-                securitizationPoolContract,
-                borrowerSigner,
-                ASSET_PURPOSE.LOAN,
-                loans
-            );
-            console.log('expected loan value: ', formatEther(expectedLoansValue));
-            tokenIds = await untangledProtocol.uploadLoans(
-                untangledAdminSigner,
-                securitizationPoolContract,
-                borrowerSigner,
-                ASSET_PURPOSE.LOAN,
-                loans
-            );
-            console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAV()));
-            const ownerOfAggreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
-            expect(ownerOfAggreement).equal(securitizationPoolContract.address);
-
-            const poolBalance = await loanAssetTokenContract.balanceOf(securitizationPoolContract.address);
-            expect(poolBalance).equal(tokenIds.length);
-            await time.increase(877806);
-        });
-
-        it('change riskscore', async () => {
-            console.log('Before risk score change');
-            console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAV()));
-            console.log('total debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
-            const newRiskScores = [
-                {
-                    daysPastDue: oneDayInSecs,
-                    advanceRate: 1000000, // 100%
-                    penaltyRate: 900000, // 90%
-                    interestRate: 168800, // 16.88%
-                    probabilityOfDefault: 1000, // 0.1%
-                    lossGivenDefault: 250000, // 25%
-                    gracePeriod: halfOfADay,
-                    collectionPeriod: halfOfADay,
-                    writeOffAfterGracePeriod: halfOfADay,
-                    writeOffAfterCollectionPeriod: halfOfADay,
-                    discountRate: 168800, // 16.88%
-                },
-            ];
-            await untangledProtocol.setupRiskScore(poolCreatorSigner, securitizationPoolContract, newRiskScores);
-
-            await securitizationPoolContract
-                .connect(poolCreatorSigner)
-                .updateAssetRiskScore(tokenIds[0], 1, { gasLimit: 10000000 });
-            console.log('===========================================');
-            console.log('After riskscore change');
-            console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAVAsset(tokenIds[0])));
-            console.log('total debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
-            await time.increase(10 * 3600 * 24);
-        });
-        it('10 days after riskscores change', async () => {
-            console.log('10 days later');
-            console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAVAsset(tokenIds[0])));
-            console.log('total debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
-            console.log(
-                'asset infor: ',
-                await securitizationPoolValueService.getAssetInterestRate(
-                    securitizationPoolContract.address,
-                    tokenIds[0]
-                )
-            );
+            const loanParam = {
+                orderAddresses: [
+                    '0xf24a7a2a548120494b002166a63b2d4739963fda',
+                    '0x6f48Ef99a294d5C9F394A0a08f4149b1f350441a',
+                    '0x3828A20e026d4332CdEb8aDa9C2D21502d71885a',
+                    '0x0000000000000000000000000000000000000000',
+                    '0x0000000000000000000000000000000000000000',
+                ],
+                orderValues: [0, 0, '1250000000', '1250000000', 1706288400, 1712336400, 8364207077, 5123848855, 3, 1],
+                termsContractParameters: [
+                    '0x0000000000000000004a817c8001d4c010000000000000000000002700200000',
+                    '0x0000000000000000004a817c8001388010000000000000000000008e80200000',
+                ],
+                latInfo: [
+                    {
+                        tokenIds: [
+                            '0xf8ec6da64b3a5106efa55cbb6ac8bd9d8c9c86a8cf2d9050e1284e6de61a9b0c',
+                            '0x1da3a8b35d60d5ba711a0a67b84df142960a29dc378020f5d2aa32bad60daf94',
+                        ],
+                        nonces: ['0', '0'],
+                        validator: '0x0000000000000000000000000000000000000000',
+                        validateSignature: '0x',
+                    },
+                ],
+            };
+            console.log('expected loan value: ', await loanKernel.getLoansValue(loanParam));
         });
     });
 });

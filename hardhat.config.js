@@ -55,14 +55,14 @@ module.exports = {
             accounts: {
                 mnemonic: MNEMONIC,
             },
-            kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
+            // kycAdmin: '0x9C469Ff6d548D0219575AAc9c26Ac041314AE2bA',
 
-            forking: {
-                // url: 'https://alfajores-forno.celo-testnet.org',
-                url: 'https://rpc-amoy.polygon.technology',
-                blockNumber: 6627500,
-            },
-            chainId: 80002,
+            // forking: {
+            //     // url: 'https://alfajores-forno.celo-testnet.org',
+            //     url: 'https://rpc-amoy.polygon.technology',
+            //     blockNumber: 6627500,
+            // },
+            // chainId: 80002,
         },
         celo: {
             saveDeployments: true,

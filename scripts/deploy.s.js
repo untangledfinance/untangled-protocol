@@ -1,6 +1,20 @@
 const { ethers, upgrades } = require('hardhat');
-const { OWNER_ROLE, POOL_ADMIN_ROLE } = require('../test/constants');
+const { OWNER_ROLE, POOL_ADMIN_ROLE, ORIGINATOR_ROLE, VALIDATOR_ROLE } = require('../test/constants');
 const { LAT_BASE_URI } = require('../test/shared/constants');
+const dayjs = require('dayjs');
+const {
+    genRiskScoreParam,
+    genLoanAgreementIds,
+    saltFromOrderValues,
+    debtorsFromOrderAddresses,
+    packTermsContractParameters,
+    interestRateFixedPoint,
+    genSalt,
+    generateLATMintPayload,
+    getPoolByAddress,
+    formatFillDebtOrderParams,
+} = require('../test/utils');
+const { presignedMintMessage } = require('../test/shared/uid-helper.js');
 async function main() {
     const [deployer] = await ethers.getSigners();
     const Registry = await ethers.getContractFactory('Registry');
@@ -9,15 +23,27 @@ async function main() {
     const admin = await upgrades.admin.getInstance();
     const factoryAdmin = await ethers.getContractAt('ProxyAdmin', admin.address);
 
+    const tokenFactory = await ethers.getContractFactory('TestERC20');
+    const USDC = await tokenFactory.deploy('USDC', 'USDC', ethers.utils.parseEther('10000000'));
+
+    await USDC.transfer(deployer.address, ethers.utils.parseEther('2000000'));
     const SecuritizationManager = await ethers.getContractFactory('SecuritizationManager');
-    const securitizationManager = await upgrades.deployProxy(SecuritizationManager);
+    const securitizationManager = await upgrades.deployProxy(SecuritizationManager, [
+        registry.address,
+        factoryAdmin.address,
+    ]);
     await securitizationManager.grantRole(POOL_ADMIN_ROLE, deployer.address);
     await registry.setSecuritizationManager(securitizationManager.address);
+
+    const SecuritizationPoolValueService = await ethers.getContractFactory('SecuritizationPoolValueService');
+    const securitizationPoolValueService = await upgrades.deployProxy(SecuritizationPoolValueService, [
+        registry.address,
+    ]);
+    await registry.setSecuritizationPoolValueService(securitizationPoolValueService.address);
 
     // setup NoteTokenFatory
     const NoteTokenFactory = await ethers.getContractFactory('NoteTokenFactory');
     const noteTokenFactory = await upgrades.deployProxy(NoteTokenFactory, [registry.address, factoryAdmin.address]);
-
     const NoteToken = await ethers.getContractFactory('NoteToken');
     const noteTokenImpl = await NoteToken.deploy();
     await noteTokenFactory.setNoteTokenImplementation(noteTokenImpl.address);
@@ -38,7 +64,6 @@ async function main() {
     await tokenGenerationEventFactory.setTGEImplAddress(1, mintedNormalTGEImpl.address);
 
     await registry.setTokenGenerationEventFactory(tokenGenerationEventFactory.address);
-
     // setup Pool
     const PoolNAVLogic = await ethers.getContractFactory('PoolNAVLogic');
     const poolNAVLogic = await PoolNAVLogic.deploy();
@@ -99,6 +124,242 @@ async function main() {
 
     await securitizationManager.grantRole(OWNER_ROLE, deployer.address);
 
-    console.log();
+    // create pool
+    const poolParams = {
+        salt: ethers.utils.keccak256(Date.now()),
+        debtCeiling: 10000000,
+        minFirstLossCushion: 10,
+        currencyAddress: USDC.address,
+        validatorRequired: false,
+    };
+    const tx = await securitizationManager.connect(deployer).newPoolInstance(
+        poolParams.salt,
+        deployer.address,
+        ethers.utils.defaultAbiCoder.encode(
+            [
+                {
+                    type: 'tuple',
+                    components: [
+                        {
+                            name: 'currency',
+                            type: 'address',
+                        },
+                        {
+                            name: 'minFirstLossCushion',
+                            type: 'uint32',
+                        },
+                        {
+                            name: 'validatorRequired',
+                            type: 'bool',
+                        },
+                        {
+                            name: 'debtCeiling',
+                            type: 'uint256',
+                        },
+                    ],
+                },
+            ],
+            [
+                {
+                    currency: poolParams.currencyAddress,
+                    minFirstLossCushion: poolParams.minFirstLossCushion * 10000,
+                    validatorRequired: poolParams.validatorRequired,
+                    debtCeiling: ethers.utils.parseEther(poolParams.debtCeiling.toString()).toString(),
+                },
+            ]
+        )
+    );
+
+    const receipt = await tx.wait();
+    const [securitizationPoolAddress] = receipt.events.find((e) => e.event == 'NewPoolCreated').args;
+    const pool = await ethers.getContractAt('Pool', securitizationPoolAddress);
+    await pool.connect(deployer).grantRole(VALIDATOR_ROLE, deployer.address);
+
+    // setup riskscore
+    const riskScores = [
+        {
+            daysPastDue: 24 * 3600, // one day
+            advanceRate: 1000000, // 100%
+            penaltyRate: 900000, // 90%
+            interestRate: 157000, // 15.7%
+            probabilityOfDefault: 1000, // 0.1%
+            lossGivenDefault: 250000, // 25%
+            gracePeriod: 12 * 3600, // haft a day
+            collectionPeriod: 12 * 3600, // haft a day
+            writeOffAfterGracePeriod: 12 * 3600, // haft a day
+            writeOffAfterCollectionPeriod: 12 * 3600, // haft a day
+            discountRate: 157000, // 15.7%
+        },
+    ];
+    const { daysPastDues, ratesAndDefaults, periodsAndWriteOffs } = genRiskScoreParam(...riskScores);
+    await pool
+        .connect(deployer)
+        .setupRiskScores(daysPastDues, ratesAndDefaults, periodsAndWriteOffs, { gasLimit: 10000000 });
+
+    // mint UID
+    const UID_TYPE = 0;
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    const expiredAt = dayjs().unix() + 86400 * 1000;
+    const nonce = 0;
+    const ethRequired = ethers.utils.parseEther('0.00083');
+
+    const uidMintMessage = presignedMintMessage(
+        deployer.address,
+        UID_TYPE,
+        expiredAt,
+        uniqueIdentity.address,
+        nonce,
+        chainId
+    );
+    const signature = await deployer.signMessage(uidMintMessage);
+    await uniqueIdentity.connect(deployer).mint(UID_TYPE, expiredAt, signature, { value: ethRequired });
+
+    // create note token sale
+    const openingTime = dayjs(new Date()).unix();
+    const closingTime = dayjs(new Date()).add(7, 'days').unix();
+    const rate = 2;
+    const totalCapOfToken = ethers.utils.parseEther('1000000');
+    const interestRate = 10000; // 1%
+    const timeInterval = 24 * 3600; // seconds
+    const amountChangeEachInterval = 0;
+    const prefixOfNoteTokenSaleName = 'Ticker_';
+    const sotInfo = {
+        issuerTokenController: deployer.address,
+        saleType: 0,
+        minBidAmount: ethers.utils.parseEther('5000'),
+        openingTime,
+        closingTime,
+        rate,
+        cap: totalCapOfToken,
+        timeInterval,
+        amountChangeEachInterval,
+        ticker: prefixOfNoteTokenSaleName,
+        interestRate,
+    };
+
+    const initialJOTAmount = ethers.utils.parseEther('100');
+    const jotInfo = {
+        issuerTokenController: deployer.address,
+        minBidAmount: ethers.utils.parseEther('5000'),
+        saleType: 1,
+        longSale: true,
+        ticker: prefixOfNoteTokenSaleName,
+        openingTime: openingTime,
+        closingTime: closingTime,
+        rate: rate,
+        cap: totalCapOfToken,
+        initialJOTAmount,
+    };
+
+    const transactionJOTSale = await securitizationManager.connect(deployer).setUpTGEForJOT(
+        {
+            issuerTokenController: jotInfo.issuerTokenController,
+            pool: pool.address,
+            minBidAmount: jotInfo.minBidAmount,
+            totalCap: jotInfo.cap,
+            openingTime: jotInfo.openingTime,
+            saleType: jotInfo.saleType,
+            longSale: true,
+            ticker: jotInfo.ticker,
+        },
+        jotInfo.initialJOTAmount
+    );
+    const receiptJOTSale = await transactionJOTSale.wait();
+
+    const [jotTokenAddress, jotTGEAddress] = receiptJOTSale.events.find((e) => e.event == 'SetupJot').args;
+    console.log('JOT: ', jotTokenAddress);
+    console.log('JOT TGE: ', jotTGEAddress);
+
+    const transactionSOTSale = await securitizationManager.connect(deployer).setUpTGEForSOT(
+        {
+            issuerTokenController: sotInfo.issuerTokenController,
+            pool: pool.address,
+            minBidAmount: sotInfo.minBidAmount,
+            totalCap: sotInfo.cap,
+            openingTime: sotInfo.openingTime,
+            saleType: sotInfo.saleType,
+            ticker: sotInfo.ticker,
+        },
+        sotInfo.interestRate
+    );
+    const receiptSOTSale = await transactionSOTSale.wait();
+    const [sotTokenAddress, sotTGEAddress] = receiptSOTSale.events.find((e) => e.event == 'SetupSot').args;
+    console.log('SOT: ', sotTokenAddress);
+    console.log('SOT TGE: ', sotTGEAddress);
+
+    // 1,000,000$ invest in JOT
+    const investAmount = ethers.utils.parseEther('1000000');
+    await USDC.connect(deployer).approve(jotTGEAddress, investAmount);
+
+    await securitizationManager.connect(deployer).buyTokens(jotTGEAddress, investAmount);
+
+    // upload loan
+    await pool.connect(deployer).grantRole(ORIGINATOR_ROLE, deployer.address);
+    const loans = [
+        {
+            principalAmount: 100000000000000000000000n,
+            expirationTimestamp: dayjs(new Date()).unix() + 3600 * 24 * 900,
+            assetPurpose: 0,
+            termInDays: 900,
+            riskScore: '1',
+            salt: ethers.utils.keccak256(Date.now()),
+        },
+    ];
+
+    const CREDITOR_FEE = '0';
+    const orderAddresses = [
+        pool.address,
+        USDC.address,
+        loanKernel.address,
+        // borrower 1
+        // borrower 2
+        // ...
+        ...new Array(loans.length).fill(deployer.address),
+    ];
+    const orderValues = [
+        CREDITOR_FEE,
+        0,
+        ...loans.map((l) => ethers.utils.parseEther(l.principalAmount.toString())),
+        ...loans.map((l) => l.expirationTimestamp),
+        ...loans.map((l) => l.salt || 0),
+        ...loans.map((l) => l.riskScore),
+    ];
+
+    const interestRatePercentage = 5;
+
+    const termsContractParameters = loans.map((l) =>
+        packTermsContractParameters({
+            amortizationUnitType: 1,
+            gracePeriodInDays: 2,
+            principalAmount: l.principalAmount,
+            termLengthUnits: l.termInDays * 24,
+            interestRateFixedPoint: interestRateFixedPoint(interestRatePercentage),
+        })
+    );
+
+    const salts = saltFromOrderValues(orderValues, termsContractParameters.length);
+    const debtors = debtorsFromOrderAddresses(orderAddresses, termsContractParameters.length);
+
+    const tokenIds = genLoanAgreementIds(loanKernel.address, debtors, termsContractParameters, salts);
+    const fillDebtOrderParams = formatFillDebtOrderParams(
+        orderAddresses,
+        orderValues,
+        termsContractParameters,
+        await Promise.all(
+            tokenIds.map(async (x, i) => ({
+                ...(await generateLATMintPayload(
+                    loanKernel,
+                    deployer,
+                    [x],
+                    [loans[i].nonce || (await loanAssetTokenContract.nonce(x)).toNumber()],
+                    deployer.address
+                )),
+            }))
+        )
+    );
+
+    await loanKernel.connect(deployer).fillDebtOrder(fillDebtOrderParams);
+
+    console.log('NAV: ', await pool.currentNAV());
 }
 main();

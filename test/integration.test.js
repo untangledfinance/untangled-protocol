@@ -264,6 +264,9 @@ describe('integration-test', () => {
             console.log("JPM2413's NAV: ", formatEther(await securitizationPoolContract.currentNAVAsset(tokenIds[2])));
             console.log("JPM2414's NAV: ", formatEther(await securitizationPoolContract.currentNAVAsset(tokenIds[3])));
             console.log("JPM2415's NAV: ", formatEther(await securitizationPoolContract.currentNAVAsset(tokenIds[4])));
+            console.log("JPM2411's NFT: ", await securitizationPoolContract.nftAssets(0));
+            console.log("JPM2412's NFT: ", await securitizationPoolContract.nftAssets(1));
+
             const ownerOfAggreement = await loanAssetTokenContract.ownerOf(tokenIds[0]);
             expect(ownerOfAggreement).equal(securitizationPoolContract.address);
 

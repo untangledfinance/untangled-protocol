@@ -246,7 +246,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         uint256[] calldata riskIDs
     ) external onlyRole(POOL_ADMIN_ROLE) {
         require(nftIDs.length == riskIDs.length, 'unmatch length');
-        for (uint8 i = 0; i <= nftIDs.length; i++) {
+        for (uint8 i = 0; i < nftIDs.length; i++) {
             updateAssetRiskScore(nftIDs[i], riskIDs[i]);
         }
     }

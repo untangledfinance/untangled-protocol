@@ -14,7 +14,7 @@ import {TGELogic} from '../../libraries/logic/TGELogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {RebaseLogic} from '../../libraries/logic/RebaseLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
-
+import {ICreditOracleCoordinator} from '../../interfaces/ICreditOracleCoordinator.sol';
 /**
  * @title Untangled's SecuritizationPool contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
@@ -28,6 +28,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     event InsertNFTAsset(address token, uint256 tokenId);
     event Repay(address poolAddress, uint256 increaseInterestRepay, uint256 increasePrincipalRepay, uint256 timestamp);
+    error OnlyCoordinatorCanFulfill(address have, address want);
 
     modifier requirePoolAdminOrOwner() {
         require(
@@ -234,22 +235,42 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return uint256(_poolStorage.discountRate);
     }
 
-    function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) public onlyRole(POOL_ADMIN_ROLE) {
+    function updateAssetRiskScore(bytes32 nftID_, uint256 risk_) internal {
         PoolNAVLogic.updateAssetRiskScore(_poolStorage, nftID_, risk_);
 
         // rebase
         rebase();
     }
 
-    function batchUpdateAssetRiskScore(
-        bytes32[] calldata nftIDs,
-        uint256[] calldata riskIDs
-    ) external onlyRole(POOL_ADMIN_ROLE) {
+    function batchUpdateAssetRiskScoreWithProof(uint256 batchSize,bytes calldata proof, uint256[] calldata pubInputs, bytes calldata data) external onlyRole(POOL_ADMIN_ROLE) {
+        address coordinator = 0x10996Fa450e0c40d1324b833A91F98c5E3352B3c;
+        ICreditOracleCoordinator(coordinator).fulfillProof(batchSize,proof,pubInputs,data);
+    }
+    function batchUpdateAssetRiskExcessCLLimitation(uint256 batchSize,bytes calldata proof, uint256[] calldata pubInputs, bytes calldata data) external onlyRole(POOL_ADMIN_ROLE) {
+        address coordinator = 0x10996Fa450e0c40d1324b833A91F98c5E3352B3c;
+        ICreditOracleCoordinator(coordinator).forCaseExcessCLLimitation(batchSize,proof,pubInputs,data);
+    }
+    
+    function fulfillCredit(uint256[] memory, bytes memory data) internal {
+        // TODO
+        (bytes32[] memory nftIDs, uint256[] memory riskIDs) = abi.decode(data, (bytes32[], uint256[]));
+
         require(nftIDs.length == riskIDs.length, 'unmatch length');
-        for (uint8 i = 0; i <= nftIDs.length; i++) {
+        
+        for (uint8 i = 0; i < nftIDs.length; i++) {
             updateAssetRiskScore(nftIDs[i], riskIDs[i]);
         }
     }
+
+    function rawFulfillCredit(uint256[] memory pubInputs, bytes memory data) external {
+        address coordinator = 0x10996Fa450e0c40d1324b833A91F98c5E3352B3c;
+        if (msg.sender != coordinator) {
+            revert OnlyCoordinatorCanFulfill(msg.sender, coordinator);
+        }
+        fulfillCredit(pubInputs, data);
+    }
+
+    
 
     /// @notice retrieves loan information
     function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory) {

@@ -15,6 +15,7 @@ import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {RebaseLogic} from '../../libraries/logic/RebaseLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
 import {ICreditOracleCoordinator} from '../../interfaces/ICreditOracleCoordinator.sol';
+
 /**
  * @title Untangled's SecuritizationPool contract
  * @notice Main entry point for senior LPs (a.k.a. capital providers)
@@ -242,21 +243,32 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         rebase();
     }
 
-    function batchUpdateAssetRiskScoreWithProof(uint256 batchSize,bytes calldata proof, uint256[] calldata pubInputs, bytes calldata data) external onlyRole(POOL_ADMIN_ROLE) {
+    function batchUpdateAssetRiskScoreWithProof(
+        uint256 batchSize,
+        bytes calldata proof,
+        uint256[] calldata pubInputs,
+        bytes calldata data
+    ) external onlyRole(POOL_ADMIN_ROLE) {
         address coordinator = 0x10996Fa450e0c40d1324b833A91F98c5E3352B3c;
-        ICreditOracleCoordinator(coordinator).fulfillProof(batchSize,proof,pubInputs,data);
+        ICreditOracleCoordinator(coordinator).fulfillProof(batchSize, proof, pubInputs, data);
     }
-    function batchUpdateAssetRiskExcessCLLimitation(uint256 batchSize,bytes calldata proof, uint256[] calldata pubInputs, bytes calldata data) external onlyRole(POOL_ADMIN_ROLE) {
+
+    function batchUpdateAssetRiskExcessCLLimitation(
+        uint256 batchSize,
+        bytes calldata proof,
+        uint256[] calldata pubInputs,
+        bytes calldata data
+    ) external onlyRole(POOL_ADMIN_ROLE) {
         address coordinator = 0x10996Fa450e0c40d1324b833A91F98c5E3352B3c;
-        ICreditOracleCoordinator(coordinator).forCaseExcessCLLimitation(batchSize,proof,pubInputs,data);
+        ICreditOracleCoordinator(coordinator).forCaseExcessCLLimitation(batchSize, proof, pubInputs, data);
     }
-    
+
     function fulfillCredit(uint256[] memory, bytes memory data) internal {
         // TODO
         (bytes32[] memory nftIDs, uint256[] memory riskIDs) = abi.decode(data, (bytes32[], uint256[]));
 
         require(nftIDs.length == riskIDs.length, 'unmatch length');
-        
+
         for (uint8 i = 0; i < nftIDs.length; i++) {
             updateAssetRiskScore(nftIDs[i], riskIDs[i]);
         }
@@ -269,8 +281,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         }
         fulfillCredit(pubInputs, data);
     }
-
-    
 
     /// @notice retrieves loan information
     function getAsset(bytes32 agreementId) external view returns (DataTypes.NFTDetails memory) {

@@ -183,7 +183,7 @@ async function setup() {
     distributionAssessor = securitizationPoolValueService;
 
     const NoteTokenVault = await ethers.getContractFactory('NoteTokenVault');
-    noteTokenVault = await upgrades.deployProxy(NoteTokenVault, [registry.address]);
+    noteTokenVault = await upgrades.deployProxy(NoteTokenVault, []);
 
     await registry.setSecuritizationManager(securitizationManager.address);
     await registry.setLoanKernel(loanKernel.address);

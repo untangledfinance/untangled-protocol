@@ -1,307 +1,220 @@
-// SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
 
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/cryptography/ECDSAUpgradeable.sol';
-import {UntangledMath} from '../../libraries/UntangledMath.sol';
-import {INoteTokenVault} from '../../interfaces/INoteTokenVault.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
-import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
-import {BACKEND_ADMIN_ROLE, SIGNER_ROLE} from '../../libraries/DataTypes.sol';
 import {IPool} from '../../interfaces/IPool.sol';
-import {Configuration} from '../../libraries/Configuration.sol';
-import '../../storage/Registry.sol';
-import '../../libraries/ConfigHelper.sol';
+import {ONE_HUNDRED_PERCENT, BACKEND_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
 
-/// @title NoteTokenVault
-/// @author Untangled Team
-/// @notice NoteToken redemption
 contract NoteTokenVault is
     Initializable,
     PausableUpgradeable,
     AccessControlEnumerableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    INoteTokenVault
+    ReentrancyGuardUpgradeable
 {
-    using ConfigHelper for Registry;
-    Registry public registry;
-
-    /// @dev Pool redeem disabled value
-    mapping(address => bool) public poolRedeemDisabled;
-    /// @dev Pool total SOT redeem
-    mapping(address => uint256) public poolTotalSOTRedeem;
-    /// @dev Pool total JOT redeem
-    mapping(address => uint256) public poolTotalJOTRedeem;
-    /// @dev Pool user redeem order
-    mapping(address => mapping(address => UserOrder)) public poolUserRedeems;
-
-    /// @dev We include a nonce in every hashed message, and increment the nonce as part of a
-    /// state-changing operation, so as to prevent replay attacks, i.e. the reuse of a signature.
-    mapping(address => uint256) public nonces;
-    mapping(address => mapping(uint256 => mapping(uint256 => bool))) public epochBatchs;
-    mapping(address => mapping(uint256 => bool)) epochPreDistributed;
-
-    /// @dev Checks if redeeming is allowed for a given pool.
-    /// @param pool The address of the pool to check.
-    modifier orderAllowed(address pool) {
-        require(!poolRedeemDisabled[pool], 'redeem-not-allowed');
-        _;
+    struct Order {
+        uint256 sotCurrencyAmount;
+        uint256 jotCurrencyAmount;
+        bool allSOTIncomeOnly;
+        bool allJOTIncomeOnly;
     }
 
-    function _incrementNonce(address account) internal {
-        nonces[account] += 1;
+    struct ExecutionOrder {
+        address user;
+        uint256 sotIncomeClaimAmount;
+        uint256 jotIncomeClaimAmount;
+        uint256 sotCapitalClaimAmount;
+        uint256 jotCapitalClaimAmount;
     }
 
-    function initialize(Registry _registry) public initializer {
+    struct EpochInfor {
+        uint256 sotPrice;
+        uint256 jotPrice;
+        uint256 timestamp;
+        bool redeemDisabled;
+        bool epochClosed;
+    }
+
+    struct FeeInfor {
+        uint256 feePercentage;
+        uint256 freeTimestamp;
+    }
+    // pool => user => order
+    mapping(address => mapping(address => Order)) orders;
+    // pool => epochInfor
+    mapping(address => EpochInfor) epochInfor;
+    // pool => fee
+    mapping(address => FeeInfor) fees;
+
+    event OrderCreated(address pool, address user);
+
+    function initialize() public initializer {
         __Pausable_init_unchained();
         __ReentrancyGuard_init_unchained();
         __AccessControlEnumerable_init_unchained();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
-        registry = _registry;
     }
 
-    function hasAllowedUID(address sender) public view returns (bool) {
-        return registry.getSecuritizationManager().hasAllowedUID(sender);
+    function getEpochInfor(address pool) public view returns (EpochInfor memory) {
+        return epochInfor[pool];
     }
 
-    function _validateRedeemParam(RedeemOrderParam calldata redeemParam, bytes calldata signature) internal view {
-        address usr = _msgSender();
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                usr,
-                redeemParam.pool,
-                redeemParam.noteTokenAddress,
-                redeemParam.noteTokenRedeemAmount,
-                block.chainid
-            )
-        );
-        bytes32 ethSignedMessage = ECDSAUpgradeable.toEthSignedMessageHash(hash);
-        require(hasRole(SIGNER_ROLE, ECDSAUpgradeable.recover(ethSignedMessage, signature)), 'Invalid signer');
-    }
-
-    /// @inheritdoc INoteTokenVault
-    function redeemOrder(
-        RedeemOrderParam calldata redeemParam,
-        bytes calldata signature
-    ) public orderAllowed(redeemParam.pool) nonReentrant {
-        _validateRedeemParam(redeemParam, signature);
-
-        address pool = redeemParam.pool;
-        address noteTokenAddress = redeemParam.noteTokenAddress;
-        uint256 noteTokenRedeemAmount = redeemParam.noteTokenRedeemAmount;
-
-        address jotTokenAddress = IPool(pool).jotToken();
-        address sotTokenAddress = IPool(pool).sotToken();
-        require(
-            _isJotToken(noteTokenAddress, jotTokenAddress) || _isSotToken(noteTokenAddress, sotTokenAddress),
-            'NoteTokenVault: Invalid token address'
-        );
-        address usr = _msgSender();
-        require(hasAllowedUID(usr), 'Unauthorized. Must have correct UID');
-
-        uint256 noteTokenPrice;
-        if (_isJotToken(noteTokenAddress, jotTokenAddress)) {
-            uint256 currentRedeemAmount = poolUserRedeems[pool][usr].redeemJOTAmount;
-            require(currentRedeemAmount == 0, 'NoteTokenVault: User already created redeem order');
-            poolUserRedeems[pool][usr].redeemJOTAmount = noteTokenRedeemAmount;
-            poolTotalJOTRedeem[pool] = poolTotalJOTRedeem[pool] + noteTokenRedeemAmount;
-            noteTokenPrice = registry.getSecuritizationPoolValueService().getJOTTokenPrice(pool);
-        } else {
-            uint256 currentRedeemAmount = poolUserRedeems[pool][usr].redeemSOTAmount;
-            require(currentRedeemAmount == 0, 'NoteTokenVault: User already created redeem order');
-            poolUserRedeems[pool][usr].redeemSOTAmount = noteTokenRedeemAmount;
-            poolTotalSOTRedeem[pool] = poolTotalSOTRedeem[pool] + noteTokenRedeemAmount;
-            noteTokenPrice = registry.getSecuritizationPoolValueService().getSOTTokenPrice(pool);
-        }
-
-        require(
-            INoteToken(noteTokenAddress).transferFrom(usr, address(this), noteTokenRedeemAmount),
-            'token-transfer-to-pool-failed'
-        );
-        emit RedeemOrder(pool, noteTokenAddress, usr, noteTokenRedeemAmount, noteTokenPrice);
-    }
-
-    function preDistribute(
-        EpochParam calldata epochParam,
-        uint256 incomeAmount,
-        uint256 capitalAmount,
-        address[] calldata noteTokenAddresses,
-        uint256[] calldata totalRedeemedNoteAmounts
-    ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
-        require(
-            !epochPreDistributed[epochParam.pool][epochParam.epochId],
-            'NoteTokenVault: Epoch have been pre distributed'
-        );
-        IPool pool = IPool(epochParam.pool);
-
-        (, uint256 sotTokenPrice) = pool.calcTokenPrices();
-        uint256 totalSotRedeem;
-        uint256 decimals;
-
-        for (uint i = 0; i < noteTokenAddresses.length; i++) {
-            INoteToken(noteTokenAddresses[i]).burn(totalRedeemedNoteAmounts[i]);
-            if (INoteToken(noteTokenAddresses[i]).noteTokenType() == uint8(Configuration.NOTE_TOKEN_TYPE.SENIOR)) {
-                totalSotRedeem += totalRedeemedNoteAmounts[i];
-                decimals = INoteToken(noteTokenAddresses[i]).decimals();
-            }
-        }
-        pool.decreaseIncomeReserve(incomeAmount);
-        pool.decreaseCapitalReserve(capitalAmount);
-        // rebase
-        if (totalSotRedeem > 0) {
-            pool.changeSeniorAsset(0, (sotTokenPrice * totalSotRedeem) / 10 ** decimals);
-        }
-        require(pool.isMinFirstLossValid(), 'NoteTokenVault: Exceeds MinFirstLoss');
-        epochPreDistributed[epochParam.pool][epochParam.epochId] = true;
-        emit PreDistribute(
-            epochParam.pool,
-            epochParam,
-            incomeAmount,
-            capitalAmount,
-            noteTokenAddresses,
-            totalRedeemedNoteAmounts
-        );
-    }
-
-    /// @inheritdoc INoteTokenVault
-    function disburseAll(
-        EpochParam calldata epochParam,
-        address noteTokenAddress,
-        address[] memory toAddresses,
-        uint256[] memory currencyAmounts,
-        uint256[] memory redeemedNoteAmounts
-    ) public onlyRole(BACKEND_ADMIN_ROLE) nonReentrant {
-        address pool = epochParam.pool;
-
-        require(!epochBatchs[pool][epochParam.epochId][epochParam.batchId], 'NoteTokenVault: BatchId already existed');
-
-        IPool poolTGE = IPool(pool);
-        address jotTokenAddress = poolTGE.jotToken();
-        address sotTokenAddress = poolTGE.sotToken();
-        require(
-            _isJotToken(noteTokenAddress, jotTokenAddress) || _isSotToken(noteTokenAddress, sotTokenAddress),
-            'NoteTokenVault: Invalid token address'
-        );
-
-        epochBatchs[pool][epochParam.epochId][epochParam.batchId] = true;
-
-        uint256 totalCurrencyAmount = 0;
-        uint256 userLength = toAddresses.length;
-
-        uint256 totalNoteRedeemed = 0;
-        for (uint256 i = 0; i < userLength; i = UntangledMath.uncheckedInc(i)) {
-            totalCurrencyAmount += currencyAmounts[i];
-            totalNoteRedeemed += redeemedNoteAmounts[i];
-            poolTGE.disburse(toAddresses[i], currencyAmounts[i]);
-
-            if (_isJotToken(noteTokenAddress, jotTokenAddress)) {
-                poolUserRedeems[pool][toAddresses[i]].redeemJOTAmount -= redeemedNoteAmounts[i];
-            } else {
-                poolUserRedeems[pool][toAddresses[i]].redeemSOTAmount -= redeemedNoteAmounts[i];
-            }
-        }
-
-        if (_isJotToken(noteTokenAddress, jotTokenAddress)) {
-            poolTotalJOTRedeem[pool] -= totalNoteRedeemed;
-            IMintedNormalTGE(IPool(pool).secondTGEAddress()).onRedeem(totalCurrencyAmount);
-        } else {
-            poolTotalSOTRedeem[pool] -= totalNoteRedeemed;
-            IMintedNormalTGE(IPool(pool).tgeAddress()).onRedeem(totalCurrencyAmount);
-        }
-
-        emit DisburseOrder(pool, epochParam, noteTokenAddress, toAddresses, currencyAmounts, redeemedNoteAmounts);
-    }
-
-    function _validateCancelParam(CancelOrderParam calldata cancelParam, bytes calldata signature) internal view {
-        require(block.timestamp <= cancelParam.maxTimestamp, 'Cancel request has expired');
-        address usr = _msgSender();
-        bytes32 hash = keccak256(
-            abi.encodePacked(
-                usr,
-                cancelParam.pool,
-                cancelParam.noteTokenAddress,
-                cancelParam.maxTimestamp,
-                nonces[usr],
-                block.chainid
-            )
-        );
-        bytes32 ethSignedMessage = ECDSAUpgradeable.toEthSignedMessageHash(hash);
-        require(hasRole(SIGNER_ROLE, ECDSAUpgradeable.recover(ethSignedMessage, signature)), 'Invalid signer');
-    }
-
-    function cancelOrder(CancelOrderParam calldata cancelParam, bytes calldata signature) public nonReentrant {
-        address usr = _msgSender();
-
-        _validateCancelParam(cancelParam, signature);
-        _incrementNonce(usr);
-
-        address pool = cancelParam.pool;
-        address jotTokenAddress = IPool(pool).jotToken();
-        address sotTokenAddress = IPool(pool).sotToken();
-        address noteTokenAddress = cancelParam.noteTokenAddress;
-
-        require(
-            _isJotToken(noteTokenAddress, jotTokenAddress) || _isSotToken(noteTokenAddress, sotTokenAddress),
-            'NoteTokenVault: Invalid token address'
-        );
-
-        uint256 currentRedeemAmount;
-
-        if (_isJotToken(noteTokenAddress, jotTokenAddress)) {
-            currentRedeemAmount = poolUserRedeems[pool][usr].redeemJOTAmount;
-            poolUserRedeems[pool][usr].redeemJOTAmount = 0;
-            poolTotalJOTRedeem[pool] = poolTotalJOTRedeem[pool] - currentRedeemAmount;
-        } else {
-            currentRedeemAmount = poolUserRedeems[pool][usr].redeemSOTAmount;
-            poolUserRedeems[pool][usr].redeemSOTAmount = 0;
-            poolTotalSOTRedeem[pool] = poolTotalSOTRedeem[pool] - currentRedeemAmount;
-        }
-
-        require(currentRedeemAmount > 0, 'NoteTokenVault: Redeem order not found');
-        require(INoteToken(noteTokenAddress).transfer(usr, currentRedeemAmount), 'token-transfer-from-pool-failed');
-
-        emit CancelOrder(pool, noteTokenAddress, usr, currentRedeemAmount);
-    }
-
-    /// @inheritdoc INoteTokenVault
-    function setRedeemDisabled(address pool, bool _redeemDisabled) public onlyRole(BACKEND_ADMIN_ROLE) {
-        poolRedeemDisabled[pool] = _redeemDisabled;
-        emit SetRedeemDisabled(pool, _redeemDisabled);
-    }
-
-    /// @inheritdoc INoteTokenVault
     function redeemDisabled(address pool) public view returns (bool) {
-        return poolRedeemDisabled[pool];
+        return epochInfor[pool].redeemDisabled;
     }
 
-    /// @inheritdoc INoteTokenVault
-    function totalJOTRedeem(address pool) public view override returns (uint256) {
-        return poolTotalJOTRedeem[pool];
+    function getOrder(address pool, address user) public view returns (Order memory) {
+        return orders[pool][user];
+    }
+    /**
+     * set the parameter for fee calculation of a pool
+     * @param pool pool address
+     * @param _feePercentage the fee percentage that will be charge if user withdraw their capital before commitment period end
+     * @param _freeTimestamp the timestamp where commitment period end
+     */
+    function setFeeInfor(
+        address pool,
+        uint256 _feePercentage,
+        uint256 _freeTimestamp
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        fees[pool].feePercentage = _feePercentage;
+        fees[pool].freeTimestamp = _freeTimestamp;
+    }
+    /**
+     * set pool's availability to redeem
+     * @param pool pool address
+     * @param _redeemDisabled pool's redeemability
+     */
+    function setPoolRedeemDisabled(address pool, bool _redeemDisabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        epochInfor[pool].redeemDisabled = _redeemDisabled;
     }
 
-    /// @inheritdoc INoteTokenVault
-    function totalSOTRedeem(address pool) public view override returns (uint256) {
-        return poolTotalSOTRedeem[pool];
+    /**
+     * Create an order in currency amount
+     * @param pool address of the pool
+     * @param order the information of the withdraw order
+     */
+    function createOrder(address pool, Order calldata order) external {
+        orders[pool][msg.sender] = order;
+        emit OrderCreated(pool, msg.sender);
     }
 
-    /// @inheritdoc INoteTokenVault
-    function userRedeemJOTOrder(address pool, address usr) public view override returns (uint256) {
-        return poolUserRedeems[pool][usr].redeemJOTAmount;
+    /**
+     * Close the epoch and snapshot the NoteToken prices at that moment
+     * @param pool address of corresponding pool
+     */
+    function closeEpoch(address pool) external onlyRole(BACKEND_ADMIN_ROLE) {
+        require(epochInfor[pool].epochClosed == false, 'epoch already closed');
+        (uint256 jotPrice, uint256 sotPrice) = IPool(pool).calcTokenPrices();
+        epochInfor[pool].jotPrice = jotPrice;
+        epochInfor[pool].sotPrice = sotPrice;
+        epochInfor[pool].timestamp = block.timestamp;
+        epochInfor[pool].epochClosed = true;
     }
 
-    /// @inheritdoc INoteTokenVault
-    function userRedeemSOTOrder(address pool, address usr) public view override returns (uint256) {
-        return poolUserRedeems[pool][usr].redeemSOTAmount;
+    /**
+     * Receive the information and execution the epoch
+     * @param executionOrders batch of execution orders
+     */
+    function executeOrders(
+        address pool,
+        ExecutionOrder[] calldata executionOrders
+    ) external onlyRole(BACKEND_ADMIN_ROLE) {
+        require(epochInfor[pool].epochClosed == true, "epoch haven't closed");
+        address sotAddress = IPool(pool).sotToken();
+        address jotAddress = IPool(pool).jotToken();
+        uint256 totalIncomeWithdraw;
+        uint256 totalCapitalWithdraw;
+        uint256 totalSeniorWithdraw;
+        for (uint256 i = 0; i < executionOrders.length; i++) {
+            _validateAndBurn(
+                pool,
+                executionOrders[i].user,
+                executionOrders[i].sotIncomeClaimAmount + executionOrders[i].sotCapitalClaimAmount, // total sot claimed
+                executionOrders[i].jotIncomeClaimAmount + executionOrders[i].jotCapitalClaimAmount, // total jot claimed
+                sotAddress,
+                jotAddress
+            );
+
+            _updateOrder(
+                pool,
+                executionOrders[i].user,
+                executionOrders[i].sotIncomeClaimAmount + executionOrders[i].sotCapitalClaimAmount, // total sot claimed
+                executionOrders[i].jotIncomeClaimAmount + executionOrders[i].jotCapitalClaimAmount // total jot claimed
+            );
+            address _pool = pool;
+            uint256 fee;
+            uint256 capitalWithdraw = executionOrders[i].sotCapitalClaimAmount +
+                executionOrders[i].jotCapitalClaimAmount;
+            uint256 incomeWithdraw = executionOrders[i].sotIncomeClaimAmount + executionOrders[i].jotIncomeClaimAmount;
+            uint256 seniorWithdraw = executionOrders[i].sotCapitalClaimAmount + executionOrders[i].sotIncomeClaimAmount;
+
+            if (block.timestamp < fees[_pool].freeTimestamp) {
+                fee = (capitalWithdraw * fees[_pool].feePercentage) / ONE_HUNDRED_PERCENT;
+            }
+
+            totalSeniorWithdraw += seniorWithdraw;
+            totalIncomeWithdraw += incomeWithdraw;
+            totalCapitalWithdraw += capitalWithdraw;
+
+            IPool(_pool).disburse(executionOrders[i].user, (capitalWithdraw + incomeWithdraw - fee));
+        }
+        // update reserve and senior asset
+        IPool(pool).decreaseIncomeReserve(totalIncomeWithdraw);
+        IPool(pool).decreaseCapitalReserve(totalCapitalWithdraw);
+        IPool(pool).changeSeniorAsset(0, totalSeniorWithdraw);
+        // check minFirstLoss
+        require(IPool(pool).isMinFirstLossValid(), 'exceed minFirstLoss');
+
+        // open epoch
+        epochInfor[pool].epochClosed = false;
     }
 
-    function _isJotToken(address noteToken, address jotToken) internal pure returns (bool) {
-        return noteToken == jotToken;
+    function _updateOrder(address pool, address user, uint256 sotCurrencyClaimed, uint256 jotCurrencyClaimed) internal {
+        if (orders[pool][user].sotCurrencyAmount >= sotCurrencyClaimed) {
+            orders[pool][user].sotCurrencyAmount -= sotCurrencyClaimed;
+        }
+        if (orders[pool][user].jotCurrencyAmount >= jotCurrencyClaimed) {
+            orders[pool][user].jotCurrencyAmount -= jotCurrencyClaimed;
+        }
     }
 
-    function _isSotToken(address noteToken, address sotToken) internal pure returns (bool) {
-        return noteToken == sotToken;
+    function _validateAndBurn(
+        address pool,
+        address user,
+        uint256 sotCurrencyClaimed,
+        uint256 jotCurrencyClaimed,
+        address sotAddress,
+        address jotAddress
+    ) internal {
+        require(
+            orders[pool][user].sotCurrencyAmount >= sotCurrencyClaimed || orders[pool][user].allSOTIncomeOnly,
+            'sot claim amount bigger than ordered'
+        );
+        require(
+            orders[pool][user].jotCurrencyAmount >= jotCurrencyClaimed || orders[pool][user].allJOTIncomeOnly,
+            'jot claim amount bigger than ordered'
+        );
+
+        // burn note token
+        uint256 sotBurn = sotCurrencyClaimed / epochInfor[pool].sotPrice;
+        uint256 jotBurn = jotCurrencyClaimed / epochInfor[pool].jotPrice;
+
+        require(
+            INoteToken(sotAddress).allowance(user, address(this)) >= sotBurn &&
+                INoteToken(jotAddress).allowance(user, address(this)) >= jotBurn,
+            'not enough note token allowance'
+        );
+
+        if (sotBurn > 0) {
+            INoteToken(sotAddress).transferFrom(user, address(this), sotBurn * (10 ** 18));
+            INoteToken(sotAddress).burn(sotBurn);
+        }
+        if (jotBurn > 0) {
+            INoteToken(jotAddress).transferFrom(user, address(this), jotBurn * (10 ** 18));
+            INoteToken(jotAddress).burn(jotBurn);
+        }
     }
 }

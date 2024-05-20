@@ -23,7 +23,7 @@ const {
 } = require('./utils.js');
 const { BigNumber } = require('ethers');
 
-describe('riskscore-change', () => {
+describe('integration-test', () => {
     let stableCoin,
         loanAssetTokenContract,
         loanKernel,
@@ -43,11 +43,10 @@ describe('riskscore-change', () => {
         securitizationPoolImpl,
         defaultLoanAssetTokenValidator,
         loanRegistry,
+        noteTokenVault,
         untangledProtocol;
     let untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, relayer;
-    const drawdownAmount = 100000000000000000000000n;
-    const oneDayInSecs = 24 * 3600;
-    const halfOfADay = oneDayInSecs / 2;
+    const drawdownAmount = 600000000000000000000000n;
     let totalRepay = BigNumber.from(0);
     before('create fixture', async () => {
         [untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, relayer] =
@@ -68,6 +67,7 @@ describe('riskscore-change', () => {
             securitizationPoolImpl,
             defaultLoanAssetTokenValidator,
             loanRegistry,
+            noteTokenVault,
         } = contracts);
 
         await stableCoin.transfer(lenderSigner.address, parseEther('2000000'));
@@ -92,19 +92,21 @@ describe('riskscore-change', () => {
                 debtCeiling: 2000000,
             };
 
+            const oneDayInSecs = 24 * 3600;
+            const halfOfADay = oneDayInSecs / 2;
             const riskScores = [
                 {
                     daysPastDue: oneDayInSecs,
-                    advanceRate: 1000000, // 100%
+                    advanceRate: 1000000, // 85%
                     penaltyRate: 900000, // 90%
-                    interestRate: 157000, // 15.7%
-                    probabilityOfDefault: 1000, // 0.1%
-                    lossGivenDefault: 250000, // 25%
+                    interestRate: 168217, // 12%
+                    probabilityOfDefault: 30000, // 3%
+                    lossGivenDefault: 500000, // 50%
                     gracePeriod: halfOfADay,
                     collectionPeriod: halfOfADay,
                     writeOffAfterGracePeriod: halfOfADay,
                     writeOffAfterCollectionPeriod: halfOfADay,
-                    discountRate: 157000, // 15.7%
+                    discountRate: 100000, // 10%
                 },
             ];
 
@@ -153,6 +155,8 @@ describe('riskscore-change', () => {
             securitizationPoolContract = await getPoolByAddress(poolAddress);
             mintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', sotCreated.sotTGEAddress);
             jotMintedIncreasingInterestTGE = await ethers.getContractAt('MintedNormalTGE', jotCreated.jotTGEAddress);
+            sotToken = await ethers.getContractAt('NoteToken', sotCreated.sotTokenAddress);
+            jotToken = await ethers.getContractAt('NoteToken', jotCreated.jotTokenAddress);
         });
 
         it('invest 1,000,000$ JOT', async () => {
@@ -167,13 +171,13 @@ describe('riskscore-change', () => {
             expect(tokenPrice[0]).to.be.eq(parseEther('1'));
         });
 
-        it('drawdown $100,000', async () => {
+        it('drawdown $600,000', async () => {
             const loans = [
                 {
                     principalAmount: drawdownAmount,
-                    expirationTimestamp: (await time.latest()) + 3600 * 24 * 900,
+                    expirationTimestamp: (await time.latest()) + 3600 * 24 * 360 * 3,
                     assetPurpose: ASSET_PURPOSE.LOAN,
-                    termInDays: 900,
+                    termInDays: 360 * 3,
                     riskScore: '1',
                     salt: genSalt(),
                 },
@@ -202,52 +206,55 @@ describe('riskscore-change', () => {
 
             const poolBalance = await loanAssetTokenContract.balanceOf(securitizationPoolContract.address);
             expect(poolBalance).equal(tokenIds.length);
-            await time.increase(877806);
+            await time.increase(91 * 24 * 3600);
         });
 
-        it('change riskscore', async () => {
-            console.log('Before risk score change');
-            console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAV()));
-            console.log('total debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
-            const newRiskScores = [
-                {
-                    daysPastDue: oneDayInSecs,
-                    advanceRate: 1000000, // 100%
-                    penaltyRate: 900000, // 90%
-                    interestRate: 168800, // 16.88%
-                    probabilityOfDefault: 1000, // 0.1%
-                    lossGivenDefault: 250000, // 25%
-                    gracePeriod: halfOfADay,
-                    collectionPeriod: halfOfADay,
-                    writeOffAfterGracePeriod: halfOfADay,
-                    writeOffAfterCollectionPeriod: halfOfADay,
-                    discountRate: 168800, // 16.88%
-                },
-            ];
-            await untangledProtocol.setupRiskScore(poolCreatorSigner, securitizationPoolContract, newRiskScores, {
-                gasLimit: 10000000,
-            });
-
-            await securitizationPoolContract
-                .connect(poolCreatorSigner)
-                .updateAssetRiskScore(tokenIds[0], 1, { gasLimit: 10000000 });
-            console.log('===========================================');
-            console.log('After riskscore change');
-            console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAVAsset(tokenIds[0])));
-            console.log('total debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
-            await time.increase(10 * 3600 * 24);
-        });
-        it('10 days after riskscores change', async () => {
-            console.log('10 days later');
-            console.log('current NAV: ', formatEther(await securitizationPoolContract.currentNAVAsset(tokenIds[0])));
-            console.log('total debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
-            console.log(
-                'asset infor: ',
-                await securitizationPoolValueService.getAssetInterestRate(
-                    securitizationPoolContract.address,
-                    tokenIds[0]
-                )
+        it('1st repay', async () => {
+            const totalDebt = await securitizationPoolContract.debt(tokenIds[0]);
+            const repayAmount = BigNumber.from(totalDebt).sub(drawdownAmount);
+            totalRepay = totalRepay.add(repayAmount);
+            console.log('repay amount: ', formatEther(repayAmount));
+            await loanKernel
+                .connect(untangledAdminSigner)
+                .repayInBatch([tokenIds[0]], [repayAmount], stableCoin.address);
+            expect(await securitizationPoolContract.debt(tokenIds[0])).to.be.closeTo(
+                parseEther('600000'),
+                parseEther('0.01')
             );
+            console.log('current debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
+            console.log('total repay: ', formatEther(totalRepay));
+            const [incomeReserve, capitalReserve] = await securitizationPoolContract.getReserves();
+            console.log('income reserve: ', formatEther(incomeReserve));
+            console.log('capital reserve: ', formatEther(capitalReserve));
+
+            await time.increase(31 * 24 * 3600);
+        });
+
+        it('withdraw', async () => {
+            await noteTokenVault.grantRole(BACKEND_ADMIN, untangledAdminSigner.address);
+            await jotToken.connect(lenderSigner).approve(noteTokenVault.address, unlimitedAllowance);
+            await noteTokenVault.connect(lenderSigner).createOrder(securitizationPoolContract.address, {
+                sotCurrencyAmount: 0,
+                jotCurrencyAmount: parseEther('30000'),
+                allSOTIncomeOnly: false,
+                allJOTIncomeOnly: false,
+            });
+            await noteTokenVault.connect(untangledAdminSigner).closeEpoch(securitizationPoolContract.address);
+
+            console.log('jot balance before: ', formatEther(await jotToken.balanceOf(lenderSigner.address)));
+            console.log('currency balance before: ', formatEther(await stableCoin.balanceOf(lenderSigner.address)));
+            const [incomeReserve, capitalReserve] = await securitizationPoolContract.getReserves();
+            await noteTokenVault.connect(untangledAdminSigner).executeOrders(securitizationPoolContract.address, [
+                {
+                    user: lenderSigner.address,
+                    sotIncomeClaimAmount: 0,
+                    jotIncomeClaimAmount: incomeReserve,
+                    sotCapitalClaimAmount: 0,
+                    jotCapitalClaimAmount: parseEther('30000').sub(incomeReserve),
+                },
+            ]);
+            console.log('jot balance after: ', formatEther(await jotToken.balanceOf(lenderSigner.address)));
+            console.log('currency balance after: ', formatEther(await stableCoin.balanceOf(lenderSigner.address)));
         });
     });
 });

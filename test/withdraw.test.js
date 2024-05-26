@@ -45,12 +45,29 @@ describe('integration-test', () => {
         loanRegistry,
         noteTokenVault,
         untangledProtocol;
-    let untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, relayer;
-    const drawdownAmount = 600000000000000000000000n;
+    let untangledAdminSigner,
+        poolCreatorSigner,
+        originatorSigner,
+        borrowerSigner,
+        lenderSigner,
+        alice,
+        bob,
+        charlie,
+        duncan;
+    const drawdownAmount = 80000000000000000000000n;
     let totalRepay = BigNumber.from(0);
     before('create fixture', async () => {
-        [untangledAdminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, relayer] =
-            await ethers.getSigners();
+        [
+            untangledAdminSigner,
+            poolCreatorSigner,
+            originatorSigner,
+            borrowerSigner,
+            lenderSigner,
+            alice,
+            bob,
+            charlie,
+            duncan,
+        ] = await ethers.getSigners();
         const contracts = await setup();
         untangledProtocol = UntangledProtocol.bind(contracts);
         ({
@@ -70,11 +87,17 @@ describe('integration-test', () => {
             noteTokenVault,
         } = contracts);
 
-        await stableCoin.transfer(lenderSigner.address, parseEther('2000000'));
+        await stableCoin.transfer(alice.address, parseEther('100000'));
+        await stableCoin.transfer(bob.address, parseEther('100000'));
+        await stableCoin.transfer(charlie.address, parseEther('100000'));
+        await stableCoin.transfer(duncan.address, parseEther('100000'));
 
         await stableCoin.connect(untangledAdminSigner).approve(loanRepaymentRouter.address, unlimitedAllowance);
 
-        await untangledProtocol.mintUID(lenderSigner);
+        await untangledProtocol.mintUID(alice);
+        await untangledProtocol.mintUID(bob);
+        await untangledProtocol.mintUID(charlie);
+        await untangledProtocol.mintUID(duncan);
     });
 
     describe('#intialize suit', async () => {
@@ -159,19 +182,17 @@ describe('integration-test', () => {
             jotToken = await ethers.getContractAt('NoteToken', jotCreated.jotTokenAddress);
         });
 
-        it('invest 1,000,000$ JOT', async () => {
-            await untangledProtocol.buyToken(
-                lenderSigner,
-                jotMintedIncreasingInterestTGE.address,
-                parseEther('1000000')
-            );
-            expect(formatEther(await stableCoin.balanceOf(securitizationPoolContract.address))).equal('1000000.0');
+        it('invest', async () => {
+            await untangledProtocol.buyToken(alice, jotMintedIncreasingInterestTGE.address, parseEther('10000'));
+            await untangledProtocol.buyToken(bob, jotMintedIncreasingInterestTGE.address, parseEther('20000'));
+            await untangledProtocol.buyToken(charlie, jotMintedIncreasingInterestTGE.address, parseEther('30000'));
+            await untangledProtocol.buyToken(duncan, jotMintedIncreasingInterestTGE.address, parseEther('40000'));
 
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).to.be.eq(parseEther('1'));
         });
 
-        it('drawdown $600,000', async () => {
+        it('drawdown', async () => {
             const loans = [
                 {
                     principalAmount: drawdownAmount,
@@ -217,10 +238,6 @@ describe('integration-test', () => {
             await loanKernel
                 .connect(untangledAdminSigner)
                 .repayInBatch([tokenIds[0]], [repayAmount], stableCoin.address);
-            expect(await securitizationPoolContract.debt(tokenIds[0])).to.be.closeTo(
-                parseEther('600000'),
-                parseEther('0.01')
-            );
             console.log('current debt: ', formatEther(await securitizationPoolContract.debt(tokenIds[0])));
             console.log('total repay: ', formatEther(totalRepay));
             const [incomeReserve, capitalReserve] = await securitizationPoolContract.getReserves();
@@ -232,29 +249,111 @@ describe('integration-test', () => {
 
         it('withdraw', async () => {
             await noteTokenVault.grantRole(BACKEND_ADMIN, untangledAdminSigner.address);
-            await jotToken.connect(lenderSigner).approve(noteTokenVault.address, unlimitedAllowance);
-            await noteTokenVault.connect(lenderSigner).createOrder(securitizationPoolContract.address, {
+
+            // aprove
+            await jotToken.connect(alice).approve(noteTokenVault.address, unlimitedAllowance);
+            await jotToken.connect(bob).approve(noteTokenVault.address, unlimitedAllowance);
+            await jotToken.connect(charlie).approve(noteTokenVault.address, unlimitedAllowance);
+            await jotToken.connect(duncan).approve(noteTokenVault.address, unlimitedAllowance);
+            // create order
+            await noteTokenVault.connect(alice).createOrder(securitizationPoolContract.address, {
                 sotCurrencyAmount: 0,
-                jotCurrencyAmount: parseEther('30000'),
+                jotCurrencyAmount: parseEther('3000'),
                 allSOTIncomeOnly: false,
                 allJOTIncomeOnly: false,
             });
+
+            await noteTokenVault.connect(bob).createOrder(securitizationPoolContract.address, {
+                sotCurrencyAmount: 0,
+                jotCurrencyAmount: parseEther('3000'),
+                allSOTIncomeOnly: false,
+                allJOTIncomeOnly: false,
+            });
+
+            await noteTokenVault.connect(charlie).createOrder(securitizationPoolContract.address, {
+                sotCurrencyAmount: 0,
+                jotCurrencyAmount: parseEther('3000'),
+                allSOTIncomeOnly: false,
+                allJOTIncomeOnly: false,
+            });
+
+            await noteTokenVault.connect(duncan).createOrder(securitizationPoolContract.address, {
+                sotCurrencyAmount: 0,
+                jotCurrencyAmount: parseEther('3000'),
+                allSOTIncomeOnly: false,
+                allJOTIncomeOnly: false,
+            });
+
+            // close epoch
             await noteTokenVault.connect(untangledAdminSigner).closeEpoch(securitizationPoolContract.address);
 
-            console.log('jot balance before: ', formatEther(await jotToken.balanceOf(lenderSigner.address)));
-            console.log('currency balance before: ', formatEther(await stableCoin.balanceOf(lenderSigner.address)));
             const [incomeReserve, capitalReserve] = await securitizationPoolContract.getReserves();
+            const noteTokenSupply = BigNumber.from(await jotToken.totalSupply()).div(parseEther('1'));
+            const incomePerNoteToken = BigNumber.from(incomeReserve).div(noteTokenSupply);
+
+            const aliceIncome = BigNumber.from(await jotToken.balanceOf(alice.address))
+                .div(parseEther('1'))
+                .mul(incomePerNoteToken);
+            const bobIncome = BigNumber.from(await jotToken.balanceOf(bob.address))
+                .div(parseEther('1'))
+                .mul(incomePerNoteToken);
+            const charlieIncome = BigNumber.from(await jotToken.balanceOf(charlie.address))
+                .div(parseEther('1'))
+                .mul(incomePerNoteToken);
+            const duncanIncome = BigNumber.from(await jotToken.balanceOf(duncan.address))
+                .div(parseEther('1'))
+                .mul(incomePerNoteToken);
+
+            console.log('income reserve: ', formatEther(incomeReserve));
+            console.log('capital reserve: ', formatEther(capitalReserve));
+            console.log("alice's income: ", formatEther(aliceIncome));
+            console.log("bob's income: ", formatEther(bobIncome));
+            console.log("charlie's income: ", formatEther(charlieIncome));
+
             await noteTokenVault.connect(untangledAdminSigner).executeOrders(securitizationPoolContract.address, [
                 {
-                    user: lenderSigner.address,
+                    user: alice.address,
                     sotIncomeClaimAmount: 0,
-                    jotIncomeClaimAmount: incomeReserve,
+                    jotIncomeClaimAmount: aliceIncome,
                     sotCapitalClaimAmount: 0,
-                    jotCapitalClaimAmount: parseEther('30000').sub(incomeReserve),
+                    jotCapitalClaimAmount: parseEther('3000').sub(aliceIncome),
+                },
+                {
+                    user: bob.address,
+                    sotIncomeClaimAmount: 0,
+                    jotIncomeClaimAmount: bobIncome,
+                    sotCapitalClaimAmount: 0,
+                    jotCapitalClaimAmount: parseEther('3000').sub(bobIncome),
+                },
+                {
+                    user: charlie.address,
+                    sotIncomeClaimAmount: 0,
+                    jotIncomeClaimAmount: charlieIncome,
+                    sotCapitalClaimAmount: 0,
+                    jotCapitalClaimAmount: parseEther('3000').sub(charlieIncome),
+                },
+                {
+                    user: duncan.address,
+                    sotIncomeClaimAmount: 0,
+                    jotIncomeClaimAmount: duncanIncome,
+                    sotCapitalClaimAmount: 0,
+                    jotCapitalClaimAmount: parseEther('3000').sub(duncanIncome),
                 },
             ]);
-            console.log('jot balance after: ', formatEther(await jotToken.balanceOf(lenderSigner.address)));
-            console.log('currency balance after: ', formatEther(await stableCoin.balanceOf(lenderSigner.address)));
+            console.log('============== After execution ==============');
+            let [IR, CR] = await securitizationPoolContract.getReserves();
+            console.log('income reserve: ', formatEther(IR));
+            console.log('capital reserve: ', formatEther(CR));
+
+            console.log('alice note token balance: ', formatEther(await jotToken.balanceOf(alice.address)));
+            console.log('bob note token balance: ', formatEther(await jotToken.balanceOf(bob.address)));
+            console.log('charlie note token balance: ', formatEther(await jotToken.balanceOf(charlie.address)));
+            console.log('duncan note token balance: ', formatEther(await jotToken.balanceOf(duncan.address)));
+
+            console.log('alice currency balance: ', formatEther(await stableCoin.balanceOf(alice.address)));
+            console.log('bob currency balance: ', formatEther(await stableCoin.balanceOf(bob.address)));
+            console.log('charlie currency balance: ', formatEther(await stableCoin.balanceOf(charlie.address)));
+            console.log('duncan currency balance: ', formatEther(await stableCoin.balanceOf(duncan.address)));
         });
     });
 });

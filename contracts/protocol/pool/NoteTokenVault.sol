@@ -69,7 +69,7 @@ contract NoteTokenVault is
         return orders[pool][user];
     }
     /**
-     * set the parameter for fee calculation of a pool
+     * Set the parameter for fee calculation of a pool
      * @param pool pool address
      * @param _feePercentage the fee percentage that will be charge if user withdraw their capital before commitment period end
      * @param _freeTimestamp the timestamp where commitment period end
@@ -83,7 +83,7 @@ contract NoteTokenVault is
         fees[pool].freeTimestamp = _freeTimestamp;
     }
     /**
-     * set pool's availability to redeem
+     * Set pool's availability to redeem
      * @param pool pool address
      * @param _redeemDisabled pool's redeemability
      */
@@ -129,6 +129,7 @@ contract NoteTokenVault is
         uint256 totalCapitalWithdraw;
         uint256 totalSeniorWithdraw;
         for (uint256 i = 0; i < executionOrders.length; i++) {
+            // validate the order and burn the required amount note token
             _validateAndBurn(
                 pool,
                 executionOrders[i].user,
@@ -137,29 +138,24 @@ contract NoteTokenVault is
                 sotAddress,
                 jotAddress
             );
-
+            // update the state of the order
             _updateOrder(
                 pool,
                 executionOrders[i].user,
                 executionOrders[i].sotIncomeClaimAmount + executionOrders[i].sotCapitalClaimAmount, // total sot claimed
                 executionOrders[i].jotIncomeClaimAmount + executionOrders[i].jotCapitalClaimAmount // total jot claimed
             );
-            address _pool = pool;
-            uint256 fee;
+
             uint256 capitalWithdraw = executionOrders[i].sotCapitalClaimAmount +
                 executionOrders[i].jotCapitalClaimAmount;
             uint256 incomeWithdraw = executionOrders[i].sotIncomeClaimAmount + executionOrders[i].jotIncomeClaimAmount;
             uint256 seniorWithdraw = executionOrders[i].sotCapitalClaimAmount + executionOrders[i].sotIncomeClaimAmount;
 
-            if (block.timestamp < fees[_pool].freeTimestamp) {
-                fee = (capitalWithdraw * fees[_pool].feePercentage) / ONE_HUNDRED_PERCENT;
-            }
-
             totalSeniorWithdraw += seniorWithdraw;
             totalIncomeWithdraw += incomeWithdraw;
             totalCapitalWithdraw += capitalWithdraw;
-
-            IPool(_pool).disburse(executionOrders[i].user, (capitalWithdraw + incomeWithdraw - fee));
+            // disburse currency token to user
+            _disburse(pool, executionOrders[i].user, capitalWithdraw, incomeWithdraw);
         }
         // update reserve and senior asset
         IPool(pool).decreaseIncomeReserve(totalIncomeWithdraw);
@@ -193,6 +189,7 @@ contract NoteTokenVault is
             orders[pool][user].sotCurrencyAmount >= sotCurrencyClaimed || orders[pool][user].allSOTIncomeOnly,
             'sot claim amount bigger than ordered'
         );
+
         require(
             orders[pool][user].jotCurrencyAmount >= jotCurrencyClaimed || orders[pool][user].allJOTIncomeOnly,
             'jot claim amount bigger than ordered'
@@ -216,5 +213,14 @@ contract NoteTokenVault is
             INoteToken(jotAddress).transferFrom(user, address(this), jotBurn * (10 ** 18));
             INoteToken(jotAddress).burn(jotBurn);
         }
+    }
+
+    function _disburse(address pool, address receiver, uint256 capitalWithdraw, uint256 incomeWithdraw) internal {
+        uint256 fee;
+        if (block.timestamp < fees[pool].freeTimestamp) {
+            fee = (capitalWithdraw * fees[pool].feePercentage) / ONE_HUNDRED_PERCENT;
+        }
+
+        IPool(pool).disburse(receiver, (capitalWithdraw + incomeWithdraw - fee));
     }
 }

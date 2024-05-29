@@ -110,7 +110,7 @@ describe('integration-test', () => {
 
             const poolParams = {
                 currency: 'cUSD',
-                minFirstLossCushion: 20,
+                minFirstLossCushion: 50,
                 validatorRequired: true,
                 debtCeiling: 2000000,
             };
@@ -120,9 +120,9 @@ describe('integration-test', () => {
             const riskScores = [
                 {
                     daysPastDue: oneDayInSecs,
-                    advanceRate: 1000000, // 85%
+                    advanceRate: 1000000, // 100%
                     penaltyRate: 900000, // 90%
-                    interestRate: 168217, // 12%
+                    interestRate: 150000, // 15%
                     probabilityOfDefault: 30000, // 3%
                     lossGivenDefault: 500000, // 50%
                     gracePeriod: halfOfADay,
@@ -188,6 +188,10 @@ describe('integration-test', () => {
             await untangledProtocol.buyToken(charlie, jotMintedIncreasingInterestTGE.address, parseEther('30000'));
             await untangledProtocol.buyToken(duncan, jotMintedIncreasingInterestTGE.address, parseEther('40000'));
 
+            await untangledProtocol.buyToken(alice, mintedIncreasingInterestTGE.address, parseEther('10000'));
+            await untangledProtocol.buyToken(bob, mintedIncreasingInterestTGE.address, parseEther('20000'));
+            await untangledProtocol.buyToken(charlie, mintedIncreasingInterestTGE.address, parseEther('30000'));
+            await untangledProtocol.buyToken(duncan, mintedIncreasingInterestTGE.address, parseEther('40000'));
             let tokenPrice = await securitizationPoolContract.calcTokenPrices();
             expect(tokenPrice[0]).to.be.eq(parseEther('1'));
         });
@@ -255,30 +259,36 @@ describe('integration-test', () => {
             await jotToken.connect(bob).approve(noteTokenVault.address, unlimitedAllowance);
             await jotToken.connect(charlie).approve(noteTokenVault.address, unlimitedAllowance);
             await jotToken.connect(duncan).approve(noteTokenVault.address, unlimitedAllowance);
+
+            await sotToken.connect(alice).approve(noteTokenVault.address, unlimitedAllowance);
+            await sotToken.connect(bob).approve(noteTokenVault.address, unlimitedAllowance);
+            await sotToken.connect(charlie).approve(noteTokenVault.address, unlimitedAllowance);
+            await sotToken.connect(duncan).approve(noteTokenVault.address, unlimitedAllowance);
+
             // create order
             await noteTokenVault.connect(alice).createOrder(securitizationPoolContract.address, {
-                sotCurrencyAmount: 0,
+                sotCurrencyAmount: parseEther('2000'),
                 jotCurrencyAmount: parseEther('3000'),
                 allSOTIncomeOnly: false,
                 allJOTIncomeOnly: false,
             });
 
             await noteTokenVault.connect(bob).createOrder(securitizationPoolContract.address, {
-                sotCurrencyAmount: 0,
+                sotCurrencyAmount: parseEther('2000'),
                 jotCurrencyAmount: parseEther('3000'),
                 allSOTIncomeOnly: false,
                 allJOTIncomeOnly: false,
             });
 
             await noteTokenVault.connect(charlie).createOrder(securitizationPoolContract.address, {
-                sotCurrencyAmount: 0,
+                sotCurrencyAmount: parseEther('2000'),
                 jotCurrencyAmount: parseEther('3000'),
                 allSOTIncomeOnly: false,
                 allJOTIncomeOnly: false,
             });
 
             await noteTokenVault.connect(duncan).createOrder(securitizationPoolContract.address, {
-                sotCurrencyAmount: 0,
+                sotCurrencyAmount: parseEther('2000'),
                 jotCurrencyAmount: parseEther('3000'),
                 allSOTIncomeOnly: false,
                 allJOTIncomeOnly: false,
@@ -288,72 +298,223 @@ describe('integration-test', () => {
             await noteTokenVault.connect(untangledAdminSigner).closeEpoch(securitizationPoolContract.address);
 
             const [incomeReserve, capitalReserve] = await securitizationPoolContract.getReserves();
-            const noteTokenSupply = BigNumber.from(await jotToken.totalSupply()).div(parseEther('1'));
-            const incomePerNoteToken = BigNumber.from(incomeReserve).div(noteTokenSupply);
-
-            const aliceIncome = BigNumber.from(await jotToken.balanceOf(alice.address))
-                .div(parseEther('1'))
-                .mul(incomePerNoteToken);
-            const bobIncome = BigNumber.from(await jotToken.balanceOf(bob.address))
-                .div(parseEther('1'))
-                .mul(incomePerNoteToken);
-            const charlieIncome = BigNumber.from(await jotToken.balanceOf(charlie.address))
-                .div(parseEther('1'))
-                .mul(incomePerNoteToken);
-            const duncanIncome = BigNumber.from(await jotToken.balanceOf(duncan.address))
-                .div(parseEther('1'))
-                .mul(incomePerNoteToken);
 
             console.log('income reserve: ', formatEther(incomeReserve));
             console.log('capital reserve: ', formatEther(capitalReserve));
-            console.log("alice's income: ", formatEther(aliceIncome));
-            console.log("bob's income: ", formatEther(bobIncome));
-            console.log("charlie's income: ", formatEther(charlieIncome));
+
+            const jotSupply = BigNumber.from(await jotToken.totalSupply()).div(parseEther('1'));
+            const sotSupply = BigNumber.from(await sotToken.totalSupply()).div(parseEther('1'));
+            const sotIncome = BigNumber.from(incomeReserve).div(3); // sotIncome = incomeReserve * 50% * 10% / 15% = incomeReserve / 3;
+            const jotIncome = BigNumber.from(incomeReserve).sub(sotIncome);
+            const sotIncomePerToken = BigNumber.from(sotIncome).div(sotSupply);
+            const jotIncomePerToken = BigNumber.from(jotIncome).div(jotSupply);
+
+            console.log('sot income: ', formatEther(sotIncome));
+            console.log('jot income: ', formatEther(jotIncome));
+
+            const aliceSeniorIncome = BigNumber.from(await sotToken.balanceOf(alice.address))
+                .div(parseEther('1'))
+                .mul(sotIncomePerToken);
+            const bobSeniorIncome = BigNumber.from(await sotToken.balanceOf(bob.address))
+                .div(parseEther('1'))
+                .mul(sotIncomePerToken);
+            const charlieSeniorIncome = BigNumber.from(await sotToken.balanceOf(charlie.address))
+                .div(parseEther('1'))
+                .mul(sotIncomePerToken);
+            const duncanSeniorIncome = BigNumber.from(await sotToken.balanceOf(duncan.address))
+                .div(parseEther('1'))
+                .mul(sotIncomePerToken);
+
+            const aliceJuniorIncome = BigNumber.from(await jotToken.balanceOf(alice.address))
+                .div(parseEther('1'))
+                .mul(jotIncomePerToken);
+            const bobJuniorIncome = BigNumber.from(await jotToken.balanceOf(bob.address))
+                .div(parseEther('1'))
+                .mul(jotIncomePerToken);
+            const charlieJuniorIncome = BigNumber.from(await jotToken.balanceOf(charlie.address))
+                .div(parseEther('1'))
+                .mul(jotIncomePerToken);
+            const duncanJuniorIncome = BigNumber.from(await jotToken.balanceOf(duncan.address))
+                .div(parseEther('1'))
+                .mul(jotIncomePerToken);
+
+            console.log('alice senior income: ', formatEther(aliceSeniorIncome));
+            console.log('bob senior income: ', formatEther(bobSeniorIncome));
+            console.log('charlie senior income: ', formatEther(charlieSeniorIncome));
+            console.log('duncan senior income: ', formatEther(duncanSeniorIncome));
+
+            console.log('alice junior income: ', formatEther(aliceJuniorIncome));
+            console.log('bob junior income: ', formatEther(bobJuniorIncome));
+            console.log('charlie junior income: ', formatEther(charlieJuniorIncome));
+            console.log('duncan junior income: ', formatEther(duncanJuniorIncome));
 
             await noteTokenVault.connect(untangledAdminSigner).executeOrders(securitizationPoolContract.address, [
                 {
                     user: alice.address,
-                    sotIncomeClaimAmount: 0,
-                    jotIncomeClaimAmount: aliceIncome,
-                    sotCapitalClaimAmount: 0,
-                    jotCapitalClaimAmount: parseEther('3000').sub(aliceIncome),
+                    sotIncomeClaimAmount: aliceSeniorIncome,
+                    jotIncomeClaimAmount: aliceJuniorIncome,
+                    sotCapitalClaimAmount: parseEther('2000').sub(aliceSeniorIncome),
+                    jotCapitalClaimAmount: parseEther('3000').sub(aliceJuniorIncome),
                 },
                 {
                     user: bob.address,
-                    sotIncomeClaimAmount: 0,
-                    jotIncomeClaimAmount: bobIncome,
-                    sotCapitalClaimAmount: 0,
-                    jotCapitalClaimAmount: parseEther('3000').sub(bobIncome),
+                    sotIncomeClaimAmount: bobSeniorIncome,
+                    jotIncomeClaimAmount: bobJuniorIncome,
+                    sotCapitalClaimAmount: parseEther('2000').sub(bobSeniorIncome),
+                    jotCapitalClaimAmount: parseEther('3000').sub(bobJuniorIncome),
                 },
                 {
                     user: charlie.address,
-                    sotIncomeClaimAmount: 0,
-                    jotIncomeClaimAmount: charlieIncome,
-                    sotCapitalClaimAmount: 0,
-                    jotCapitalClaimAmount: parseEther('3000').sub(charlieIncome),
+                    sotIncomeClaimAmount: charlieSeniorIncome,
+                    jotIncomeClaimAmount: charlieJuniorIncome,
+                    sotCapitalClaimAmount: parseEther('2000').sub(charlieSeniorIncome),
+                    jotCapitalClaimAmount: parseEther('3000').sub(charlieJuniorIncome),
                 },
                 {
                     user: duncan.address,
-                    sotIncomeClaimAmount: 0,
-                    jotIncomeClaimAmount: duncanIncome,
-                    sotCapitalClaimAmount: 0,
-                    jotCapitalClaimAmount: parseEther('3000').sub(duncanIncome),
+                    sotIncomeClaimAmount: duncanSeniorIncome,
+                    jotIncomeClaimAmount: duncanJuniorIncome,
+                    sotCapitalClaimAmount: parseEther('2000').sub(duncanSeniorIncome),
+                    jotCapitalClaimAmount: parseEther('3000').sub(duncanJuniorIncome),
                 },
             ]);
             console.log('============== After execution ==============');
-            let [IR, CR] = await securitizationPoolContract.getReserves();
-            console.log('income reserve: ', formatEther(IR));
-            console.log('capital reserve: ', formatEther(CR));
+            const [seniorDebt, seniorBalance] = await securitizationPoolContract.seniorDebtAndBalance();
+            console.log('min first loss: ', await securitizationPoolContract.calcJuniorRatio());
+            console.log('senior debt: ', formatEther(seniorDebt));
+            console.log('senior balance: ', formatEther(seniorBalance));
 
-            console.log('alice note token balance: ', formatEther(await jotToken.balanceOf(alice.address)));
-            console.log('bob note token balance: ', formatEther(await jotToken.balanceOf(bob.address)));
-            console.log('charlie note token balance: ', formatEther(await jotToken.balanceOf(charlie.address)));
-            console.log('duncan note token balance: ', formatEther(await jotToken.balanceOf(duncan.address)));
+            const [incomeAfter, capitalAfter] = await securitizationPoolContract.getReserves();
+            console.log('income reserve: ', formatEther(incomeAfter));
+            console.log('capital reserve: ', formatEther(capitalAfter));
 
+            console.log('============== sot balance ==============');
+            console.log('alice sot token balance: ', formatEther(await sotToken.balanceOf(alice.address)));
+            console.log('bob sot token balance: ', formatEther(await sotToken.balanceOf(bob.address)));
+            console.log('charlie sot token balance: ', formatEther(await sotToken.balanceOf(charlie.address)));
+            console.log('duncan sot token balance: ', formatEther(await sotToken.balanceOf(duncan.address)));
+
+            console.log('============== jot balance ==============');
+            console.log('alice jot token balance: ', formatEther(await jotToken.balanceOf(alice.address)));
+            console.log('bob jot token balance: ', formatEther(await jotToken.balanceOf(bob.address)));
+            console.log('charlie jot token balance: ', formatEther(await jotToken.balanceOf(charlie.address)));
+            console.log('duncan jot token balance: ', formatEther(await jotToken.balanceOf(duncan.address)));
+
+            console.log('============== currency balance ==============');
             console.log('alice currency balance: ', formatEther(await stableCoin.balanceOf(alice.address)));
             console.log('bob currency balance: ', formatEther(await stableCoin.balanceOf(bob.address)));
             console.log('charlie currency balance: ', formatEther(await stableCoin.balanceOf(charlie.address)));
             console.log('duncan currency balance: ', formatEther(await stableCoin.balanceOf(duncan.address)));
         });
+
+        // it('withdraw', async () => {
+        //     await noteTokenVault.grantRole(BACKEND_ADMIN, untangledAdminSigner.address);
+
+        //     // aprove
+        //     await jotToken.connect(alice).approve(noteTokenVault.address, unlimitedAllowance);
+        //     await jotToken.connect(bob).approve(noteTokenVault.address, unlimitedAllowance);
+        //     await jotToken.connect(charlie).approve(noteTokenVault.address, unlimitedAllowance);
+        //     await jotToken.connect(duncan).approve(noteTokenVault.address, unlimitedAllowance);
+        //     // create order
+        //     await noteTokenVault.connect(alice).createOrder(securitizationPoolContract.address, {
+        //         sotCurrencyAmount: 0,
+        //         jotCurrencyAmount: parseEther('3000'),
+        //         allSOTIncomeOnly: false,
+        //         allJOTIncomeOnly: false,
+        //     });
+
+        //     await noteTokenVault.connect(bob).createOrder(securitizationPoolContract.address, {
+        //         sotCurrencyAmount: 0,
+        //         jotCurrencyAmount: parseEther('3000'),
+        //         allSOTIncomeOnly: false,
+        //         allJOTIncomeOnly: false,
+        //     });
+
+        //     await noteTokenVault.connect(charlie).createOrder(securitizationPoolContract.address, {
+        //         sotCurrencyAmount: 0,
+        //         jotCurrencyAmount: parseEther('3000'),
+        //         allSOTIncomeOnly: false,
+        //         allJOTIncomeOnly: false,
+        //     });
+
+        //     await noteTokenVault.connect(duncan).createOrder(securitizationPoolContract.address, {
+        //         sotCurrencyAmount: 0,
+        //         jotCurrencyAmount: parseEther('3000'),
+        //         allSOTIncomeOnly: false,
+        //         allJOTIncomeOnly: false,
+        //     });
+
+        //     // close epoch
+        //     await noteTokenVault.connect(untangledAdminSigner).closeEpoch(securitizationPoolContract.address);
+
+        //     const [incomeReserve, capitalReserve] = await securitizationPoolContract.getReserves();
+        //     const noteTokenSupply = BigNumber.from(await jotToken.totalSupply()).div(parseEther('1'));
+        //     const incomePerNoteToken = BigNumber.from(incomeReserve).div(noteTokenSupply);
+
+        //     const aliceIncome = BigNumber.from(await jotToken.balanceOf(alice.address))
+        //         .div(parseEther('1'))
+        //         .mul(incomePerNoteToken);
+        //     const bobIncome = BigNumber.from(await jotToken.balanceOf(bob.address))
+        //         .div(parseEther('1'))
+        //         .mul(incomePerNoteToken);
+        //     const charlieIncome = BigNumber.from(await jotToken.balanceOf(charlie.address))
+        //         .div(parseEther('1'))
+        //         .mul(incomePerNoteToken);
+        //     const duncanIncome = BigNumber.from(await jotToken.balanceOf(duncan.address))
+        //         .div(parseEther('1'))
+        //         .mul(incomePerNoteToken);
+
+        //     console.log('income reserve: ', formatEther(incomeReserve));
+        //     console.log('capital reserve: ', formatEther(capitalReserve));
+        //     console.log("alice's income: ", formatEther(aliceIncome));
+        //     console.log("bob's income: ", formatEther(bobIncome));
+        //     console.log("charlie's income: ", formatEther(charlieIncome));
+        //     console.log("duncan's income: ", formatEther(duncanIncome));
+
+        //     await noteTokenVault.connect(untangledAdminSigner).executeOrders(securitizationPoolContract.address, [
+        //         {
+        //             user: alice.address,
+        //             sotIncomeClaimAmount: 0,
+        //             jotIncomeClaimAmount: aliceIncome,
+        //             sotCapitalClaimAmount: 0,
+        //             jotCapitalClaimAmount: parseEther('3000').sub(aliceIncome),
+        //         },
+        //         {
+        //             user: bob.address,
+        //             sotIncomeClaimAmount: 0,
+        //             jotIncomeClaimAmount: bobIncome,
+        //             sotCapitalClaimAmount: 0,
+        //             jotCapitalClaimAmount: parseEther('3000').sub(bobIncome),
+        //         },
+        //         {
+        //             user: charlie.address,
+        //             sotIncomeClaimAmount: 0,
+        //             jotIncomeClaimAmount: charlieIncome,
+        //             sotCapitalClaimAmount: 0,
+        //             jotCapitalClaimAmount: parseEther('3000').sub(charlieIncome),
+        //         },
+        //         {
+        //             user: duncan.address,
+        //             sotIncomeClaimAmount: 0,
+        //             jotIncomeClaimAmount: duncanIncome,
+        //             sotCapitalClaimAmount: 0,
+        //             jotCapitalClaimAmount: parseEther('3000').sub(duncanIncome),
+        //         },
+        //     ]);
+        //     console.log('============== After execution ==============');
+        //     let [IR, CR] = await securitizationPoolContract.getReserves();
+        //     console.log('income reserve: ', formatEther(IR));
+        //     console.log('capital reserve: ', formatEther(CR));
+
+        //     console.log('alice note token balance: ', formatEther(await jotToken.balanceOf(alice.address)));
+        //     console.log('bob note token balance: ', formatEther(await jotToken.balanceOf(bob.address)));
+        //     console.log('charlie note token balance: ', formatEther(await jotToken.balanceOf(charlie.address)));
+        //     console.log('duncan note token balance: ', formatEther(await jotToken.balanceOf(duncan.address)));
+
+        //     console.log('alice currency balance: ', formatEther(await stableCoin.balanceOf(alice.address)));
+        //     console.log('bob currency balance: ', formatEther(await stableCoin.balanceOf(bob.address)));
+        //     console.log('charlie currency balance: ', formatEther(await stableCoin.balanceOf(charlie.address)));
+        //     console.log('duncan currency balance: ', formatEther(await stableCoin.balanceOf(duncan.address)));
+        // });
     });
 });

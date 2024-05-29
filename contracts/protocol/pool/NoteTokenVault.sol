@@ -116,6 +116,7 @@ contract NoteTokenVault is
 
     /**
      * Receive the information and execution the epoch
+     * @param pool address of the target pool
      * @param executionOrders batch of execution orders
      */
     function executeOrders(

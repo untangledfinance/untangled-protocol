@@ -160,7 +160,9 @@ library DataTypes {
         /// @notice mapping from loan => grace time
 
         uint256 loanCount;
+        // loan => loan principal
         mapping(uint256 => uint256) balances;
+        // sum of loan principal 
         uint256 balance;
         // nft => details
         mapping(bytes32 => NFTDetails) details;

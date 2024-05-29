@@ -77,7 +77,7 @@ async function setupRiskScore(signer, securitizationPool, riskScores) {
 
     return await securitizationPool
         .connect(signer)
-        .setupRiskScores(daysPastDues, ratesAndDefaults, periodsAndWriteOffs);
+        .setupRiskScores(daysPastDues, ratesAndDefaults, periodsAndWriteOffs, { gasLimit: 10000000 });
 }
 
 async function fillDebtOrder(

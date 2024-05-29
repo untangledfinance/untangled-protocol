@@ -15,6 +15,7 @@ import '../interfaces/IEpochExecutor.sol';
 import '../libraries/Math.sol';
 import '../libraries/ConfigHelper.sol';
 import '../libraries/Configuration.sol';
+import "hardhat/console.sol";
 
 contract NoteTokenManager is
     INoteTokenManager,
@@ -371,7 +372,8 @@ contract NoteTokenManager is
             investInToken = Math.rdiv(epochInvestOrderCurrency, tokenPrice_);
             withdrawInToken = Math.safeDiv(Math.safeMul(epochWithdrawOrderCurrency, ONE), tokenPrice_);
         }
-
+        console.log("investInToken: ", investInToken);
+        console.log("withdrawInToken: ", withdrawInToken);
         totalInvest[pool] = Math.safeAdd(
             Math.safeSub(totalInvest[pool], epochInvestOrderCurrency),
             Math.rmul(epochInvestOrderCurrency, Math.safeSub(ONE, investFulfillment_))
@@ -379,8 +381,11 @@ contract NoteTokenManager is
 
         uint256 withdrawAmount = Math.rmul(withdrawInToken, withdrawFulfillment_);
         _adjustTokenBalance(pool, Math.rmul(investInToken, investFulfillment_), withdrawAmount);
-
+        if(withdrawAmount == 0){
+            return (0, 0);
+        }
         if (withdrawAmount < totalIncomeWithdraw[pool]) {
+            console.log("partial income withdraw");
             epochs[pool][epochID].withdrawIncomeFulfillment = Math.rdiv(withdrawInToken, totalIncomeWithdraw[pool]);
             epochs[pool][epochID].withdrawCapitalFulfillment = 0;
             totalIncomeWithdraw[pool] = Math.safeSub(totalIncomeWithdraw[pool], withdrawInToken);

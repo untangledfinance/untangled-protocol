@@ -10,6 +10,7 @@ import '../interfaces/INoteTokenManager.sol';
 import '../interfaces/IPool.sol';
 import '../libraries/Math.sol';
 import '../libraries/ConfigHelper.sol';
+import 'hardhat/console.sol';
 
 contract EpochExecutor is
     IEpochExecutor,
@@ -133,7 +134,6 @@ contract EpochExecutor is
             epochInfor[pool].order.sotIncomeWithdraw = orderSeniorIncomeWithdraw;
             epochInfor[pool].order.jotIncomeWithdraw = orderJuniorIncomeWithdraw;
         }
-
         if (
             validate(
                 pool,
@@ -143,6 +143,7 @@ contract EpochExecutor is
                 epochInfor[pool].order.jotInvest
             ) == SUCCESS
         ) {
+            console.log('constraints validated');
             _executeEpoch(
                 pool,
                 epochInfor[pool].order.sotWithdraw,
@@ -164,16 +165,17 @@ contract EpochExecutor is
         uint256 seniorInvest,
         uint256 juniorInvest
     ) public view returns (int256 err) {
+        console.log('validate constraint');
         return
             validate(
                 pool,
                 epochInfor[pool].epochReserve,
                 epochInfor[pool].epochNAV,
                 epochInfor[pool].epochSeniorAsset,
-                seniorWithdraw,
-                juniorWithdraw,
                 seniorInvest,
-                juniorInvest
+                seniorWithdraw,
+                juniorInvest,
+                juniorWithdraw
             );
     }
 
@@ -201,14 +203,17 @@ contract EpochExecutor is
         if (err != SUCCESS) {
             return err;
         }
+        console.log("core constraints passed");
         uint256 newReserve = Math.safeSub(currencyAvailable, currencyOut);
+        uint256 newSeniorAsset = Math.safeSub(Math.safeAdd(seniorAsset_, seniorInvest), seniorWithdraw); // seniorAsset_ + seniorInvest - seniorWithdraw
+        console.log("new reserve and new senior asset calculated");
         if (epochInfor[pool].poolClosing == true) {
             if (seniorInvest == 0 && juniorInvest == 0) {
                 return SUCCESS;
             }
             return ERR_POOL_CLOSING;
         }
-        return validatePoolConstraints(pool, newReserve, seniorAsset_, nav_);
+        return validatePoolConstraints(pool, newReserve, newSeniorAsset, nav_);
     }
 
     function validateCoreConstraints(
@@ -222,8 +227,10 @@ contract EpochExecutor is
     ) public view returns (int256) {
         // constraint 1: capital currency available
         if (currencyOut > capitalCurrencyAvailable) {
+            console.log('currencyOut > capitalCurrencyAvailable');
             return ERR_CURRENCY_AVAILABLE;
         }
+        console.log('currencyOut passed');
         // constraint 2: max order
         if (
             seniorInvest > epochInfor[pool].order.sotInvest ||
@@ -231,8 +238,10 @@ contract EpochExecutor is
             seniorWithdraw > epochInfor[pool].order.sotWithdraw ||
             juniorWithdraw > epochInfor[pool].order.jotWithdraw
         ) {
+            console.log('surpass max order');
             return ERR_MAX_ORDER;
         }
+        console.log('maxOrder passed');
         // constraint 3: debt ceiling
         uint256 totalValueRaised = Math.safeSub(
             Math.safeAdd(
@@ -242,8 +251,10 @@ contract EpochExecutor is
             currencyOut
         );
         if (totalValueRaised >= IPool(pool).debtCeiling()) {
+            console.log('max debt ceiling');
             return ERR_DEBT_CEILING_REACHED;
         }
+        console.log('debt ceiling passed');
         return SUCCESS;
     }
 
@@ -254,12 +265,14 @@ contract EpochExecutor is
         uint256 nav_
     ) public view returns (int256 err) {
         uint256 assets = Math.safeAdd(nav_, reserve_);
+        console.log("assets value calculated");
         // constraint 4: min first loss
         return validateMinFirstLoss(pool, assets, seniorAsset);
     }
 
     function validateMinFirstLoss(address pool, uint256 assets, uint256 seniorAsset) public view returns (int256) {
         uint256 minFirstLossCushion = IPool(pool).minFirstLossCushion();
+        console.log("minFirstLossCushion: ", minFirstLossCushion);
         if (seniorAsset >= assets && minFirstLossCushion != 0) {
             return ERR_MAX_SENIOR_RATIO;
         }
@@ -267,9 +280,12 @@ contract EpochExecutor is
         if (seniorAsset == 0 && assets > 0) {
             return SUCCESS;
         }
-        if (Math.safeSub(ONE, Math.rdiv(seniorAsset, assets) * ONE_HUNDRED_PERCENT) / ONE < minFirstLossCushion) {
+        console.log("seniorAsset: ", seniorAsset);
+        console.log("assets: ", assets);
+        if (Math.safeSub(ONE, Math.rdiv(seniorAsset, assets)) * ONE_HUNDRED_PERCENT / ONE < minFirstLossCushion) {
             return ERR_MAX_SENIOR_RATIO;
         }
+        console.log('min first lost passed');
         return SUCCESS;
     }
 
@@ -366,6 +382,7 @@ contract EpochExecutor is
         uint256 totalCapitalWithdraw = 0;
         {
             address tempPool = pool;
+            console.log("sot price: ",epochInfor[tempPool].sotPrice);
             (uint256 sotCapitalWithdraw, uint256 sotIncomeWithdraw) = sotManager.epochUpdate(
                 pool,
                 epochID,
@@ -375,9 +392,9 @@ contract EpochExecutor is
                 epochInfor[tempPool].order.sotInvest,
                 epochInfor[tempPool].order.sotWithdraw
             );
-
+            
             IPool(tempPool).changeSeniorAsset(sotInvest, sotWithdraw);
-
+            
             (uint256 jotCapitalWithdraw, uint256 jotIncomeWithdraw) = jotManager.epochUpdate(
                 tempPool,
                 epochID,

@@ -124,6 +124,8 @@ describe('Untangled-v2', async () => {
         it('should place invest order successfully', async () => {
             expect(await sotTokenManager.getTokenAddress(securitizationPool.address)).to.be.eq(sotAddress);
             expect(await jotTokenManager.getTokenAddress(securitizationPool.address)).to.be.eq(jotAddress);
+            await stableCoin.connect(lenderSigner).approve(sotTokenManager.address, parseEther('100'));
+            await stableCoin.connect(lenderSigner).approve(jotTokenManager.address, parseEther('100'));
             await expect(
                 sotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('30'))
             ).to.be.revertedWith('NoteTokenManager: invest amount is too low');
@@ -131,5 +133,10 @@ describe('Untangled-v2', async () => {
             await sotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('60'));
             await jotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('90'));
         });
+        it('should close epoch successfully', async () => {
+            await epochExecutor.closeEpoch(securitizationPool.address);
+            console.log("current epoch: ", await epochExecutor.currentEpoch(securitizationPool.address));
+            console.log("last epoch closed: ", await epochExecutor.lastEpochExecuted(securitizationPool.address));
+        })
     });
 });

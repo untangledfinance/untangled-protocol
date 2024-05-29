@@ -14,6 +14,7 @@ import {PoolAssetLogic} from '../../libraries/logic/PoolAssetLogic.sol';
 import {GenericLogic} from '../../libraries/logic/GenericLogic.sol';
 import {RebaseLogic} from '../../libraries/logic/RebaseLogic.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
+import 'hardhat/console.sol';
 
 /**
  * @title Untangled's SecuritizationPool contract
@@ -431,6 +432,8 @@ contract Pool is IPool, PoolStorage, UntangledBase {
             _seniorSupply,
             _seniorRedeem
         );
+        console.log('reserve: ', GenericLogic.reserve(_poolStorage));
+
         if (_seniorSupply > 0) require(isMinFirstLossValid(), 'Pool: Exceeds MinFirstLoss');
     }
 

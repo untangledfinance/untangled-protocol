@@ -6,6 +6,7 @@ import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgrad
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IPool} from '../../interfaces/IPool.sol';
+import {IMintedNormalTGE} from '../../interfaces/IMintedNormalTGE.sol';
 import {ONE_HUNDRED_PERCENT, BACKEND_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
 
 contract NoteTokenVault is
@@ -129,6 +130,7 @@ contract NoteTokenVault is
         uint256 totalIncomeWithdraw;
         uint256 totalCapitalWithdraw;
         uint256 totalSeniorWithdraw;
+        uint256 totalJuniorWithdraw;
         for (uint256 i = 0; i < executionOrders.length; i++) {
             // validate the order and burn the required amount note token
             _validateAndBurn(
@@ -151,8 +153,10 @@ contract NoteTokenVault is
                 executionOrders[i].jotCapitalClaimAmount;
             uint256 incomeWithdraw = executionOrders[i].sotIncomeClaimAmount + executionOrders[i].jotIncomeClaimAmount;
             uint256 seniorWithdraw = executionOrders[i].sotCapitalClaimAmount + executionOrders[i].sotIncomeClaimAmount;
+            uint256 juniorWithdraw = executionOrders[i].jotCapitalClaimAmount + executionOrders[i].jotIncomeClaimAmount;
 
             totalSeniorWithdraw += seniorWithdraw;
+            totalJuniorWithdraw += juniorWithdraw;
             totalIncomeWithdraw += incomeWithdraw;
             totalCapitalWithdraw += capitalWithdraw;
             // disburse currency token to user
@@ -162,6 +166,15 @@ contract NoteTokenVault is
         IPool(pool).decreaseIncomeReserve(totalIncomeWithdraw);
         IPool(pool).decreaseCapitalReserve(totalCapitalWithdraw);
         IPool(pool).changeSeniorAsset(0, totalSeniorWithdraw);
+
+        // decrease total currency raised
+        if (totalSeniorWithdraw != 0) {
+            IMintedNormalTGE(IPool(pool).tgeAddress()).onRedeem(totalSeniorWithdraw);
+        }
+        if (totalJuniorWithdraw != 0) {
+            IMintedNormalTGE(IPool(pool).secondTGEAddress()).onRedeem(totalJuniorWithdraw);
+        }
+
         // check minFirstLoss
         require(IPool(pool).isMinFirstLossValid(), 'exceed minFirstLoss');
 

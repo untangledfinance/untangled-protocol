@@ -253,7 +253,9 @@ describe('integration-test', () => {
 
         it('withdraw', async () => {
             await noteTokenVault.grantRole(BACKEND_ADMIN, untangledAdminSigner.address);
-
+            const [jotPriceBefore, sotPriceBefore] = await securitizationPoolContract.calcTokenPrices();
+            console.log('jot price before: ', formatEther(jotPriceBefore));
+            console.log('sot price before: ', formatEther(sotPriceBefore));
             // aprove
             await jotToken.connect(alice).approve(noteTokenVault.address, unlimitedAllowance);
             await jotToken.connect(bob).approve(noteTokenVault.address, unlimitedAllowance);
@@ -295,7 +297,7 @@ describe('integration-test', () => {
             });
 
             // close epoch
-            await noteTokenVault.connect(untangledAdminSigner).closeEpoch(securitizationPoolContract.address);
+            await noteTokenVault.connect(untangledAdminSigner).closeEpoch(securitizationPoolContract.address, 1);
 
             const [incomeReserve, capitalReserve] = await securitizationPoolContract.getReserves();
 
@@ -379,6 +381,10 @@ describe('integration-test', () => {
                 },
             ]);
             console.log('============== After execution ==============');
+            const [jotPriceAfter, sotPriceAfter] = await securitizationPoolContract.calcTokenPrices();
+            console.log('jot price after: ', formatEther(jotPriceAfter));
+            console.log('sot price after: ', formatEther(sotPriceAfter));
+
             const [seniorDebt, seniorBalance] = await securitizationPoolContract.seniorDebtAndBalance();
             console.log('min first loss: ', await securitizationPoolContract.calcJuniorRatio());
             console.log('senior debt: ', formatEther(seniorDebt));
@@ -387,6 +393,8 @@ describe('integration-test', () => {
             const [incomeAfter, capitalAfter] = await securitizationPoolContract.getReserves();
             console.log('income reserve: ', formatEther(incomeAfter));
             console.log('capital reserve: ', formatEther(capitalAfter));
+
+            console.log('net asset value: ', formatEther(await securitizationPoolContract.currentNAV()));
 
             console.log('============== sot balance ==============');
             console.log('alice sot token balance: ', formatEther(await sotToken.balanceOf(alice.address)));

@@ -38,6 +38,11 @@ contract NoteTokenVault is
         bool epochClosed;
     }
 
+    struct BatchInfor {
+        uint256 batchSize;
+        uint256 executed;
+    }
+
     struct FeeInfor {
         uint256 feePercentage;
         uint256 freeTimestamp;
@@ -48,6 +53,8 @@ contract NoteTokenVault is
     mapping(address => EpochInfor) epochInfor;
     // pool => fee
     mapping(address => FeeInfor) fees;
+    // pool => execution batch size
+    mapping(address => BatchInfor) batchInfor;
 
     event OrderCreated(address pool, address user);
 
@@ -69,6 +76,10 @@ contract NoteTokenVault is
     function getOrder(address pool, address user) public view returns (Order memory) {
         return orders[pool][user];
     }
+
+    function getBatchInfor(address pool) public view returns (BatchInfor memory) {
+        return batchInfor[pool];
+    }
     /**
      * Set the parameter for fee calculation of a pool
      * @param pool pool address
@@ -88,7 +99,7 @@ contract NoteTokenVault is
      * @param pool pool address
      * @param _redeemDisabled pool's redeemability
      */
-    function setPoolRedeemDisabled(address pool, bool _redeemDisabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setPoolRedeemDisabled(address pool, bool _redeemDisabled) external onlyRole(BACKEND_ADMIN_ROLE) {
         epochInfor[pool].redeemDisabled = _redeemDisabled;
     }
 
@@ -106,13 +117,17 @@ contract NoteTokenVault is
      * Close the epoch and snapshot the NoteToken prices at that moment
      * @param pool address of corresponding pool
      */
-    function closeEpoch(address pool) external onlyRole(BACKEND_ADMIN_ROLE) {
+    function closeEpoch(address pool, uint256 executionBatchSize) external onlyRole(BACKEND_ADMIN_ROLE) {
         require(epochInfor[pool].epochClosed == false, 'epoch already closed');
         (uint256 jotPrice, uint256 sotPrice) = IPool(pool).calcTokenPrices();
+        // snapshot token price
         epochInfor[pool].jotPrice = jotPrice;
         epochInfor[pool].sotPrice = sotPrice;
         epochInfor[pool].timestamp = block.timestamp;
         epochInfor[pool].epochClosed = true;
+        // set batch infor
+        batchInfor[pool].batchSize = executionBatchSize;
+        batchInfor[pool].executed = 0;
     }
 
     /**
@@ -125,6 +140,7 @@ contract NoteTokenVault is
         ExecutionOrder[] calldata executionOrders
     ) external onlyRole(BACKEND_ADMIN_ROLE) {
         require(epochInfor[pool].epochClosed == true, "epoch haven't closed");
+        require(batchInfor[pool].executed < batchInfor[pool].batchSize, 'batch fully executed');
         address sotAddress = IPool(pool).sotToken();
         address jotAddress = IPool(pool).jotToken();
         uint256 totalIncomeWithdraw;
@@ -177,8 +193,11 @@ contract NoteTokenVault is
 
         // check minFirstLoss
         require(IPool(pool).isMinFirstLossValid(), 'exceed minFirstLoss');
+        batchInfor[pool].executed++;
+    }
 
-        // open epoch
+    function openEpoch(address pool) external onlyRole(BACKEND_ADMIN_ROLE) {
+        require(batchInfor[pool].batchSize == batchInfor[pool].executed, "current batch haven't been fully executed");
         epochInfor[pool].epochClosed = false;
     }
 

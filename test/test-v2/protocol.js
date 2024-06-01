@@ -1,7 +1,7 @@
 const { utils } = require('ethers');
 const { ethers, getChainId } = require('hardhat');
 const { BigNumber } = ethers;
-const { parseEthers } = ethers.utils;
+const { parseEther } = ethers.utils;
 const { RATE_SCALING_FACTOR } = require('../shared/constants');
 const { VALIDATOR_ROLE } = require('../constants');
 const {
@@ -20,7 +20,6 @@ const {
 const dayjs = require('dayjs');
 const _ = require('lodash');
 const { presignedMintMessage } = require('../shared/uid-helper');
-const { parseEther } = require('viem');
 
 function getTokenAddressFromSymbol(symbol) {
     switch (symbol) {
@@ -101,7 +100,7 @@ async function fillDebtOrder(
     const orderValues = [
         CREDITOR_FEE,
         assetPurpose,
-        ...loans.map((l) => parseEther(l.principalAmount.tostring())),
+        ...loans.map((l) => parseEther(l.principalAmount.toString())),
         ...loans.map((l) => l.expirationTimestamp),
         ...loans.map((l) => l.salt || genSalt()),
         ...loans.map((l) => l.riskScore),
@@ -133,7 +132,7 @@ async function fillDebtOrder(
                     this.loanAssetToken,
                     validatorSigner || this.defaultLoanAssetTokenValidator,
                     [x],
-                    [loans[i].nonce || (await this.loanAssetToken.nonce(x).toNumber())],
+                    [loans[i].nonce || (await this.loanAssetToken.nonce(x)).toNumber()],
                     validatorAddress || this.defaultLoanAssetTokenValidator.address
                 )),
             }))
@@ -165,7 +164,7 @@ async function getLoansValue(
     const orderValues = [
         CREDITOR_FEE,
         assetPurpose,
-        ...loans.map((l) => parseEthers(l.principalAmount.toString())),
+        ...loans.map((l) => parseEther(l.principalAmount.toString())),
         ...loans.map((l) => l.expirationTimestamp),
         ...loans.map((l) => l.salt || genSalt()),
         ...loans.map((l) => l.riskScore),
@@ -187,7 +186,6 @@ async function getLoansValue(
     const debtors = debtorsFromOrderAddresses(orderAddresses, termsContractParameters.length);
 
     const tokenIds = genLoanAgreementIds(this.loanKernel.address, debtors, termsContractParameters, salt);
-
     const fillDebtOrderParams = formatFillDebtOrderParams(
         orderAddresses,
         orderValues,
@@ -198,7 +196,7 @@ async function getLoansValue(
                     this.loanAssetToken,
                     validatorSigner || this.defaultLoanAssetTokenValidator,
                     [x],
-                    [loans[i].nonce || (await this.loanAssetToken.nonce(x).toNumber())],
+                    [loans[i].nonce || (await this.loanAssetToken.nonce(x)).toNumber()],
                     validatorAddress || this.defaultLoanAssetTokenValidator.address
                 )),
             }))

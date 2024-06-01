@@ -1,4 +1,5 @@
 const { ethers, artifacts } = require('hardhat');
+const { time } = require('@nomicfoundation/hardhat-network-helpers');
 const { setup } = require('./setup');
 const Protocol = require('./protocol');
 const { parseEther, formatEther } = ethers.utils;
@@ -18,32 +19,40 @@ describe('Untangled-v2', async () => {
         protocol,
         uniqueIdentity,
         loanKernel,
+        loanAssetToken,
         securitizationPoolImpl,
         epochExecutor,
         sotTokenManager,
         jotTokenManager,
         sotAddress,
         jotAddress,
-        noteTokenFactory;
+        sotToken,
+        jotToken,
+        noteTokenFactory,
+        tokenIds;
     // Wallets
-    let adminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner;
+    let adminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, potWallet;
     before('setup', async () => {
-        [adminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner] = await ethers.getSigners();
+        [adminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, potWallet] =
+            await ethers.getSigners();
         const contracts = await setup();
+        protocol = Protocol.bind(contracts);
         ({
             stableCoin,
             securitizationManager,
             uniqueIdentity,
             loanKernel,
+            loanAssetToken,
             securitizationPoolImpl,
             noteTokenFactory,
             sotTokenManager,
             jotTokenManager,
             epochExecutor,
         } = contracts);
-        protocol = Protocol.bind(contracts);
-        await stableCoin.transfer(lenderSigner.address, parseEther('1000'));
-        await stableCoin.connect(adminSigner).approve(loanKernel.address, unlimitedAllowance);
+        await stableCoin.transfer(lenderSigner.address, parseEther('1000000'));
+
+        await stableCoin.connect(borrowerSigner).approve(loanKernel.address, unlimitedAllowance);
+
         await protocol.mintUID(lenderSigner);
     });
     describe('security pool', async () => {
@@ -56,7 +65,7 @@ describe('Untangled-v2', async () => {
             let securitizationPoolAddress = await protocol.createSecuritizationPool(
                 poolCreatorSigner,
                 10,
-                20000,
+                200000,
                 'USDC',
                 true,
                 salt
@@ -80,18 +89,22 @@ describe('Untangled-v2', async () => {
             expect(create2).to.be.eq(securitizationPoolAddress);
 
             securitizationPool = await getPoolByAddress(securitizationPoolAddress);
-            securitizationPool.connect(poolCreatorSigner).grantRole(ORIGINATOR_ROLE, originatorSigner.address);
-            securitizationPool.connect(poolCreatorSigner).grantRole(ORIGINATOR_ROLE, adminSigner.address);
+            await securitizationPool.connect(poolCreatorSigner).grantRole(ORIGINATOR_ROLE, originatorSigner.address);
+            await securitizationPool.connect(poolCreatorSigner).grantRole(ORIGINATOR_ROLE, adminSigner.address);
+
+            await securitizationPool.connect(poolCreatorSigner).setPot(potWallet.address);
+            await stableCoin.connect(potWallet).approve(securitizationPool.address, unlimitedAllowance);
+            expect(await securitizationPool.pot()).to.be.eq(potWallet.address);
 
             const oneDayInSecs = 1 * 24 * 3600;
             const halfOfADay = oneDayInSecs / 2;
             const riskScore = {
                 daysPastDue: oneDayInSecs,
-                advanceRate: 950000,
+                advanceRate: 1000000,
                 penaltyRate: 900000,
-                interestRate: 910000,
-                probabilityOfDefault: 800000,
-                lossGivenDefault: 810000,
+                interestRate: 150000,
+                probabilityOfDefault: 30000,
+                lossGivenDefault: 500000,
                 gracePeriod: halfOfADay,
                 collectionPeriod: halfOfADay,
                 writeOffAfterGracePeriod: halfOfADay,
@@ -105,38 +118,74 @@ describe('Untangled-v2', async () => {
             sotAddress = await protocol.initNoteTokenSale(poolCreatorSigner, {
                 pool: securitizationPool.address,
                 tokenType: 0,
-                minBidAmount: parseEther('50'),
+                minBidAmount: parseEther('5000'),
                 interestRate: 2,
                 ticker: 'SOT_',
             });
             jotAddress = await protocol.initNoteTokenSale(poolCreatorSigner, {
                 pool: securitizationPool.address,
                 tokenType: 1,
-                minBidAmount: parseEther('50'),
+                minBidAmount: parseEther('5000'),
                 interestRate: 0,
                 ticker: 'JOT_',
             });
             expect(await securitizationPool.sotToken()).to.be.eq(sotAddress);
             expect(await securitizationPool.interestRateSOT()).to.be.eq(BigNumber.from(2));
             expect(await securitizationPool.jotToken()).to.be.eq(jotAddress);
+            sotToken = await ethers.getContractAt('NoteToken', sotAddress);
+            jotToken = await ethers.getContractAt('NoteToken', jotAddress);
         });
 
         it('should place invest order successfully', async () => {
             expect(await sotTokenManager.getTokenAddress(securitizationPool.address)).to.be.eq(sotAddress);
             expect(await jotTokenManager.getTokenAddress(securitizationPool.address)).to.be.eq(jotAddress);
-            await stableCoin.connect(lenderSigner).approve(sotTokenManager.address, parseEther('100'));
-            await stableCoin.connect(lenderSigner).approve(jotTokenManager.address, parseEther('100'));
+            await stableCoin.connect(lenderSigner).approve(sotTokenManager.address, parseEther('100000'));
+            await stableCoin.connect(lenderSigner).approve(jotTokenManager.address, parseEther('100000'));
             await expect(
-                sotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('30'))
+                sotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('3000'))
             ).to.be.revertedWith('NoteTokenManager: invest amount is too low');
 
-            await sotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('60'));
-            await jotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('90'));
+            await sotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('60000'));
+            await jotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('90000'));
         });
         it('should close epoch successfully', async () => {
             await epochExecutor.closeEpoch(securitizationPool.address);
-            console.log("current epoch: ", await epochExecutor.currentEpoch(securitizationPool.address));
-            console.log("last epoch closed: ", await epochExecutor.lastEpochExecuted(securitizationPool.address));
-        })
+
+            await sotTokenManager['disburse(address,address)'](securitizationPool.address, lenderSigner.address);
+            await jotTokenManager['disburse(address,address)'](securitizationPool.address, lenderSigner.address);
+
+            expect(await epochExecutor.currentEpoch(securitizationPool.address)).to.be.eq(1);
+
+            expect(await securitizationPool.reserve()).to.be.eq(parseEther('150000'));
+            expect(await stableCoin.balanceOf(potWallet.address)).to.be.eq(parseEther('150000'));
+
+            expect(await sotToken.balanceOf(lenderSigner.address)).to.be.eq(parseEther('60000'));
+            expect(await jotToken.balanceOf(lenderSigner.address)).to.be.eq(parseEther('90000'));
+        });
+
+        it('should drawdown', async () => {
+            const loans = [
+                {
+                    principalAmount: 80000000000000000000000n,
+                    expirationTimestamp: (await time.latest()) + 3600 * 24 * 90,
+                    assetPurpose: '0',
+                    termInDays: 90,
+                    riskScore: '1',
+                    salt: genSalt(),
+                },
+            ];
+            await securitizationPool.connect(poolCreatorSigner).grantRole(ORIGINATOR_ROLE, borrowerSigner.address);
+            const { expectedLoansValue } = await protocol.getLoansValue(
+                borrowerSigner,
+                securitizationPool,
+                borrowerSigner,
+                '0',
+                loans
+            );
+            expect(expectedLoansValue).to.be.eq(parseEther('80000'));
+
+            tokenIds = await protocol.fillDebtOrder(borrowerSigner, securitizationPool, borrowerSigner, '0', loans);
+            console.log('current NAV: ', formatEther(await securitizationPool.currentNAV()));
+        });
     });
 });

@@ -9,6 +9,7 @@ import '../../libraries/UntangledMath.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import '../../libraries/TransferHelper.sol';
+import 'hardhat/console.sol';
 
 /// @title LoanKernel
 /// @author Untangled Team
@@ -393,7 +394,6 @@ contract LoanKernel is ILoanKernel, UntangledBase {
 
             expectedAssetsValue += pool.collectAssets(fillDebtOrderParam.latInfo[i].tokenIds, loans);
         }
-
         // Start collect asset checkpoint and withdraw
         pool.withdraw(_msgSender(), expectedAssetsValue);
 

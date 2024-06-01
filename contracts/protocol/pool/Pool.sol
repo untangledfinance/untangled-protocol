@@ -423,7 +423,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         require(
             _msgSender() == address(registry.getSecuritizationManager()) ||
                 _msgSender() == address(registry.getEpochExecutor()),
-            'SecuritizationPool: Caller must be SecuritizationManager or NoteTokenVault'
+            'SecuritizationPool: Caller must be SecuritizationManager or EpochExecutor'
         );
         RebaseLogic.changeSeniorAsset(
             _poolStorage,
@@ -432,7 +432,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
             _seniorSupply,
             _seniorRedeem
         );
-        console.log('reserve: ', GenericLogic.reserve(_poolStorage));
 
         if (_seniorSupply > 0) require(isMinFirstLossValid(), 'Pool: Exceeds MinFirstLoss');
     }

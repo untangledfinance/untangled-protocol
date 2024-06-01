@@ -75,7 +75,6 @@ const setup = async () => {
 
     let stableCoin;
     let registry;
-
     let loanKernel;
     let securitizationManager;
     let securitizationPoolValueService;
@@ -89,7 +88,7 @@ const setup = async () => {
     const [adminSigner] = await ethers.getSigners();
 
     const tokenFactory = await ethers.getContractFactory('TestERC20');
-    stableCoin = await tokenFactory.deploy('USDC', 'USDC', ethers.utils.parseEther('100000'));
+    stableCoin = await tokenFactory.deploy('USDC', 'USDC', ethers.utils.parseEther('10000000'));
 
     const Registry = await ethers.getContractFactory('Registry');
     registry = await upgrades.deployProxy(Registry, []);

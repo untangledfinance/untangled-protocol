@@ -15,7 +15,7 @@ import '../interfaces/IEpochExecutor.sol';
 import '../libraries/Math.sol';
 import '../libraries/ConfigHelper.sol';
 import '../libraries/Configuration.sol';
-import "hardhat/console.sol";
+import 'hardhat/console.sol';
 
 contract NoteTokenManager is
     INoteTokenManager,
@@ -29,6 +29,8 @@ contract NoteTokenManager is
 
     event InvestOrder(address pool, address from, uint256 amount);
     event WithdrawOrder(address pool, address from, uint256 amount);
+    uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
+    uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
     mapping(address => uint256) public totalWithdraw;
     mapping(address => uint256) public totalInvest;
     mapping(address => uint256) public totalIncomeWithdraw;
@@ -193,7 +195,7 @@ contract NoteTokenManager is
     {
         uint256 epochIdx = orders[pool][user].orderedInEpoch;
         // no disburse possible in epoch
-        if (epochIdx == epochExecutor.lastEpochExecuted(pool)) {
+        if (epochIdx == epochExecutor.currentEpoch(pool)) {
             return (
                 payoutCurrencyAmount,
                 payoutTokenAmount,
@@ -214,44 +216,44 @@ contract NoteTokenManager is
 
         while (epochIdx <= endEpoch && (remainingInvestCurrency != 0 || remainingWithdrawToken != 0)) {
             if (remainingInvestCurrency != 0) {
-                amount = Math.rmul(remainingInvestCurrency, epochs[pool][epochIdx].investFulfillment);
+                amount = (remainingInvestCurrency * epochs[pool][epochIdx].investFulfillment) / ONE_HUNDRED_PERCENT;
                 if (amount != 0) {
-                    payoutTokenAmount = Math.safeAdd(
-                        payoutTokenAmount,
-                        Math.safeDiv(Math.safeMul(amount, ONE), epochs[pool][epochIdx].price)
-                    );
-                    remainingInvestCurrency = Math.safeSub(remainingInvestCurrency, amount);
+                    payoutTokenAmount = payoutTokenAmount + (amount * 10 ** 18) / epochs[pool][epochIdx].price;
+                    remainingInvestCurrency -= amount;
                 }
             }
             if (remainingWithdrawToken != 0) {
                 // user have income withdrawal and have withdrawal fulfillment < 100%
-                if (remainingIncomeWithdrawToken != 0 && epochs[pool][epochIdx].withdrawIncomeFulfillment != ONE) {
-                    amount = Math.rmul(remainingIncomeWithdrawToken, epochs[pool][epochIdx].withdrawIncomeFulfillment);
+                if (
+                    remainingIncomeWithdrawToken != 0 &&
+                    epochs[pool][epochIdx].withdrawIncomeFulfillment != ONE_HUNDRED_PERCENT
+                ) {
+                    amount =
+                        (remainingIncomeWithdrawToken * epochs[pool][epochIdx].withdrawIncomeFulfillment) /
+                        ONE_HUNDRED_PERCENT;
                     if (amount != 0) {
-                        payoutCurrencyAmount = Math.safeAdd(
-                            payoutCurrencyAmount,
-                            Math.rmul(amount, epochs[pool][epochIdx].price)
-                        );
-                        remainingIncomeWithdrawToken = Math.safeSub(remainingIncomeWithdrawToken, amount);
-                        remainingWithdrawToken = Math.safeSub(remainingWithdrawToken, amount);
+                        payoutCurrencyAmount =
+                            payoutCurrencyAmount +
+                            (amount * epochs[pool][epochIdx].price) /
+                            10 ** 18;
+                        remainingIncomeWithdrawToken = remainingIncomeWithdrawToken - amount;
+                        remainingWithdrawToken = remainingWithdrawToken - amount;
                     }
                 } else {
                     // all income can be withdraw or user don't have income withdrawal
                     // total withdrawal = totalIncomeWithdrawal + capitalFulfillment * totalCapitalWithdrawal
-                    amount = Math.safeAdd(
-                        Math.rmul(
-                            Math.safeSub(remainingWithdrawToken, remainingIncomeWithdrawToken), // calculate remaining capital withdrawal
-                            epochs[pool][epochIdx].withdrawCapitalFulfillment
-                        ),
-                        remainingIncomeWithdrawToken
-                    );
+                    amount =
+                        ((remainingWithdrawToken - remainingIncomeWithdrawToken) *
+                            epochs[pool][epochIdx].withdrawCapitalFulfillment) / // calculate remaining capital withdrawal
+                        ONE_HUNDRED_PERCENT +
+                        remainingIncomeWithdrawToken;
                     if (amount != 0) {
-                        payoutCurrencyAmount = Math.safeAdd(
-                            payoutCurrencyAmount,
-                            Math.rmul(amount, epochs[pool][epochIdx].price)
-                        );
+                        payoutCurrencyAmount =
+                            payoutCurrencyAmount +
+                            (amount * epochs[pool][epochIdx].price) /
+                            10 ** 18;
                         remainingIncomeWithdrawToken = 0;
-                        remainingWithdrawToken = Math.safeSub(remainingWithdrawToken, amount);
+                        remainingWithdrawToken = remainingWithdrawToken - amount;
                     }
                 }
             }
@@ -326,7 +328,7 @@ contract NoteTokenManager is
         }
 
         if (payoutTokenAmount > 0) {
-            INoteToken(tokenInfor[pool].tokenAddress).transferFrom(IPool(pool).pot(), user, payoutTokenAmount);
+            INoteToken(tokenInfor[pool].tokenAddress).mint(user, payoutTokenAmount);
             INoteToken(tokenInfor[pool].tokenAddress).increaseUserPrinciple(user, payoutTokenAmount);
         }
 
@@ -363,43 +365,46 @@ contract NoteTokenManager is
         require(waitingForUpdate[pool] == true, 'NoteTokenManager: epoch is not closed yet.');
         waitingForUpdate[pool] = false;
         epochs[pool][epochID].investFulfillment = investFulfillment_;
-        epochs[pool][epochID].withdrawIncomeFulfillment = ONE;
+        epochs[pool][epochID].withdrawIncomeFulfillment = ONE_HUNDRED_PERCENT;
         epochs[pool][epochID].price = tokenPrice_;
 
         uint256 withdrawInToken = 0;
         uint256 investInToken = 0;
         if (tokenPrice_ > 0) {
-            investInToken = Math.rdiv(epochInvestOrderCurrency, tokenPrice_);
-            withdrawInToken = Math.safeDiv(Math.safeMul(epochWithdrawOrderCurrency, ONE), tokenPrice_);
+            investInToken = (epochInvestOrderCurrency * tokenPrice_) / 10 ** 18;
+            withdrawInToken = (epochWithdrawOrderCurrency * 10 ** 18) / tokenPrice_;
         }
-        console.log("investInToken: ", investInToken);
-        console.log("withdrawInToken: ", withdrawInToken);
+
         totalInvest[pool] = Math.safeAdd(
             Math.safeSub(totalInvest[pool], epochInvestOrderCurrency),
-            Math.rmul(epochInvestOrderCurrency, Math.safeSub(ONE, investFulfillment_))
+            Math.rmul(epochInvestOrderCurrency, Math.safeSub(ONE_HUNDRED_PERCENT, investFulfillment_))
         );
 
-        uint256 withdrawAmount = Math.rmul(withdrawInToken, withdrawFulfillment_);
-        _adjustTokenBalance(pool, Math.rmul(investInToken, investFulfillment_), withdrawAmount);
-        if(withdrawAmount == 0){
+        uint256 withdrawAmount = (withdrawInToken * withdrawFulfillment_) / ONE_HUNDRED_PERCENT;
+        _adjustTokenBalance(pool, (investInToken * investFulfillment_) / ONE_HUNDRED_PERCENT, withdrawAmount);
+        if (withdrawAmount == 0) {
             return (0, 0);
         }
+
         if (withdrawAmount < totalIncomeWithdraw[pool]) {
-            console.log("partial income withdraw");
-            epochs[pool][epochID].withdrawIncomeFulfillment = Math.rdiv(withdrawInToken, totalIncomeWithdraw[pool]);
+            epochs[pool][epochID].withdrawIncomeFulfillment =
+                (withdrawInToken * ONE_HUNDRED_PERCENT) /
+                totalIncomeWithdraw[pool];
             epochs[pool][epochID].withdrawCapitalFulfillment = 0;
-            totalIncomeWithdraw[pool] = Math.safeSub(totalIncomeWithdraw[pool], withdrawInToken);
+            totalIncomeWithdraw[pool] = totalIncomeWithdraw[pool] - withdrawInToken;
             return (0, epochWithdrawOrderCurrency);
         }
+
         address tempPool = pool;
-        epochs[tempPool][epochID].withdrawCapitalFulfillment = Math.rdiv(
-            Math.safeSub(withdrawAmount, totalIncomeWithdraw[tempPool]), // withdrawCapital = withdrawAmount - incomeWithdraw
-            Math.safeSub(totalWithdraw[tempPool], totalIncomeWithdraw[tempPool])
-        );
+        epochs[tempPool][epochID].withdrawCapitalFulfillment =
+            ((withdrawAmount - totalIncomeWithdraw[tempPool]) * ONE_HUNDRED_PERCENT) / // withdrawCapital = withdrawAmount - incomeWithdraw
+            totalWithdraw[tempPool] -
+            totalIncomeWithdraw[tempPool];
+
         finalIncomeWithdrawCurrency = totalIncomeWithdraw[tempPool];
-        finalCapitalWithdrawCurrency = Math.safeSub(epochWithdrawOrderCurrency, finalIncomeWithdrawCurrency);
+        finalCapitalWithdrawCurrency = epochWithdrawOrderCurrency - finalIncomeWithdrawCurrency;
         totalIncomeWithdraw[tempPool] = 0;
-        totalWithdraw[tempPool] = Math.safeSub(totalWithdraw[tempPool], withdrawAmount);
+        totalWithdraw[tempPool] = totalWithdraw[tempPool] - withdrawAmount;
     }
 
     function mint(address pool, address receiver, uint256 amount) public returns (uint256) {
@@ -425,9 +430,9 @@ contract NoteTokenManager is
             return;
         }
 
-        if (epochWithdrawInToken < epochInvestInToken) {
-            delta = Math.safeSub(epochInvestInToken, epochWithdrawInToken);
-            INoteToken(tokenInfor[pool].tokenAddress).mint(IPool(pool).pot(), delta);
-        }
+        // if (epochWithdrawInToken < epochInvestInToken) {
+        //     delta = Math.safeSub(epochInvestInToken, epochWithdrawInToken);
+        //     INoteToken(tokenInfor[pool].tokenAddress).mint(IPool(pool).pot(), delta);
+        // }
     }
 }

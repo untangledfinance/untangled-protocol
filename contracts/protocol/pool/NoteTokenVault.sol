@@ -80,6 +80,7 @@ contract NoteTokenVault is
     function getBatchInfor(address pool) public view returns (BatchInfor memory) {
         return batchInfor[pool];
     }
+
     /**
      * Set the parameter for fee calculation of a pool
      * @param pool pool address
@@ -94,6 +95,7 @@ contract NoteTokenVault is
         fees[pool].feePercentage = _feePercentage;
         fees[pool].freeTimestamp = _freeTimestamp;
     }
+
     /**
      * Set pool's availability to redeem
      * @param pool pool address
@@ -229,20 +231,27 @@ contract NoteTokenVault is
         );
 
         // burn note token
-        uint256 sotBurn = sotCurrencyClaimed / epochInfor[pool].sotPrice;
-        uint256 jotBurn = jotCurrencyClaimed / epochInfor[pool].jotPrice;
+        uint256 sotBurn;
+        uint256 jotBurn;
+        if (epochInfor[pool].sotPrice != 0) {
+            sotBurn = sotCurrencyClaimed / epochInfor[pool].sotPrice;
+        }
+        if (epochInfor[pool].jotPrice != 0) {
+            jotBurn = jotCurrencyClaimed / epochInfor[pool].jotPrice;
+        }
 
-        require(
-            INoteToken(sotAddress).allowance(user, address(this)) >= sotBurn &&
-                INoteToken(jotAddress).allowance(user, address(this)) >= jotBurn,
-            'not enough note token allowance'
-        );
+        if (sotAddress != address(0)) {
+            require(INoteToken(sotAddress).allowance(user, address(this)) >= sotBurn, 'not enough sot token allowance');
+        }
+        if (jotAddress != address(0)) {
+            require(INoteToken(jotAddress).allowance(user, address(this)) >= jotBurn, 'not enough jot token allowance');
+        }
 
-        if (sotBurn > 0) {
+        if (sotBurn > 0 && sotAddress != address(0)) {
             INoteToken(sotAddress).transferFrom(user, address(this), sotBurn * (10 ** 18));
             INoteToken(sotAddress).burn(sotBurn);
         }
-        if (jotBurn > 0) {
+        if (jotBurn > 0 && jotAddress != address(0)) {
             INoteToken(jotAddress).transferFrom(user, address(this), jotBurn * (10 ** 18));
             INoteToken(jotAddress).burn(jotBurn);
         }

@@ -57,6 +57,7 @@ contract NoteTokenVault is
     mapping(address => BatchInfor) batchInfor;
 
     event OrderCreated(address pool, address user);
+    event OrderExecuted(address pool, address user, uint256 batchId);
 
     function initialize() public initializer {
         __Pausable_init_unchained();
@@ -179,6 +180,7 @@ contract NoteTokenVault is
             totalCapitalWithdraw += capitalWithdraw;
             // disburse currency token to user
             _disburse(pool, executionOrders[i].user, capitalWithdraw, incomeWithdraw);
+            emit OrderExecuted(pool, executionOrders[i].user, batchInfor[pool].executed);
         }
         // update reserve and senior asset
         IPool(pool).decreaseIncomeReserve(totalIncomeWithdraw);

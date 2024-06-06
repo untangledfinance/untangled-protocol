@@ -220,8 +220,8 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         uint256 sotIncomeAmt = totalInterestRepay - jotIncomeAmt;
 
         // Increase income for each type of token
-        INoteToken(_poolStorage.sotToken).increaseIncome(sotIncomeAmt);
-        INoteToken(_poolStorage.jotToken).increaseIncome(jotIncomeAmt);
+        INoteToken(sotToken()).increaseIncome(sotIncomeAmt);
+        INoteToken(jotToken()).increaseIncome(jotIncomeAmt);
 
         emit Repay(address(this), totalInterestRepay, totalPrincipalRepay, block.timestamp);
         return (repayAmounts, previousDebts);

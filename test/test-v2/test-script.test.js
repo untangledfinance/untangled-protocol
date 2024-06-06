@@ -32,6 +32,7 @@ describe('Untangled-v2', async () => {
         tokenIds;
     // Wallets
     let adminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, potWallet;
+    const drawdownAmount = 80000000000000000000000n;
     before('setup', async () => {
         [adminSigner, poolCreatorSigner, originatorSigner, borrowerSigner, lenderSigner, potWallet] =
             await ethers.getSigners();
@@ -166,7 +167,7 @@ describe('Untangled-v2', async () => {
         it('should drawdown', async () => {
             const loans = [
                 {
-                    principalAmount: 80000000000000000000000n,
+                    principalAmount: drawdownAmount,
                     expirationTimestamp: (await time.latest()) + 3600 * 24 * 90,
                     assetPurpose: '0',
                     termInDays: 90,
@@ -185,7 +186,16 @@ describe('Untangled-v2', async () => {
             expect(expectedLoansValue).to.be.eq(parseEther('80000'));
 
             tokenIds = await protocol.fillDebtOrder(borrowerSigner, securitizationPool, borrowerSigner, '0', loans);
-            console.log('current NAV: ', formatEther(await securitizationPool.currentNAV()));
+
+            time.increase(30 * 3600 * 24); // 30 days later
+        });
+
+        it('should repay', async () => {
+            const totalDebt = await securitizationPool.debt(tokenIds[0]);
+            const repayAmount = BigNumber.from(totalDebt).sub(drawdownAmount);
+
+            await loanKernel.connect(borrowerSigner).repayInBatch([tokenIds[0]], [repayAmount], stableCoin.address);
+            expect(await securitizationPool.debt(tokenIds[0])).to.be.closeTo(drawdownAmount, parseEther('0.01'));
         });
     });
 });

@@ -1,5 +1,5 @@
 const { ethers, upgrades } = require('hardhat');
-const { OWNER_ROLE, POOL_ADMIN_ROLE, ORIGINATOR_ROLE, VALIDATOR_ROLE } = require('../test/constants');
+const { OWNER_ROLE, POOL_ADMIN_ROLE, ORIGINATOR_ROLE, VALIDATOR_ROLE, BACKEND_ADMIN } = require('../test/constants');
 const { LAT_BASE_URI } = require('../test/shared/constants');
 const dayjs = require('dayjs');
 const {
@@ -13,10 +13,13 @@ const {
     generateLATMintPayload,
     getPoolByAddress,
     formatFillDebtOrderParams,
+    unlimitedAllowance,
 } = require('../test/utils');
 const { presignedMintMessage } = require('../test/shared/uid-helper.js');
 async function main() {
+    const backendAdress = '0x39870fb7417307f602dc2e9d997e3f1d20762669';
     const [deployer] = await ethers.getSigners();
+    console.log('deployer: ', deployer.address);
     const Registry = await ethers.getContractFactory('Registry');
     const registry = await upgrades.deployProxy(Registry, []);
 
@@ -109,7 +112,7 @@ async function main() {
     await registry.setLoanKernel(loanKernel.address);
 
     const NoteTokenVault = await ethers.getContractFactory('NoteTokenVault');
-    const noteTokenVault = await upgrades.deployProxy(NoteTokenVault, [registry.address]);
+    const noteTokenVault = await upgrades.deployProxy(NoteTokenVault, []);
     await registry.setNoteTokenVault(noteTokenVault.address);
 
     const LoanAssetToken = await ethers.getContractFactory('LoanAssetToken');
@@ -121,6 +124,9 @@ async function main() {
         }
     );
     await registry.setLoanAssetToken(loanAssetTokenContract.address);
+    console.log('NoteTokenVault: ', noteTokenVault.address);
+    console.log('LoanKernel: ', loanKernel.address);
+    console.log('USDC: ', USDC.address);
 
     await securitizationManager.grantRole(OWNER_ROLE, deployer.address);
 
@@ -175,6 +181,8 @@ async function main() {
     const pool = await ethers.getContractAt('Pool', securitizationPoolAddress);
     await pool.connect(deployer).grantRole(VALIDATOR_ROLE, deployer.address);
 
+    console.log('Pool: ', securitizationPoolAddress);
+
     // setup riskscore
     const riskScores = [
         {
@@ -218,7 +226,7 @@ async function main() {
     const openingTime = dayjs(new Date()).unix();
     const closingTime = dayjs(new Date()).add(7, 'days').unix();
     const rate = 2;
-    const totalCapOfToken = ethers.utils.parseEther('1000000');
+    const totalCapOfToken = ethers.utils.parseEther('10000000');
     const interestRate = 10000; // 1%
     const timeInterval = 24 * 3600; // seconds
     const amountChangeEachInterval = 0;
@@ -287,12 +295,16 @@ async function main() {
     console.log('SOT: ', sotTokenAddress);
     console.log('SOT TGE: ', sotTGEAddress);
 
-    // 1,000,000$ invest in JOT
-    const investAmount = ethers.utils.parseEther('1000000');
+    const investAmount = ethers.utils.parseEther('500000');
+    // 500,000$ invest in JOT
     await USDC.connect(deployer).approve(jotTGEAddress, investAmount);
 
     await securitizationManager.connect(deployer).buyTokens(jotTGEAddress, investAmount);
 
+    // 500,000$ invest in SOT
+    await USDC.connect(deployer).approve(sotTGEAddress, investAmount);
+
+    await securitizationManager.connect(deployer).buyTokens(sotTGEAddress, investAmount);
     // upload loan
     await pool.connect(deployer).grantRole(ORIGINATOR_ROLE, deployer.address);
     const loans = [
@@ -360,6 +372,21 @@ async function main() {
 
     await loanKernel.connect(deployer).fillDebtOrder(fillDebtOrderParams);
 
-    console.log('NAV: ', await pool.currentNAV());
+    await noteTokenVault.grantRole(BACKEND_ADMIN, backendAdress);
+    const sotToken = await ethers.getContractAt('NoteToken', sotTokenAddress);
+    const jotToken = await ethers.getContractAt('NoteToken', jotTokenAddress);
+
+    await sotToken.connect(deployer).approve(noteTokenVault.address, unlimitedAllowance);
+    await jotToken.connect(deployer).approve(noteTokenVault.address, unlimitedAllowance);
+
+    await noteTokenVault.connect(deployer).createOrder(securitizationPoolAddress, {
+        sotCurrencyAmount: ethers.utils.parseEther('2000'),
+        jotCurrencyAmount: ethers.utils.parseEther('3000'),
+        allSOTIncomeOnly: false,
+        allJOTIncomeOnly: false,
+    });
+
+    console.log(await noteTokenVault.getOrder(securitizationPoolAddress, deployer.address));
 }
+
 main();

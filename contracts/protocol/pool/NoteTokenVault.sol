@@ -180,7 +180,9 @@ contract NoteTokenVault is
             totalCapitalWithdraw += capitalWithdraw;
             // disburse currency token to user
             _disburse(pool, executionOrders[i].user, capitalWithdraw, incomeWithdraw);
-            emit OrderExecuted(pool, executionOrders[i].user, batchInfor[pool].executed);
+            address tempPool = pool;
+            address usr = executionOrders[i].user;
+            emit OrderExecuted(tempPool, usr, batchInfor[tempPool].executed);
         }
         // update reserve and senior asset
         IPool(pool).decreaseIncomeReserve(totalIncomeWithdraw);

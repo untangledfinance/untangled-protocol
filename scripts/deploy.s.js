@@ -124,6 +124,7 @@ async function main() {
         }
     );
     await registry.setLoanAssetToken(loanAssetTokenContract.address);
+
     console.log('NoteTokenVault: ', noteTokenVault.address);
     console.log('LoanKernel: ', loanKernel.address);
     console.log('USDC: ', USDC.address);

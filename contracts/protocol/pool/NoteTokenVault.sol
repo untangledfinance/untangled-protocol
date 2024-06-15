@@ -151,12 +151,17 @@ contract NoteTokenVault is
         uint256 totalSeniorWithdraw;
         uint256 totalJuniorWithdraw;
         for (uint256 i = 0; i < executionOrders.length; i++) {
+            uint256 capitalWithdraw = executionOrders[i].sotCapitalClaimAmount +
+                executionOrders[i].jotCapitalClaimAmount;
+            uint256 incomeWithdraw = executionOrders[i].sotIncomeClaimAmount + executionOrders[i].jotIncomeClaimAmount;
+            uint256 seniorWithdraw = executionOrders[i].sotCapitalClaimAmount + executionOrders[i].sotIncomeClaimAmount;
+            uint256 juniorWithdraw = executionOrders[i].jotCapitalClaimAmount + executionOrders[i].jotIncomeClaimAmount;
             // validate the order and burn the required amount note token
             _validateAndBurn(
                 pool,
                 executionOrders[i].user,
-                executionOrders[i].sotIncomeClaimAmount + executionOrders[i].sotCapitalClaimAmount, // total sot claimed
-                executionOrders[i].jotIncomeClaimAmount + executionOrders[i].jotCapitalClaimAmount, // total jot claimed
+                seniorWithdraw, // total sot claimed
+                juniorWithdraw, // total jot claimed
                 sotAddress,
                 jotAddress
             );
@@ -164,15 +169,9 @@ contract NoteTokenVault is
             _updateOrder(
                 pool,
                 executionOrders[i].user,
-                executionOrders[i].sotIncomeClaimAmount + executionOrders[i].sotCapitalClaimAmount, // total sot claimed
-                executionOrders[i].jotIncomeClaimAmount + executionOrders[i].jotCapitalClaimAmount // total jot claimed
+                seniorWithdraw, // total sot claimed
+                juniorWithdraw // total jot claimed
             );
-
-            uint256 capitalWithdraw = executionOrders[i].sotCapitalClaimAmount +
-                executionOrders[i].jotCapitalClaimAmount;
-            uint256 incomeWithdraw = executionOrders[i].sotIncomeClaimAmount + executionOrders[i].jotIncomeClaimAmount;
-            uint256 seniorWithdraw = executionOrders[i].sotCapitalClaimAmount + executionOrders[i].sotIncomeClaimAmount;
-            uint256 juniorWithdraw = executionOrders[i].jotCapitalClaimAmount + executionOrders[i].jotIncomeClaimAmount;
 
             totalSeniorWithdraw += seniorWithdraw;
             totalJuniorWithdraw += juniorWithdraw;
@@ -190,10 +189,10 @@ contract NoteTokenVault is
         IPool(pool).changeSeniorAsset(0, totalSeniorWithdraw);
 
         // decrease total currency raised
-        if (totalSeniorWithdraw != 0) {
+        if (totalSeniorWithdraw != 0 && IPool(pool).tgeAddress() != address(0)) {
             IMintedNormalTGE(IPool(pool).tgeAddress()).onRedeem(totalSeniorWithdraw);
         }
-        if (totalJuniorWithdraw != 0) {
+        if (totalJuniorWithdraw != 0 && IPool(pool).secondTGEAddress() != address(0)) {
             IMintedNormalTGE(IPool(pool).secondTGEAddress()).onRedeem(totalJuniorWithdraw);
         }
 
@@ -233,31 +232,36 @@ contract NoteTokenVault is
             orders[pool][user].jotCurrencyAmount >= jotCurrencyClaimed || orders[pool][user].allJOTIncomeOnly,
             'jot claim amount bigger than ordered'
         );
+        uint256 decimals;
+        if (jotAddress != address(0)) {
+            decimals = INoteToken(jotAddress).decimals();
+        } else {
+            decimals = INoteToken(sotAddress).decimals();
+        }
 
         // burn note token
-        uint256 sotBurn;
-        uint256 jotBurn;
-        if (epochInfor[pool].sotPrice != 0) {
-            sotBurn = sotCurrencyClaimed / epochInfor[pool].sotPrice;
-        }
-        if (epochInfor[pool].jotPrice != 0) {
-            jotBurn = jotCurrencyClaimed / epochInfor[pool].jotPrice;
-        }
-
-        if (sotAddress != address(0)) {
-            require(INoteToken(sotAddress).allowance(user, address(this)) >= sotBurn, 'not enough sot token allowance');
-        }
-        if (jotAddress != address(0)) {
-            require(INoteToken(jotAddress).allowance(user, address(this)) >= jotBurn, 'not enough jot token allowance');
+        if (epochInfor[pool].sotPrice != 0 && sotAddress != address(0)) {
+            uint256 sotBurn = (sotCurrencyClaimed * 10 ** decimals) / epochInfor[pool].sotPrice;
+            if (sotBurn != 0) {
+                require(
+                    INoteToken(sotAddress).allowance(user, address(this)) >= sotBurn,
+                    'not enough sot token allowance'
+                );
+                INoteToken(sotAddress).transferFrom(user, address(this), sotBurn);
+                INoteToken(sotAddress).burn(sotBurn);
+            }
         }
 
-        if (sotBurn > 0 && sotAddress != address(0)) {
-            INoteToken(sotAddress).transferFrom(user, address(this), sotBurn * (10 ** 18));
-            INoteToken(sotAddress).burn(sotBurn);
-        }
-        if (jotBurn > 0 && jotAddress != address(0)) {
-            INoteToken(jotAddress).transferFrom(user, address(this), jotBurn * (10 ** 18));
-            INoteToken(jotAddress).burn(jotBurn);
+        if (epochInfor[pool].jotPrice != 0 && jotAddress != address(0)) {
+            uint256 jotBurn = (jotCurrencyClaimed * 10 ** decimals) / epochInfor[pool].jotPrice;
+            if (jotBurn != 0) {
+                require(
+                    INoteToken(jotAddress).allowance(user, address(this)) >= jotBurn,
+                    'not enough jot token allowance'
+                );
+                INoteToken(jotAddress).transferFrom(user, address(this), jotBurn);
+                INoteToken(jotAddress).burn(jotBurn);
+            }
         }
     }
 

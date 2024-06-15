@@ -113,6 +113,25 @@ async function createFullPool(signer, poolParams, riskScores, sotInfo, jotInfo) 
     return [poolAddress, sotCreated, jotCreated];
 }
 
+async function createPoolWithOnlyJOT(signer, poolParams, riskScores, jotInfo) {
+    const poolAddress = await createSecuritizationPool.call(
+        this,
+        signer,
+        poolParams.minFirstLossCushion,
+        poolParams.debtCeiling,
+        poolParams.currency,
+        poolParams.validatorRequired
+    );
+    const securitizationPoolContract = await getPoolByAddress(poolAddress);
+    await setupRiskScore.call(this, signer, securitizationPoolContract, riskScores);
+    let jotCreated;
+    if (jotInfo) {
+        jotCreated =
+            jotInfo && (await initJOTSale.call(this, signer, { ...jotInfo, pool: securitizationPoolContract.address }));
+    }
+    return [poolAddress, jotCreated];
+}
+
 async function setupRiskScore(signer, securitizationPoolContract, riskScores) {
     const { daysPastDues, ratesAndDefaults, periodsAndWriteOffs } = genRiskScoreParam(...riskScores);
 
@@ -333,6 +352,7 @@ function bind(contracts) {
         buyToken: buyToken.bind(contracts),
         mintUID: mintUID.bind(contracts),
         createFullPool: createFullPool.bind(contracts),
+        createPoolWithOnlyJOT: createPoolWithOnlyJOT.bind(contracts),
     };
 }
 

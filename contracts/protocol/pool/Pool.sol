@@ -218,7 +218,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
         uint256 jotIncomeAmt = (totalInterestRepay * juniorRatio) / ONE_HUNDRED_PERCENT;
         uint256 sotIncomeAmt = totalInterestRepay - jotIncomeAmt;
-
         // Increase income for each type of token
         INoteToken(sotToken()).increaseIncome(sotIncomeAmt);
         INoteToken(jotToken()).increaseIncome(jotIncomeAmt);
@@ -387,8 +386,9 @@ contract Pool is IPool, PoolStorage, UntangledBase {
     /// @param currencyAmount The amount of currency to disburse.
     function disburse(address usr, uint256 currencyAmount) external whenNotPaused {
         require(
-            _msgSender() == address(registry.getEpochExecutor()),
-            'SecuritizationPool: Caller must be EpochExecutor'
+            _msgSender() == address(registry.getSeniorTokenManager()) ||
+                _msgSender() == address(registry.getJuniorTokenManager()),
+            'SecuritizationPool: Caller must be NoteTokenManager'
         );
         GenericLogic.disburse(_poolStorage, usr, currencyAmount);
     }

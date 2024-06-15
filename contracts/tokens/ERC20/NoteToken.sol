@@ -5,7 +5,6 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/presets/ERC20PresetMinte
 import '../../interfaces/IPool.sol';
 import '../../libraries/Configuration.sol';
 import '../../interfaces/INoteToken.sol';
-
 /// @title NoteToken
 /// @author Untangled Team
 /// @dev Template for SOT/JOT token
@@ -124,7 +123,7 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
     }
 
     function getUserIncome(address user) external view returns (uint256) {
-        return userCachedIncome[user] + _getUncachedIncomes(userCachedIncome[user], systemIndex, userIndexes[user]);
+        return userCachedIncome[user] + _getUncachedIncomes(userPrincipalAmounts[user], systemIndex, userIndexes[user]);
     }
 
     /**
@@ -185,9 +184,9 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
     function increaseIncome(uint256 usdAmount) external {
         require(msg.sender == _poolAddress, 'Only Pool');
         uint256 supply = totalSupply();
-        require(supply != 0, 'totalSupply !=0');
+        require(supply != 0, 'totalSupply != 0');
 
-        systemIndex += (usdAmount * PRECISION) / supply;
+        systemIndex += (usdAmount * 10 ** PRECISION) / supply;
     }
 
     function decreaseUserPrinciple(address[] calldata users, uint256[] calldata amounts) external onlyNoteTokenManager {
@@ -221,7 +220,7 @@ contract NoteToken is INoteToken, ERC20PresetMinterPauserUpgradeable {
         userCachedIncome[user] -= amounts;
     }
 
-    function increaseUserPrinciple(address user, uint256 amount) external onlyNoteTokenManager {
+    function _increaseUserPrinciple(address user, uint256 amount) internal {
         uint256 userPrincipal = userPrincipalAmounts[user];
         _updateCurrentUnclaimedIncome(user, userPrincipal);
         userPrincipalAmounts[user] += amount;

@@ -11,8 +11,8 @@ interface INoteTokenManager {
     struct UserOrder {
         uint256 orderedInEpoch;
         uint256 investCurrencyAmount;
-        uint256 withdrawTokenAmount;
-        uint256 withdrawIncomeTokenAmount;
+        uint256 withdrawCurrencyAmount;
+        uint256 withdrawIncomeCurrencyAmount;
     }
 
     struct NoteTokenInfor {
@@ -38,6 +38,7 @@ interface INoteTokenManager {
         view
         returns (
             uint256 payoutCurrencyAmount,
+            uint256 burnAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
             uint256 remainingCapitalWithdrawToken,
@@ -53,6 +54,7 @@ interface INoteTokenManager {
         view
         returns (
             uint256 payoutCurrencyAmount,
+            uint256 burnAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
             uint256 remainingCapitalWithdrawToken,
@@ -66,6 +68,7 @@ interface INoteTokenManager {
         external
         returns (
             uint256 payoutCurrencyAmount,
+            uint256 burnAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
             uint256 remainingCapitalWithdrawToken,
@@ -80,6 +83,7 @@ interface INoteTokenManager {
         external
         returns (
             uint256 payoutCurrencyAmount,
+            uint256 burnAmount,
             uint256 payoutTokenAmount,
             uint256 remainingInvestCurrency,
             uint256 remainingCapitalWithdrawToken,
@@ -94,7 +98,7 @@ interface INoteTokenManager {
         uint256 tokenPrice_,
         uint256 epochInvestOrderCurrency,
         uint256 epochWithdrawOrderCurrency
-    ) external returns (uint256 finalCapitalWithdrawCurrency, uint256 finalIncomeWithdrawCurrency);
+    ) external returns (uint256 capitalWithdraw, uint256 incomeWithdraw);
 
     function closeEpoch(
         address pool

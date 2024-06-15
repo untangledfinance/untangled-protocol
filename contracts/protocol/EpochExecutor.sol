@@ -130,8 +130,8 @@ contract EpochExecutor is
                 epochInfor[pool].poolClosing = true;
             }
 
-            epochInfor[pool].order.sotWithdraw = Math.rmul(orderSeniorWithdraw, sotPrice);
-            epochInfor[pool].order.jotWithdraw = Math.rmul(orderJuniorWithdraw, jotPrice);
+            epochInfor[pool].order.sotWithdraw = orderSeniorWithdraw;
+            epochInfor[pool].order.jotWithdraw = orderJuniorWithdraw;
             epochInfor[pool].order.sotInvest = orderSeniorInvest;
             epochInfor[pool].order.jotInvest = orderJuniorInvest;
             epochInfor[pool].order.sotIncomeWithdraw = orderSeniorIncomeWithdraw;
@@ -389,9 +389,9 @@ contract EpochExecutor is
                 epochInfor[tempPool].order.jotInvest,
                 epochInfor[tempPool].order.jotWithdraw
             );
-            totalCapitalWithdraw = Math.safeAdd(sotCapitalWithdraw, jotCapitalWithdraw);
+            totalCapitalWithdraw = sotCapitalWithdraw + jotCapitalWithdraw;
             IPool(tempPool).changeSeniorAsset(0, 0);
-            IPool(tempPool).decreaseIncomeReserve(Math.safeAdd(sotIncomeWithdraw, jotIncomeWithdraw));
+            IPool(tempPool).decreaseIncomeReserve(sotIncomeWithdraw + jotIncomeWithdraw);
         }
 
         uint256 totalInvest = Math.safeAdd(sotInvest, jotInvest);

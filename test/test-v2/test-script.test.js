@@ -115,6 +115,7 @@ describe('Untangled-v2', async () => {
 
             await protocol.setupRiskScore(poolCreatorSigner, securitizationPool, [riskScore]);
         });
+        
         it('should create note token sale successfully', async () => {
             sotAddress = await protocol.initNoteTokenSale(poolCreatorSigner, {
                 pool: securitizationPool.address,
@@ -149,7 +150,7 @@ describe('Untangled-v2', async () => {
             await sotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('60000'));
             await jotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('90000'));
         });
-        it('should close epoch successfully', async () => {
+        it('should close investment epoch ', async () => {
             await epochExecutor.closeEpoch(securitizationPool.address);
 
             await sotTokenManager['disburse(address,address)'](securitizationPool.address, lenderSigner.address);
@@ -196,6 +197,45 @@ describe('Untangled-v2', async () => {
 
             await loanKernel.connect(borrowerSigner).repayInBatch([tokenIds[0]], [repayAmount], stableCoin.address);
             expect(await securitizationPool.debt(tokenIds[0])).to.be.closeTo(drawdownAmount, parseEther('0.01'));
+            console.log('capital reserve: ', formatEther(await securitizationPool.capitalReserve()));
+            console.log('income reserve: ', formatEther(await securitizationPool.incomeReserve()));
+        });
+
+        it('should withdraw', async () => {
+            await sotToken.connect(lenderSigner).approve(sotTokenManager.address, unlimitedAllowance);
+            await jotToken.connect(lenderSigner).approve(jotTokenManager.address, unlimitedAllowance);
+
+            await sotTokenManager.connect(lenderSigner).withdrawOrder(securitizationPool.address, parseEther('2000'));
+            await jotTokenManager.connect(lenderSigner).withdrawOrder(securitizationPool.address, parseEther('3000'));
+            expect(
+                (await sotTokenManager.getOrder(securitizationPool.address, lenderSigner.address))
+                    .withdrawCurrencyAmount
+            ).to.be.eq(parseEther('2000'));
+
+            expect(
+                (await jotTokenManager.getOrder(securitizationPool.address, lenderSigner.address))
+                    .withdrawCurrencyAmount
+            ).to.be.eq(parseEther('3000'));
+        });
+
+        it('should close withdraw epoch', async () => {
+            const currencyBalanceBefore = await stableCoin.balanceOf(lenderSigner.address);
+            await epochExecutor.closeEpoch(securitizationPool.address);
+
+            await sotTokenManager['disburse(address,address)'](securitizationPool.address, lenderSigner.address);
+            await jotTokenManager['disburse(address,address)'](securitizationPool.address, lenderSigner.address);
+
+            expect(await epochExecutor.currentEpoch(securitizationPool.address)).to.be.eq(2);
+
+            console.log('SOT balance: ', formatEther(await sotToken.balanceOf(lenderSigner.address)));
+            console.log('JOT balance: ', formatEther(await jotToken.balanceOf(lenderSigner.address)));
+
+            expect(await stableCoin.balanceOf(lenderSigner.address)).to.be.eq(
+                BigNumber.from(currencyBalanceBefore).add(parseEther('5000'))
+            );
+
+            console.log('capital reserve: ', formatEther(await securitizationPool.capitalReserve()));
+            console.log('income reserve: ', formatEther(await securitizationPool.incomeReserve()));
         });
     });
 });

@@ -34,6 +34,7 @@ contract NoteTokenVault is
         uint256 sotPrice;
         uint256 jotPrice;
         uint256 timestamp;
+        uint256 epochId;
         bool redeemDisabled;
         bool epochClosed;
     }
@@ -57,7 +58,7 @@ contract NoteTokenVault is
     mapping(address => BatchInfor) batchInfor;
 
     event OrderCreated(address pool, address user);
-    event OrderExecuted(address pool, address user, uint256 batchId);
+    event OrderExecuted(address pool, address user, uint256 epochId, uint256 batchId, ExecutionOrder order);
 
     function initialize() public initializer {
         __Pausable_init_unchained();
@@ -144,8 +145,6 @@ contract NoteTokenVault is
     ) external onlyRole(BACKEND_ADMIN_ROLE) {
         require(epochInfor[pool].epochClosed == true, "epoch haven't closed");
         require(batchInfor[pool].executed < batchInfor[pool].batchSize, 'batch fully executed');
-        address sotAddress = IPool(pool).sotToken();
-        address jotAddress = IPool(pool).jotToken();
         uint256 totalIncomeWithdraw;
         uint256 totalCapitalWithdraw;
         uint256 totalSeniorWithdraw;
@@ -161,9 +160,7 @@ contract NoteTokenVault is
                 pool,
                 executionOrders[i].user,
                 seniorWithdraw, // total sot claimed
-                juniorWithdraw, // total jot claimed
-                sotAddress,
-                jotAddress
+                juniorWithdraw // total jot claimed
             );
             // update the state of the order
             _updateOrder(
@@ -180,8 +177,14 @@ contract NoteTokenVault is
             // disburse currency token to user
             _disburse(pool, executionOrders[i].user, capitalWithdraw, incomeWithdraw);
             address tempPool = pool;
-            address usr = executionOrders[i].user;
-            emit OrderExecuted(tempPool, usr, batchInfor[tempPool].executed);
+            ExecutionOrder memory order = executionOrders[i];
+            emit OrderExecuted(
+                tempPool,
+                order.user,
+                epochInfor[tempPool].epochId,
+                batchInfor[tempPool].executed,
+                order
+            );
         }
         // update reserve and senior asset
         IPool(pool).decreaseIncomeReserve(totalIncomeWithdraw);
@@ -204,6 +207,7 @@ contract NoteTokenVault is
     function openEpoch(address pool) external onlyRole(BACKEND_ADMIN_ROLE) {
         require(batchInfor[pool].batchSize == batchInfor[pool].executed, "current batch haven't been fully executed");
         epochInfor[pool].epochClosed = false;
+        epochInfor[pool].epochId++;
     }
 
     function _updateOrder(address pool, address user, uint256 sotCurrencyClaimed, uint256 jotCurrencyClaimed) internal {
@@ -219,10 +223,10 @@ contract NoteTokenVault is
         address pool,
         address user,
         uint256 sotCurrencyClaimed,
-        uint256 jotCurrencyClaimed,
-        address sotAddress,
-        address jotAddress
+        uint256 jotCurrencyClaimed
     ) internal {
+        address sotAddress = IPool(pool).sotToken();
+        address jotAddress = IPool(pool).jotToken();
         require(
             orders[pool][user].sotCurrencyAmount >= sotCurrencyClaimed || orders[pool][user].allSOTIncomeOnly,
             'sot claim amount bigger than ordered'

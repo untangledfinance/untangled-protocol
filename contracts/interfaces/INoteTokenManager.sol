@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
+
 interface INoteTokenManager {
     struct Epoch {
-        uint256 withdrawCapitalFulfillment;
-        uint256 withdrawIncomeFulfillment;
+        uint256 withdrawFulfillment;
         uint256 investFulfillment;
         uint256 price;
     }
 
     struct UserOrder {
         uint256 orderedInEpoch;
-        uint256 investCurrencyAmount;
-        uint256 withdrawCurrencyAmount;
-        uint256 withdrawIncomeCurrencyAmount;
+        uint256 investAmount;
+        uint256 withdrawAmount;
     }
 
     struct NoteTokenInfor {
@@ -26,9 +25,11 @@ interface INoteTokenManager {
 
     function setupNewToken(address pool, address tokenAddress, uint256 minBidAmount) external;
 
-    function investOrder(address pool, uint256 newInvestAmount) external;
+    function hasValidUID(address sender) external view returns (bool);
 
-    function withdrawOrder(address pool, uint256 newWithdrawAmount) external;
+    function investOrder(address pool, uint256 investAmount) external;
+
+    function withdrawOrder(address pool, uint256 withdrawAmount) external;
 
     function calcDisburse(
         address pool,
@@ -37,28 +38,10 @@ interface INoteTokenManager {
         external
         view
         returns (
-            uint256 payoutCurrencyAmount,
-            uint256 burnAmount,
-            uint256 payoutTokenAmount,
-            uint256 remainingInvestCurrency,
-            uint256 remainingCapitalWithdrawToken,
-            uint256 remainingIncomeWithdrawToken
-        );
-
-    function calcDisburse(
-        address pool,
-        address user,
-        uint256 endEpoch
-    )
-        external
-        view
-        returns (
-            uint256 payoutCurrencyAmount,
-            uint256 burnAmount,
-            uint256 payoutTokenAmount,
-            uint256 remainingInvestCurrency,
-            uint256 remainingCapitalWithdrawToken,
-            uint256 remainingIncomeWithdrawToken
+            uint256 fulfilledInvest,
+            uint256 fulfilledWithdraw,
+            uint256 remainingInvest,
+            uint256 remainingWithdraw
         );
 
     function disburse(
@@ -67,28 +50,13 @@ interface INoteTokenManager {
     )
         external
         returns (
-            uint256 payoutCurrencyAmount,
-            uint256 burnAmount,
-            uint256 payoutTokenAmount,
-            uint256 remainingInvestCurrency,
-            uint256 remainingCapitalWithdrawToken,
-            uint256 remainingIncomeWithdrawToken
+            uint256 fulfilledInvest,
+            uint256 fulfilledWithdraw,
+            uint256 remainingInvest,
+            uint256 remainingWithdraw
         );
 
-    function disburse(
-        address pool,
-        address user,
-        uint256 endEpoch
-    )
-        external
-        returns (
-            uint256 payoutCurrencyAmount,
-            uint256 burnAmount,
-            uint256 payoutTokenAmount,
-            uint256 remainingInvestCurrency,
-            uint256 remainingCapitalWithdrawToken,
-            uint256 remainingIncomeWithdrawToken
-        );
+    function closeEpoch(address pool) external returns (uint256 totalInvest_, uint256 totalWithdraw_);
 
     function epochUpdate(
         address pool,
@@ -96,14 +64,11 @@ interface INoteTokenManager {
         uint256 investFulfillment_,
         uint256 withdrawFulfillment_,
         uint256 tokenPrice_,
-        uint256 epochInvestOrderCurrency,
-        uint256 epochWithdrawOrderCurrency
-    ) external returns (uint256 capitalWithdraw, uint256 incomeWithdraw);
-
-    function closeEpoch(
-        address pool
-    ) external returns (uint256 totalInvestCurrency_, uint256 totalWithdrawToken_, uint256 totalIncomeWithdrawToken_);
-    function getTokenAddress(address pool) external view returns (address);
+        uint256 epochTotalInvest,
+        uint256 epochTotalWithdraw
+    ) external;
 
     function getTotalValueRaised(address pool) external view returns (uint256);
+
+    function getTokenAddress(address pool) external view returns (address);
 }

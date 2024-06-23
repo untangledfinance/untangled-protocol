@@ -44,6 +44,7 @@ contract Registry is UntangledBase {
     function setSeniorTokenManager(address newAddress) public onlyAdmin whenNotPaused {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.SENIOR_TOKEN_MANAGER), newAddress);
     }
+
     function setJuniorTokenManager(address newAddress) public onlyAdmin whenNotPaused {
         _setAddress(uint8(Configuration.CONTRACT_TYPE.JUNIOR_TOKEN_MANAGER), newAddress);
     }

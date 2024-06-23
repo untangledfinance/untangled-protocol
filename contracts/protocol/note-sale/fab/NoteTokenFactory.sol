@@ -8,12 +8,13 @@ import '../../../interfaces/INoteTokenFactory.sol';
 import '../../../libraries/ConfigHelper.sol';
 import '../../../libraries/UntangledMath.sol';
 import {MINTER_ROLE} from '../../../libraries/DataTypes.sol';
+import 'hardhat/console.sol';
 
 contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
     using ConfigHelper for Registry;
 
     bytes4 constant TOKEN_INIT_FUNC_SELECTOR =
-        bytes4(keccak256('initialize(string,string,uint8,address,address,uint8)'));
+        bytes4(keccak256('initialize(string,string,uint256,address,address,uint8)'));
 
     Registry public registry;
 
@@ -83,9 +84,7 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
         );
 
         address ntAddress = _deployInstance(noteTokenImplementation, _initialData);
-
         INoteToken token = INoteToken(ntAddress);
-
         tokens.push(token);
         isExistingTokens[address(token)] = true;
 
@@ -104,17 +103,17 @@ contract NoteTokenFactory is UntangledBase, Factory, INoteTokenFactory {
         }
     }
 
-    function pauseAllTokens() external whenNotPaused nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 tokensLength = tokens.length;
-        for (uint256 i = 0; i < tokensLength; i = UntangledMath.uncheckedInc(i)) {
-            if (!tokens[i].paused()) tokens[i].pause();
-        }
-    }
+    // function pauseAllTokens() external whenNotPaused nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+    //     uint256 tokensLength = tokens.length;
+    //     for (uint256 i = 0; i < tokensLength; i = UntangledMath.uncheckedInc(i)) {
+    //         if (!tokens[i].paused()) tokens[i].pause();
+    //     }
+    // }
 
-    function unPauseAllTokens() external whenNotPaused nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
-        uint256 tokensLength = tokens.length;
-        for (uint256 i = 0; i < tokensLength; i = UntangledMath.uncheckedInc(i)) {
-            if (tokens[i].paused()) tokens[i].unpause();
-        }
-    }
+    // function unPauseAllTokens() external whenNotPaused nonReentrant onlyRole(DEFAULT_ADMIN_ROLE) {
+    //     uint256 tokensLength = tokens.length;
+    //     for (uint256 i = 0; i < tokensLength; i = UntangledMath.uncheckedInc(i)) {
+    //         if (tokens[i].paused()) tokens[i].unpause();
+    //     }
+    // }
 }

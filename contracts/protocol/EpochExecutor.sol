@@ -58,6 +58,7 @@ contract EpochExecutor is
     function _isNewEpoch(address pool) internal view {
         require(Math.safeSub(block.timestamp, epochInfor[pool].lastEpochClosed) >= epochInfor[pool].minimumEpochTime);
     }
+
     function setUpNoteTokenManger() public {
         INoteTokenManager sotManager_ = registry.getSeniorTokenManager();
         INoteTokenManager jotManager_ = registry.getJuniorTokenManager();
@@ -107,16 +108,14 @@ contract EpochExecutor is
         epochInfor[pool].epochIncomeReserve = IPool(pool).incomeReserve();
 
         {
-            (uint256 orderJuniorInvest, uint256 orderJuniorWithdraw, uint256 orderJuniorIncomeWithdraw) = jotManager
-                .closeEpoch(pool);
-            (uint256 orderSeniorInvest, uint256 orderSeniorWithdraw, uint256 orderSeniorIncomeWithdraw) = sotManager
-                .closeEpoch(pool);
+            (uint256 totalJuniorInvest, uint256 totalJuniorWithdraw) = jotManager.closeEpoch(pool);
+            (uint256 totalSeniorInvest, uint256 totalSeniorWithdraw) = sotManager.closeEpoch(pool);
 
             (uint256 seniorDebt, uint256 seniorBalance) = IPool(pool).seniorDebtAndBalance();
             epochInfor[pool].epochSeniorAsset = Math.safeAdd(seniorDebt, seniorBalance);
 
             if (
-                orderSeniorWithdraw == 0 && orderJuniorWithdraw == 0 && orderJuniorInvest == 0 && orderSeniorInvest == 0
+                totalSeniorWithdraw == 0 && totalJuniorWithdraw == 0 && totalJuniorInvest == 0 && totalSeniorInvest == 0
             ) {
                 jotManager.epochUpdate(pool, epochInfor[pool].currentEpoch, 0, 0, 0, 0, 0);
                 sotManager.epochUpdate(pool, epochInfor[pool].currentEpoch, 0, 0, 0, 0, 0);
@@ -130,12 +129,10 @@ contract EpochExecutor is
                 epochInfor[pool].poolClosing = true;
             }
 
-            epochInfor[pool].order.sotWithdraw = orderSeniorWithdraw;
-            epochInfor[pool].order.jotWithdraw = orderJuniorWithdraw;
-            epochInfor[pool].order.sotInvest = orderSeniorInvest;
-            epochInfor[pool].order.jotInvest = orderJuniorInvest;
-            epochInfor[pool].order.sotIncomeWithdraw = orderSeniorIncomeWithdraw;
-            epochInfor[pool].order.jotIncomeWithdraw = orderJuniorIncomeWithdraw;
+            epochInfor[pool].order.sotWithdraw = totalSeniorWithdraw;
+            epochInfor[pool].order.jotWithdraw = totalJuniorWithdraw;
+            epochInfor[pool].order.sotInvest = totalSeniorInvest;
+            epochInfor[pool].order.jotInvest = totalJuniorInvest;
         }
         if (
             validate(
@@ -238,13 +235,11 @@ contract EpochExecutor is
             return ERR_MAX_ORDER;
         }
         // constraint 3: debt ceiling
-        uint256 totalValueRaised = Math.safeSub(
-            Math.safeAdd(
-                Math.safeAdd(sotManager.getTotalValueRaised(pool), jotManager.getTotalValueRaised(pool)),
-                Math.safeAdd(seniorInvest, juniorInvest)
-            ),
-            currencyOut
-        );
+        uint256 totalValueRaised = sotManager.getTotalValueRaised(pool) +
+            jotManager.getTotalValueRaised(pool) +
+            seniorInvest +
+            juniorInvest -
+            currencyOut;
         if (totalValueRaised >= IPool(pool).debtCeiling()) {
             return ERR_DEBT_CEILING_REACHED;
         }
@@ -368,10 +363,9 @@ contract EpochExecutor is
         uint256 epochID = epochInfor[pool].currentEpoch;
         epochInfor[pool].submitPeriod = false;
 
-        uint256 totalCapitalWithdraw = 0;
         {
             address tempPool = pool;
-            (uint256 sotCapitalWithdraw, uint256 sotIncomeWithdraw) = sotManager.epochUpdate(
+            sotManager.epochUpdate(
                 tempPool,
                 epochID,
                 _calcFulfillment(sotInvest, epochInfor[tempPool].order.sotInvest),
@@ -380,7 +374,7 @@ contract EpochExecutor is
                 epochInfor[tempPool].order.sotInvest,
                 epochInfor[tempPool].order.sotWithdraw
             );
-            (uint256 jotCapitalWithdraw, uint256 jotIncomeWithdraw) = jotManager.epochUpdate(
+            jotManager.epochUpdate(
                 tempPool,
                 epochID,
                 _calcFulfillment(jotInvest, epochInfor[tempPool].order.jotInvest),
@@ -389,11 +383,10 @@ contract EpochExecutor is
                 epochInfor[tempPool].order.jotInvest,
                 epochInfor[tempPool].order.jotWithdraw
             );
-            totalCapitalWithdraw = sotCapitalWithdraw + jotCapitalWithdraw;
             IPool(tempPool).changeSeniorAsset(0, 0);
-            IPool(tempPool).decreaseIncomeReserve(sotIncomeWithdraw + jotIncomeWithdraw);
         }
 
+        uint256 totalCapitalWithdraw = sotWithdraw + jotWithdraw;
         uint256 totalInvest = Math.safeAdd(sotInvest, jotInvest);
 
         if (totalCapitalWithdraw < totalInvest) {

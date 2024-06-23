@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 pragma solidity 0.8.19;
-import {INoteToken} from '../../interfaces/INoteToken.sol';
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {IPool} from '../../interfaces/IPool.sol';
 import {IEpochExecutor} from '../../interfaces/IEpochExecutor.sol';
+import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {OWNER_ROLE, ORIGINATOR_ROLE, POOL_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
@@ -57,7 +58,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         setDebtCeiling(newPoolParams.debtCeiling);
 
         require(
-            INoteToken(newPoolParams.currency).approve(address(this), type(uint256).max),
+            ERC20(newPoolParams.currency).approve(address(this), type(uint256).max),
             'Pool: Currency approval failed'
         );
 
@@ -219,9 +220,10 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         uint256 jotIncomeAmt = (totalInterestRepay * juniorRatio) / ONE_HUNDRED_PERCENT;
         uint256 sotIncomeAmt = totalInterestRepay - jotIncomeAmt;
         // Increase income for each type of token
-        INoteToken(sotToken()).increaseIncome(sotIncomeAmt);
-        INoteToken(jotToken()).increaseIncome(jotIncomeAmt);
-
+        INoteToken(jotToken()).distributeIncome(jotIncomeAmt);
+        INoteToken(sotToken()).distributeIncome(sotIncomeAmt);
+        // set income balance to be = 0
+        _poolStorage.incomeReserve = 0;
         emit Repay(address(this), totalInterestRepay, totalPrincipalRepay, block.timestamp);
         return (repayAmounts, previousDebts);
     }

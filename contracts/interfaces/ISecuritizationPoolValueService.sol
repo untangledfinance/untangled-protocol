@@ -35,7 +35,7 @@ interface ISecuritizationPoolValueService {
     function getExternalTokenInfos(address poolAddress) external view returns (DataTypes.NoteToken[] memory);
 
     /// @notice the available cash balance in the securitization pool
-    function getCashBalance(address pool) external view returns (uint256);
+    // function getCashBalance(address pool) external view returns (uint256);
 
     /// @notice calculates the corresponding total asset value for a specific token address, investor, and end time
     function calcCorrespondingTotalAssetValue(address tokenAddress, address investor) external view returns (uint256);

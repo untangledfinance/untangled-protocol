@@ -2,9 +2,9 @@
 pragma solidity 0.8.19;
 
 import {IAccessControlUpgradeable} from '@openzeppelin/contracts-upgradeable/access/IAccessControlUpgradeable.sol';
+import '@openzeppelin/contracts/token/ERC20/ERC20.sol';
 import {UntangledBase} from '../../base/UntangledBase.sol';
 import {IRequiresUID} from '../../interfaces/IRequiresUID.sol';
-import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {Factory2} from '../../base/Factory2.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {ISecuritizationManager} from '../../interfaces/ISecuritizationManager.sol';
@@ -15,6 +15,8 @@ import {Registry} from '../../storage/Registry.sol';
 import {Configuration} from '../../libraries/Configuration.sol';
 import {POOL_ADMIN_ROLE, OWNER_ROLE} from '../../libraries/DataTypes.sol';
 import {DataTypes} from '../../libraries/DataTypes.sol';
+
+import 'hardhat/console.sol';
 
 abstract contract SecuritizationManagerBase is ISecuritizationManager {
     Registry public override registry;
@@ -120,21 +122,23 @@ contract SecuritizationManager is UntangledBase, Factory2, SecuritizationManager
         require(address(tokenFactory) != address(0), 'SecuritizationManager: Note Token Factory was not registered');
 
         address currency = IPool(pool).underlyingCurrency();
-        address tokenAddress = tokenFactory.createToken(pool, tokenType, INoteToken(currency).decimals(), ticker);
+        address tokenAddress = tokenFactory.createToken(pool, tokenType, ERC20(currency).decimals(), ticker);
         require(tokenAddress != address(0), 'SecuritizationManager: token must be created');
 
         if (tokenType == Configuration.NOTE_TOKEN_TYPE.SENIOR) {
             INoteTokenManager sotManager = registry.getSeniorTokenManager();
             sotManager.setupNewToken(pool, tokenAddress, minBidAmount);
             IPool(pool).setInterestRateSOT(interestRate);
-            tokenFactory.changeMinterRole(tokenAddress, address(sotManager));
+
+            // tokenFactory.changeMinterRole(tokenAddress, address(sotManager));
             emit NewTokenCreated(pool, tokenAddress, 'SENIOR');
         }
 
         if (tokenType == Configuration.NOTE_TOKEN_TYPE.JUNIOR) {
             INoteTokenManager jotManager = registry.getJuniorTokenManager();
             jotManager.setupNewToken(pool, tokenAddress, minBidAmount);
-            tokenFactory.changeMinterRole(tokenAddress, address(jotManager));
+
+            // tokenFactory.changeMinterRole(tokenAddress, address(jotManager));
             emit NewTokenCreated(pool, tokenAddress, 'JUNIOR');
         }
     }

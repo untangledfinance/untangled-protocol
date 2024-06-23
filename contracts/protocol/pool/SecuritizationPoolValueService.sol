@@ -201,7 +201,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
     /// @return The value in pool's underlying currency
     function _calcCorrespondingAssetValue(address tokenAddress, address investor) internal view returns (uint256) {
         INoteToken notesToken = INoteToken(tokenAddress);
-        uint256 tokenPrice = calcTokenPrice(notesToken.poolAddress(), tokenAddress);
+        uint256 tokenPrice = calcTokenPrice(notesToken.pool(), tokenAddress);
         uint256 tokenBalance = notesToken.balanceOf(investor);
 
         return (tokenBalance * tokenPrice) / 10 ** notesToken.decimals();
@@ -264,7 +264,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         for (uint256 i = 0; i < tokenAddresses.length; i = UntangledMath.uncheckedInc(i)) {
             address tokenAddress = tokenAddresses[i];
             INoteToken noteToken = INoteToken(tokenAddress);
-            IPool notePool = IPool(noteToken.poolAddress());
+            IPool notePool = IPool(noteToken.pool());
 
             uint256 apy = notePool.interestRateSOT();
 
@@ -284,7 +284,7 @@ contract SecuritizationPoolValueService is SecuritizationPoolServiceBase, ISecur
         return jotTokenPrice;
     }
 
-    function getCashBalance(address pool) external view returns (uint256) {
-        return INoteToken(IPool(pool).underlyingCurrency()).balanceOf(IPool(pool).pot());
-    }
+    // function getCashBalance(address pool) external view returns (uint256) {
+    //     return INoteToken(IPool(pool).underlyingCurrency()).balanceOf(IPool(pool).pot());
+    // }
 }

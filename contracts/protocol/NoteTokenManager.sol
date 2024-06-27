@@ -79,7 +79,6 @@ contract NoteTokenManager is
 
     function setupNewToken(address pool, address tokenAddress, uint256 minBidAmount) external {
         tokenInfor[pool].tokenAddress = tokenAddress;
-        tokenInfor[pool].correspondingPool = pool;
         tokenInfor[pool].minBidAmount = minBidAmount;
         emit NewTokenAdded(pool, tokenAddress, block.timestamp);
     }
@@ -100,7 +99,7 @@ contract NoteTokenManager is
             );
             return;
         } else if (investAmount < currentInvestAmount) {
-            currency.transferFrom(IPool(pool).pot(), msg.sender, currentInvestAmount - investAmount);
+            IPool(pool).disburse(msg.sender, currentInvestAmount - investAmount);
         }
         emit InvestOrder(pool, msg.sender, investAmount);
     }
@@ -114,6 +113,13 @@ contract NoteTokenManager is
         totalWithdraw[pool] = totalWithdraw[pool] + withdrawAmount - orders[pool][msg.sender].withdrawAmount;
         orders[pool][msg.sender].withdrawAmount = withdrawAmount;
         emit WithdrawOrder(pool, msg.sender, withdrawAmount);
+    }
+
+    function claimIncome(address pool) public {
+        address noteTokenAddress = tokenInfor[pool].tokenAddress;
+        uint256 amount = INoteToken(noteTokenAddress).calcUserIncome(msg.sender);
+        INoteToken(noteTokenAddress).claimIncome(msg.sender);
+        IPool(pool).disburse(msg.sender, amount);
     }
 
     function calcDisburse(

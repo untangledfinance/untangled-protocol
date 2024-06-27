@@ -217,15 +217,35 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         _poolStorage.incomeReserve += totalInterestRepay;
         _poolStorage.capitalReserve += totalPrincipalRepay;
 
-        uint256 jotIncomeAmt = (totalInterestRepay * juniorRatio) / ONE_HUNDRED_PERCENT;
-        uint256 sotIncomeAmt = totalInterestRepay - jotIncomeAmt;
-        // Increase income for each type of token
-        INoteToken(jotToken()).distributeIncome(jotIncomeAmt);
-        INoteToken(sotToken()).distributeIncome(sotIncomeAmt);
-        // set income balance to be = 0
-        _poolStorage.incomeReserve = 0;
         emit Repay(address(this), totalInterestRepay, totalPrincipalRepay, block.timestamp);
         return (repayAmounts, previousDebts);
+    }
+
+    function distributeIncome() external {
+        registry.requireLoanKernel(_msgSender());
+        {
+            (uint256 jotPrice, uint256 sotPrice) = calcTokenPrices();
+            console.log('senior debt after repay: ', RebaseLogic.seniorDebt(_poolStorage));
+            console.log('senior balance after repay: ', _poolStorage.seniorBalance);
+            console.log('total income: ', _poolStorage.incomeReserve);
+            console.log('jot price before distribute: ', jotPrice);
+            console.log('sot price before distribute: ', sotPrice);
+        }
+        uint256 juniorRatio = calcJuniorRatio();
+        uint256 jotIncomeAmt = (_poolStorage.incomeReserve * juniorRatio) / ONE_HUNDRED_PERCENT;
+        uint256 sotIncomeAmt = _poolStorage.incomeReserve - jotIncomeAmt;
+        // Increase income for each type of token
+        INoteToken(jotToken()).distributeIncome(jotIncomeAmt);
+        _poolStorage.incomeReserve -= jotIncomeAmt;
+        INoteToken(sotToken()).distributeIncome(sotIncomeAmt);
+        _poolStorage.incomeReserve -= sotIncomeAmt;
+        RebaseLogic.changeSeniorAsset(
+            _poolStorage,
+            GenericLogic.currentNAV(_poolStorage),
+            GenericLogic.reserve(_poolStorage),
+            0,
+            sotIncomeAmt
+        );
     }
 
     function getRepaidAmount() external view returns (uint256, uint256) {
@@ -442,7 +462,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         return (RebaseLogic.seniorDebt(_poolStorage), _poolStorage.seniorBalance);
     }
 
-    function calcTokenPrices() external view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice) {
+    function calcTokenPrices() public view returns (uint256 juniorTokenPrice, uint256 seniorTokenPrice) {
         address jotTokenAddress = jotToken();
         address sotTokenAddress = sotToken();
         uint256 noteTokenDecimal = (10 ** INoteToken(sotTokenAddress).decimals());

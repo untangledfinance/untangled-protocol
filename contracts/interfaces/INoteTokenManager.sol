@@ -15,9 +15,8 @@ interface INoteTokenManager {
     }
 
     struct NoteTokenInfor {
-        address tokenAddress;
-        address correspondingPool;
         uint256 minBidAmount;
+        address tokenAddress;
     }
 
     event TokenMinted(address pool, address receiver, uint256 amount);

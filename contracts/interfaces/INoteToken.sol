@@ -13,6 +13,8 @@ interface INoteToken {
 
     function redeem(address user, uint256 currencyAmount) external;
 
+    function claimIncome(address user) external;
+
     function distributeIncome(uint256 currencyAmount) external;
 
     function calcUserIncome(address user) external view returns (uint256);

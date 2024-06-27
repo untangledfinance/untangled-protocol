@@ -115,7 +115,7 @@ describe('Untangled-v2', async () => {
 
             await protocol.setupRiskScore(poolCreatorSigner, securitizationPool, [riskScore]);
         });
-        
+
         it('should create note token sale successfully', async () => {
             sotAddress = await protocol.initNoteTokenSale(poolCreatorSigner, {
                 pool: securitizationPool.address,

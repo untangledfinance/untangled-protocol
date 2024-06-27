@@ -119,4 +119,6 @@ interface IPool {
         address[] memory recipients,
         uint256[] memory amounts
     ) external;
+
+    function distributeIncome() external;
 }

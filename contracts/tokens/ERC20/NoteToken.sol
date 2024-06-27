@@ -9,7 +9,6 @@ import '../../interfaces/INoteTokenManager.sol';
 import '../../interfaces/INoteToken.sol';
 
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
-import 'hardhat/console.sol';
 
 contract NoteToken is Initializable, PausableUpgradeable, INoteToken {
     using ConfigHelper for Registry;
@@ -85,11 +84,15 @@ contract NoteToken is Initializable, PausableUpgradeable, INoteToken {
     function distributeIncome(uint256 currencyAmount) external onlyPool {
         systemIndex += (currencyAmount * 10 ** _decimals) / totalCapital;
         _reduceTotalSupply(currencyAmount);
-        console.log(getPrice());
+    }
+
+    function claimIncome(address user) external onlyNoteTokenManager {
+        unclaimedIncomeBalance[user] = 0;
+        userIndex[user] = systemIndex;
     }
 
     function _onlyPool() internal view {
-        require(msg.sender == _pool, 'only private _pool');
+        require(msg.sender == _pool, 'only pool');
     }
 
     function _onlyNoteTokenManager() internal view {

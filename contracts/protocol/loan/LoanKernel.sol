@@ -440,7 +440,7 @@ contract LoanKernel is ILoanKernel, UntangledBase {
 
         // rebase
         pool.rebase();
-
+        pool.distributeIncome();
         emit BatchAssetRepay(agreementIds, _msgSender(), amounts, tokenAddress);
         return true;
     }

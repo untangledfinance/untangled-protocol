@@ -121,7 +121,7 @@ describe('Untangled-v2', async () => {
                 pool: securitizationPool.address,
                 tokenType: 0,
                 minBidAmount: parseEther('5000'),
-                interestRate: 2,
+                interestRate: 10,
                 ticker: 'SOT_',
             });
             jotAddress = await protocol.initNoteTokenSale(poolCreatorSigner, {
@@ -132,7 +132,7 @@ describe('Untangled-v2', async () => {
                 ticker: 'JOT_',
             });
             expect(await securitizationPool.sotToken()).to.be.eq(sotAddress);
-            expect(await securitizationPool.interestRateSOT()).to.be.eq(BigNumber.from(2));
+            expect(await securitizationPool.interestRateSOT()).to.be.eq(BigNumber.from(10));
             expect(await securitizationPool.jotToken()).to.be.eq(jotAddress);
             sotToken = await ethers.getContractAt('NoteToken', sotAddress);
             jotToken = await ethers.getContractAt('NoteToken', jotAddress);
@@ -149,7 +149,7 @@ describe('Untangled-v2', async () => {
             ).to.be.revertedWith('NoteTokenManager: invest amount is too low');
 
             await sotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('60000'));
-            await jotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('90000'));
+            await jotTokenManager.connect(lenderSigner).investOrder(securitizationPool.address, parseEther('60000'));
         });
         it('should close investment epoch ', async () => {
             await epochExecutor.closeEpoch(securitizationPool.address);
@@ -159,11 +159,11 @@ describe('Untangled-v2', async () => {
 
             expect(await epochExecutor.currentEpoch(securitizationPool.address)).to.be.eq(1);
 
-            expect(await securitizationPool.reserve()).to.be.eq(parseEther('150000'));
-            expect(await stableCoin.balanceOf(potWallet.address)).to.be.eq(parseEther('150000'));
+            expect(await securitizationPool.reserve()).to.be.eq(parseEther('120000'));
+            expect(await stableCoin.balanceOf(potWallet.address)).to.be.eq(parseEther('120000'));
 
             expect(await sotToken.balanceOf(lenderSigner.address)).to.be.eq(parseEther('60000'));
-            expect(await jotToken.balanceOf(lenderSigner.address)).to.be.eq(parseEther('90000'));
+            expect(await jotToken.balanceOf(lenderSigner.address)).to.be.eq(parseEther('60000'));
         });
 
         it('should drawdown', async () => {
@@ -189,6 +189,10 @@ describe('Untangled-v2', async () => {
 
             tokenIds = await protocol.fillDebtOrder(borrowerSigner, securitizationPool, borrowerSigner, '0', loans);
 
+            const [seniorDebt, seniorBalance] = await securitizationPool.seniorDebtAndBalance();
+            console.log('senior debt before repay: ', formatEther(seniorDebt));
+            console.log('senior balance before repay: ', formatEther(seniorBalance));
+
             time.increase(30 * 3600 * 24); // 30 days later
         });
 
@@ -197,10 +201,29 @@ describe('Untangled-v2', async () => {
             const repayAmount = BigNumber.from(totalDebt).sub(drawdownAmount);
 
             await loanKernel.connect(borrowerSigner).repayInBatch([tokenIds[0]], [repayAmount], stableCoin.address);
+            const [seniorDebt, seniorBalance] = await securitizationPool.seniorDebtAndBalance();
+            console.log('senior debt after income distribute: ', formatEther(seniorDebt));
+            console.log('senior balance after income distribute: ', formatEther(seniorBalance));
             expect(await securitizationPool.debt(tokenIds[0])).to.be.closeTo(drawdownAmount, parseEther('0.01'));
             console.log('capital reserve: ', formatEther(await securitizationPool.capitalReserve()));
             console.log('income reserve: ', formatEther(await securitizationPool.incomeReserve()));
             console.log(await securitizationPool.calcTokenPrices());
+
+            console.log('sot supply: ', formatEther(await sotToken.totalSupply()));
+            console.log('jot supply: ', formatEther(await jotToken.totalSupply()));
+
+            console.log(
+                'lender income balance before income claim: ',
+                formatEther(await stableCoin.balanceOf(lenderSigner.address))
+            );
+            await sotTokenManager.connect(lenderSigner).claimIncome(securitizationPool.address);
+            await jotTokenManager.connect(lenderSigner).claimIncome(securitizationPool.address);
+
+            console.log(
+                'lender income balance after income claim: ',
+                formatEther(await stableCoin.balanceOf(lenderSigner.address))
+            );
+            console.log(parseEther('333333'));
         });
     });
 });

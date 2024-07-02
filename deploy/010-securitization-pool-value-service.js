@@ -2,7 +2,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, execute, get } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    const registry = await deployments.get('Registry');
+    const registry = await get('Registry');
 
     const securitizationPoolValueService = await deploy('SecuritizationPoolValueService', {
         from: deployer,

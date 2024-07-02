@@ -71,7 +71,7 @@ const setUpPoolImpl = async (registry) => {
 };
 
 const setup = async () => {
-    await deployments.fixture(['all']);
+    // await deployments.fixture(['all']);
 
     let stableCoin;
     let registry;
@@ -123,16 +123,8 @@ const setup = async () => {
     await registry.setLoanKernel(loanKernel.address);
 
     const NoteTokenManager = await ethers.getContractFactory('NoteTokenManager');
-    sotTokenManager = await upgrades.deployProxy(NoteTokenManager, [
-        registry.address,
-        stableCoin.address,
-        [0, 1, 2, 3],
-    ]);
-    jotTokenManager = await upgrades.deployProxy(NoteTokenManager, [
-        registry.address,
-        stableCoin.address,
-        [0, 1, 2, 3],
-    ]);
+    sotTokenManager = await upgrades.deployProxy(NoteTokenManager, [registry.address, [0, 1, 2, 3]]);
+    jotTokenManager = await upgrades.deployProxy(NoteTokenManager, [registry.address, [0, 1, 2, 3]]);
     await registry.setSeniorTokenManager(sotTokenManager.address);
     await registry.setJuniorTokenManager(jotTokenManager.address);
 

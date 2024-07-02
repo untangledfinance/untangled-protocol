@@ -4,7 +4,6 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
 
     const NoteToken = await deploy('NoteToken', {
         from: deployer,
-        // skipIfAlreadyDeployed: true,
         args: [],
         log: true,
     });
@@ -20,5 +19,4 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     );
 };
 
-// module.exports.dependencies = ['Registry', 'NoteTokenFactory'];
 module.exports.tags = ['next', 'mainnet', 'NoteToken'];

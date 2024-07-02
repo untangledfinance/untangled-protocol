@@ -71,10 +71,10 @@ library DataTypes {
     }
 
     struct NewPoolParams {
+        uint256 debtCeiling;
         address currency;
         uint32 minFirstLossCushion;
         bool validatorRequired;
-        uint256 debtCeiling;
     }
 
     /// @notice details of the underlying collateral
@@ -143,6 +143,10 @@ library DataTypes {
         address underlyingCurrency;
         uint256 incomeReserve;
         uint256 capitalReserve;
+        address beneficiary;
+        uint256 protocolFee;
+        uint256 earlyExitFee;
+        uint256 exitTimestamp;
         uint32 minFirstLossCushion;
         uint64 openingBlockTimestamp;
         // by default it is address(this)
@@ -162,7 +166,7 @@ library DataTypes {
         uint256 loanCount;
         // loan => loan principal
         mapping(uint256 => uint256) balances;
-        // sum of loan principal 
+        // sum of loan principal
         uint256 balance;
         // nft => details
         mapping(bytes32 => NFTDetails) details;

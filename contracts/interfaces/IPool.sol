@@ -45,6 +45,10 @@ interface IPool {
 
     function debtCeiling() external view returns (uint256);
 
+    function getBeneficiary() external view returns (address);
+
+    function getEarlyExitInfor() external view returns (uint256, uint256);
+
     function capitalReserve() external view returns (uint256);
 
     function incomeReserve() external view returns (uint256);

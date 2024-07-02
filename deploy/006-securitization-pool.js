@@ -17,7 +17,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         log: true,
     });
 
-    const tgeLogic = await deploy('TGELogic', {
+    const genericLogic = await deploy('GenericLogic', {
         from: deployer,
         args: [],
         log: true,
@@ -35,7 +35,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         libraries: {
             PoolAssetLogic: poolAssetLogic.address,
             PoolNAVLogic: poolNAVLogic.address,
-            TGELogic: tgeLogic.address,
+            GenericLogic: genericLogic.address,
             RebaseLogic: rebaseLogic.address,
         },
         log: true,

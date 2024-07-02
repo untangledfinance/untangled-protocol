@@ -47,7 +47,6 @@ contract NoteTokenManager is
     uint256[] allowedUIDTypes;
 
     IEpochExecutor public epochExecutor;
-    IERC20 public currency;
 
     modifier onlyEpochExecutor() {
         _onlyEpochExecutor();
@@ -58,13 +57,12 @@ contract NoteTokenManager is
         require(msg.sender == address(epochExecutor), 'only epoch executor');
     }
 
-    function initialize(Registry registry_, address currency_, uint256[] memory allowedUIDs) public initializer {
+    function initialize(Registry registry_, uint256[] memory allowedUIDs) public initializer {
         __Pausable_init_unchained();
         __ReentrancyGuard_init_unchained();
         __AccessControlEnumerable_init_unchained();
         _setupRole(DEFAULT_ADMIN_ROLE, _msgSender());
         registry = registry_;
-        currency = IERC20(currency_);
         allowedUIDTypes = allowedUIDs;
     }
 
@@ -94,7 +92,11 @@ contract NoteTokenManager is
         totalInvest[pool] = totalInvest[pool] - currentInvestAmount + investAmount;
         if (investAmount > currentInvestAmount) {
             require(
-                currency.transferFrom(msg.sender, IPool(pool).pot(), investAmount - currentInvestAmount),
+                IERC20(IPool(pool).underlyingCurrency()).transferFrom(
+                    msg.sender,
+                    IPool(pool).pot(),
+                    investAmount - currentInvestAmount
+                ),
                 'NoteTokenManager: currency transfer failed'
             );
             return;
@@ -186,7 +188,16 @@ contract NoteTokenManager is
         orders[pool][user].orderedInEpoch = lastEpochExecuted + 1;
 
         if (fulfilledWithdraw > 0) {
-            IPool(pool).disburse(user, fulfilledWithdraw);
+            (uint256 feePercentage, uint256 exitTimestamp) = IPool(pool).getEarlyExitInfor();
+            address beneficiary = IPool(pool).getBeneficiary();
+            uint256 feeAmount;
+            if (block.timestamp <= exitTimestamp) {
+                feeAmount = (fulfilledWithdraw * feePercentage) / ONE_HUNDRED_PERCENT;
+            }
+            if (feeAmount > 0) {
+                IPool(pool).disburse(beneficiary, feeAmount);
+            }
+            IPool(pool).disburse(user, fulfilledWithdraw - feeAmount);
             INoteToken(tokenInfor[pool].tokenAddress).redeem(user, fulfilledWithdraw);
         }
 

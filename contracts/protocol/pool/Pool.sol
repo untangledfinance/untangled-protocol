@@ -182,7 +182,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         uint256[] calldata amounts
     ) external returns (uint256[] memory, uint256[] memory) {
         require(address(registry.getLoanKernel()) == msg.sender, 'not authorized');
-        uint256 juniorRatio = calcJuniorRatio();
 
         uint256 numberOfLoans = loans.length;
         require(numberOfLoans == amounts.length, 'Invalid length');
@@ -213,8 +212,11 @@ contract Pool is IPool, PoolStorage, UntangledBase {
                 totalPrincipalRepay += repayAmounts[i] - interestAmount;
             }
         }
+        // distribute fee
+        uint256 protocolFee = (totalInterestRepay * _poolStorage.protocolFee) / ONE_HUNDRED_PERCENT;
+        GenericLogic.disburse(_poolStorage, _poolStorage.beneficiary, protocolFee);
 
-        _poolStorage.incomeReserve += totalInterestRepay;
+        _poolStorage.incomeReserve += totalInterestRepay - protocolFee;
         _poolStorage.capitalReserve += totalPrincipalRepay;
 
         emit Repay(address(this), totalInterestRepay, totalPrincipalRepay, block.timestamp);
@@ -223,14 +225,6 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     function distributeIncome() external {
         registry.requireLoanKernel(_msgSender());
-        {
-            (uint256 jotPrice, uint256 sotPrice) = calcTokenPrices();
-            console.log('senior debt after repay: ', RebaseLogic.seniorDebt(_poolStorage));
-            console.log('senior balance after repay: ', _poolStorage.seniorBalance);
-            console.log('total income: ', _poolStorage.incomeReserve);
-            console.log('jot price before distribute: ', jotPrice);
-            console.log('sot price before distribute: ', sotPrice);
-        }
         uint256 juniorRatio = calcJuniorRatio();
         uint256 jotIncomeAmt = (_poolStorage.incomeReserve * juniorRatio) / ONE_HUNDRED_PERCENT;
         uint256 sotIncomeAmt = _poolStorage.incomeReserve - jotIncomeAmt;
@@ -246,6 +240,14 @@ contract Pool is IPool, PoolStorage, UntangledBase {
             0,
             sotIncomeAmt
         );
+    }
+
+    function getEarlyExitInfor() external view returns (uint256, uint256) {
+        return (_poolStorage.earlyExitFee, _poolStorage.exitTimestamp);
+    }
+
+    function getBeneficiary() external view returns (address) {
+        return _poolStorage.beneficiary;
     }
 
     function getRepaidAmount() external view returns (uint256, uint256) {

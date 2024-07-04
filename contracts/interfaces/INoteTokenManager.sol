@@ -70,4 +70,8 @@ interface INoteTokenManager {
     function getTotalValueRaised(address pool) external view returns (uint256);
 
     function getTokenAddress(address pool) external view returns (address);
+
+    function getOrder(address pool, address user) external view returns (UserOrder memory);
+
+    function getWithdrawAmount(address pool, address user) external view returns (uint256);
 }

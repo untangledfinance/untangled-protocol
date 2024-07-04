@@ -4,7 +4,6 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 import '@openzeppelin/contracts-upgradeable/access/AccessControlEnumerableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import '../interfaces/INoteTokenVault.sol';
 import '../interfaces/IEpochExecutor.sol';
 import '../interfaces/INoteTokenManager.sol';
 import '../interfaces/IPool.sol';
@@ -105,8 +104,6 @@ contract EpochExecutor is
         epochInfor[pool].lastEpochClosed = block.timestamp;
         epochInfor[pool].epochNAV = IPool(pool).currentNAV();
         epochInfor[pool].epochReserve = IPool(pool).reserve();
-        epochInfor[pool].epochIncomeReserve = IPool(pool).incomeReserve();
-
         {
             (uint256 totalJuniorInvest, uint256 totalJuniorWithdraw) = jotManager.closeEpoch(pool);
             (uint256 totalSeniorInvest, uint256 totalSeniorWithdraw) = sotManager.closeEpoch(pool);
@@ -134,6 +131,7 @@ contract EpochExecutor is
             epochInfor[pool].order.sotInvest = totalSeniorInvest;
             epochInfor[pool].order.jotInvest = totalJuniorInvest;
         }
+
         if (
             validate(
                 pool,
@@ -187,8 +185,8 @@ contract EpochExecutor is
         uint256 juniorInvest,
         uint256 juniorWithdraw
     ) public view returns (int256) {
-        uint256 currencyAvailable = Math.safeAdd(Math.safeAdd(reserve_, seniorInvest), juniorInvest);
-        uint256 currencyOut = Math.safeAdd(seniorWithdraw, juniorWithdraw);
+        uint256 currencyAvailable = reserve_ + seniorInvest + juniorInvest;
+        uint256 currencyOut = seniorWithdraw + juniorWithdraw;
         int256 err = validateCoreConstraints(
             pool,
             currencyAvailable,

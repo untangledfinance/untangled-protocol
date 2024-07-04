@@ -101,7 +101,8 @@ contract NoteToken is Initializable, PausableUpgradeable, INoteToken {
 
     function _transfer(address to, uint256 currencyAmount) internal {
         require(to != address(0), 'transfer to address(0)');
-        require(capitalBalance[msg.sender] >= currencyAmount, 'insufficient balance');
+        uint256 withdrawOrder = INoteTokenManager(_noteTokenManager).getWithdrawAmount(_pool, msg.sender);
+        require(capitalBalance[msg.sender] - withdrawOrder >= currencyAmount, 'insufficient balance');
         capitalBalance[msg.sender] -= currencyAmount;
         capitalBalance[to] += currencyAmount;
     }

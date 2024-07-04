@@ -6,8 +6,6 @@ interface IEpochExecutor {
         uint256 jotWithdraw;
         uint256 sotInvest;
         uint256 jotInvest;
-        uint256 sotIncomeWithdraw;
-        uint256 jotIncomeWithdraw;
     }
 
     struct EpochInformation {
@@ -21,7 +19,6 @@ interface IEpochExecutor {
         uint256 epochNAV;
         uint256 epochSeniorAsset;
         uint256 epochReserve;
-        uint256 epochIncomeReserve;
         uint256 minChallengePeriodEnd;
         uint256 challengeTime;
         uint256 bestRatioImprovement;

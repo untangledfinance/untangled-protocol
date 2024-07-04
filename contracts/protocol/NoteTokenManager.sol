@@ -27,22 +27,20 @@ contract NoteTokenManager is
     event WithdrawOrder(address pool, address from, uint256 amount);
     uint256 constant RATE_SCALING_FACTOR = 10 ** 4;
     uint256 constant ONE_HUNDRED_PERCENT = 100 * RATE_SCALING_FACTOR;
-
+    // pool => totalWithdraw
     mapping(address => uint256) public totalWithdraw;
-
+    // pool => totalInvest
     mapping(address => uint256) public totalInvest;
-
+    // pool => totalValueRaised
     mapping(address => uint256) public totalValueRaised;
-
+    // pool => noteTokenInfor
     mapping(address => NoteTokenInfor) public tokenInfor;
-
+    // pool => epochId => epoch
     mapping(address => mapping(uint256 => Epoch)) public epochs;
-
+    // pool => user => orders
     mapping(address => mapping(address => UserOrder)) orders;
 
     mapping(address => bool) public waitingForUpdate;
-
-    mapping(address => uint256) public nonces;
 
     uint256[] allowedUIDTypes;
 
@@ -111,6 +109,10 @@ contract NoteTokenManager is
         require(withdrawAmount >= 0, 'NoteTokenManager: invalid withdraw amount');
         address tokenAddress = tokenInfor[pool].tokenAddress;
         require(tokenAddress != address(0), 'NoteTokenManager: No note token found');
+        require(
+            INoteToken(tokenAddress).balanceOf(msg.sender) >= withdrawAmount,
+            'NoteTokenManager: Insufficient balance'
+        );
         orders[pool][msg.sender].orderedInEpoch = epochExecutor.currentEpoch(pool);
         totalWithdraw[pool] = totalWithdraw[pool] + withdrawAmount - orders[pool][msg.sender].withdrawAmount;
         orders[pool][msg.sender].withdrawAmount = withdrawAmount;
@@ -227,6 +229,7 @@ contract NoteTokenManager is
         require(waitingForUpdate[pool] == true, 'NoteTokenManager: epoch is not closed yet.');
         waitingForUpdate[pool] = false;
         epochs[pool][epochID].investFulfillment = investFulfillment_;
+        epochs[pool][epochID].withdrawFulfillment = withdrawFulfillment_;
         epochs[pool][epochID].price = tokenPrice_;
 
         uint256 epochFulfilledInvest = (epochTotalInvest * investFulfillment_) / ONE_HUNDRED_PERCENT;
@@ -235,6 +238,7 @@ contract NoteTokenManager is
         if (epochFulfilledInvest > epochFulfilledWithdraw) {
             totalValueRaised[pool] += epochFulfilledInvest - epochFulfilledWithdraw;
         }
+
         if (epochFulfilledInvest < epochFulfilledWithdraw) {
             totalValueRaised[pool] -= epochFulfilledWithdraw - epochFulfilledInvest;
         }
@@ -253,5 +257,9 @@ contract NoteTokenManager is
 
     function getOrder(address pool, address user) public view returns (UserOrder memory) {
         return orders[pool][user];
+    }
+
+    function getWithdrawAmount(address pool, address user) public view returns (uint256) {
+        return orders[pool][user].withdrawAmount;
     }
 }

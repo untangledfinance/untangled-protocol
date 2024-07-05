@@ -158,10 +158,12 @@ contract NoteTokenManager is
             if (remainingInvest != 0) {
                 amount = (remainingInvest * epochs[pool][epochIdx].investFulfillment) / ONE_HUNDRED_PERCENT;
                 fulfilledInvest += amount;
+                remainingInvest -= amount;
             }
             if (remainingWithdraw != 0) {
                 amount = (remainingWithdraw * epochs[pool][epochIdx].withdrawFulfillment) / ONE_HUNDRED_PERCENT;
                 fulfilledWithdraw += amount;
+                remainingWithdraw -= amount;
             }
             epochIdx = epochIdx + 1;
         }

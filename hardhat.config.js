@@ -120,6 +120,7 @@ module.exports = {
             superAdmin: '0x60e7b40B1f46971B800cd00200371fFd35c09Da9',
             beSigner: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
             beAdmin: '0x39870FB7417307f602dc2e9D997e3f1D20762669',
+            gasPrice: 50 * 1e9,
         },
         rinkeby: {
             saveDeployments: true,

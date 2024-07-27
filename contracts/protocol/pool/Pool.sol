@@ -2,6 +2,7 @@
 pragma solidity 0.8.19;
 import {INoteToken} from '../../interfaces/INoteToken.sol';
 import {IPool} from '../../interfaces/IPool.sol';
+import {ICredioAdapter} from '../../interfaces/ICredioAdapter.sol';
 import {ConfigHelper} from '../../libraries/ConfigHelper.sol';
 import {Registry} from '../../storage/Registry.sol';
 import {OWNER_ROLE, ORIGINATOR_ROLE, POOL_ADMIN_ROLE} from '../../libraries/DataTypes.sol';
@@ -248,6 +249,14 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         require(nftIDs.length == riskIDs.length, 'unmatch length');
         for (uint8 i = 0; i < nftIDs.length; i++) {
             updateAssetRiskScore(nftIDs[i], riskIDs[i]);
+        }
+    }
+
+    function updateAssetRiskScoreWithCredio(bytes32[] calldata nftIDs, address credioAdapter) external {
+        require(credioAdapter != address(0), 'invalid credio adapter address');
+        for (uint i = 0; i < nftIDs.length; i++) {
+            uint256 newRiskScore = ICredioAdapter(credioAdapter).requestUpdate(nftIDs[i]);
+            updateAssetRiskScore(nftIDs[i], newRiskScore);
         }
     }
 

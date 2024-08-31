@@ -69,26 +69,18 @@ contract EpochExecutor is
         jotManager = jotManager_;
     }
 
-    function setupPool() public {
-        epochInfor[msg.sender].lastEpochClosed = block.timestamp;
+    function setupPool(address pool) public {
+        require(
+            msg.sender == address(registry.getSecuritizationManager()),
+            'EpochExecutor: only securitization manager'
+        );
+        epochInfor[pool].lastEpochClosed = block.timestamp;
     }
 
-    function setParam(address pool, bytes32 name, uint256 value) public {
-        if (name == 'challengeTime') {
-            epochInfor[pool].challengeTime = value;
-        } else if (name == 'minimumEpochTime') {
-            epochInfor[pool].minimumEpochTime = value;
-        } else {
-            revert('unknown-name');
-        }
-    }
-
-    function setParam(address pool, bytes32 name, bool value) public {
-        if (name == 'poolClosing') {
-            epochInfor[pool].poolClosing = value;
-        } else {
-            revert('unknown-name');
-        }
+    function setParams(address pool, uint256 challengeTime, uint256 minimumEpochTime) public {
+        require(pool == msg.sender, 'EpochExecutor: invalid pool');
+        epochInfor[pool].challengeTime = challengeTime;
+        epochInfor[pool].minimumEpochTime = minimumEpochTime;
     }
 
     function setEpochInfor(address pool, uint256 _challengeTime, uint256 _minimumEpochTime, bool _poolClosing) public {

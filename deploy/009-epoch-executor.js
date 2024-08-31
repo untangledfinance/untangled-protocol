@@ -6,9 +6,12 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const EpochExecutor = await deploy('EpochExecutor', {
         from: deployer,
         proxy: {
-            init: {
-                methodName: 'initialize',
-                args: [registry.address],
+            proxyContract: 'OpenZeppelinTransparentProxy',
+            execute: {
+                init: {
+                    methodName: 'initialize',
+                    args: [registry.address],
+                },
             },
         },
         log: true,

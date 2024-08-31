@@ -11,7 +11,7 @@ const { SUPER_ADMIN } = require('./constants.js');
 const { presignedMintMessage } = require('./shared/uid-helper.js');
 
 const { unlimitedAllowance, ZERO_ADDRESS } = require('./utils.js');
-const { setup } = require('./setup.js');
+const { setup } = require('./test-v2/setup.js');
 
 describe('UniqueIdentity', () => {
     let uniqueIdentity;

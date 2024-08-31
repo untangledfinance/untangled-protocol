@@ -202,20 +202,19 @@ describe('Untangled-v2', async () => {
         });
 
         it('should withdraw', async () => {
-            await sotToken.connect(lenderSigner).approve(sotTokenManager.address, unlimitedAllowance);
-            await jotToken.connect(lenderSigner).approve(jotTokenManager.address, unlimitedAllowance);
+            // await sotToken.connect(lenderSigner).approve(sotTokenManager.address, unlimitedAllowance);
+            // await jotToken.connect(lenderSigner).approve(jotTokenManager.address, unlimitedAllowance);
 
             await sotTokenManager.connect(lenderSigner).withdrawOrder(securitizationPool.address, parseEther('2000'));
             await jotTokenManager.connect(lenderSigner).withdrawOrder(securitizationPool.address, parseEther('3000'));
-            expect(
-                (await sotTokenManager.getOrder(securitizationPool.address, lenderSigner.address))
-                    .withdrawCurrencyAmount
-            ).to.be.eq(parseEther('2000'));
+            console.log('Hello');
+            expect(await sotTokenManager.getWithdrawAmount(securitizationPool.address, lenderSigner.address)).to.be.eq(
+                parseEther('2000')
+            );
 
-            expect(
-                (await jotTokenManager.getOrder(securitizationPool.address, lenderSigner.address))
-                    .withdrawCurrencyAmount
-            ).to.be.eq(parseEther('3000'));
+            expect(await jotTokenManager.getWithdrawAmount(securitizationPool.address, lenderSigner.address)).to.be.eq(
+                parseEther('3000')
+            );
         });
 
         it('should close withdraw epoch', async () => {

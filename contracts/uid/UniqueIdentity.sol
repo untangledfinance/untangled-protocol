@@ -5,7 +5,7 @@ import {ECDSAUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/crypto
 import {IERC20Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import {ERC1155PresetPauserUpgradeable} from '../external/ERC1155PresetPauserUpgradeable.sol';
 import {IUniqueIdentity} from '../interfaces/IUniqueIdentity.sol';
-import {OWNER_ROLE ,SIGNER_ROLE , SUPER_ADMIN_ROLE} from '../libraries/DataTypes.sol';
+import {OWNER_ROLE, SIGNER_ROLE, SUPER_ADMIN_ROLE} from '../libraries/DataTypes.sol';
 /**
  * @title UniqueIdentity
  * @notice UniqueIdentity is an ERC1155-compliant contract for representing
@@ -14,7 +14,6 @@ import {OWNER_ROLE ,SIGNER_ROLE , SUPER_ADMIN_ROLE} from '../libraries/DataTypes
  */
 
 contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
-
     uint256 public constant ID_TYPE_0 = 0; // non-US individual
     uint256 public constant ID_TYPE_1 = 1; // US individual
     uint256 public constant ID_TYPE_2 = 2; // non-US entity
@@ -94,8 +93,7 @@ contract UniqueIdentity is ERC1155PresetPauserUpgradeable, IUniqueIdentity {
         uint256 id,
         uint256 expiresAt,
         bytes calldata signature
-    ) public payable override onlySignerMintTo(recipient, id, expiresAt, signature) incrementNonce(_msgSender()) {
-        require(balanceOf(_msgSender(), id) == 0, 'msgSender already owns UID');
+    ) public payable override onlySignerMintTo(recipient, id, expiresAt, signature) incrementNonce(recipient) {
         _mintTo(recipient, id);
     }
 

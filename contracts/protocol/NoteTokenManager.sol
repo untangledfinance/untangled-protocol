@@ -64,6 +64,14 @@ contract NoteTokenManager is
         allowedUIDTypes = allowedUIDs;
     }
 
+    function getAllowedUIDTypes() public view returns (uint256[] memory) {
+        return allowedUIDTypes;
+    }
+
+    function setAllowedUIDTypes(uint256[] memory newAllowedUIDs) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        allowedUIDTypes = newAllowedUIDs;
+    }
+
     function hasValidUID(address sender) public view returns (bool) {
         return registry.getGo().goOnlyIdTypes(sender, allowedUIDTypes);
     }
@@ -167,8 +175,7 @@ contract NoteTokenManager is
             }
             epochIdx = epochIdx + 1;
         }
-        remainingInvest -= fulfilledInvest;
-        remainingWithdraw -= fulfilledWithdraw;
+
         return (fulfilledInvest, fulfilledWithdraw, remainingInvest, remainingWithdraw);
     }
 
@@ -259,6 +266,10 @@ contract NoteTokenManager is
 
     function getOrder(address pool, address user) public view returns (UserOrder memory) {
         return orders[pool][user];
+    }
+
+    function getInvestAmount(address pool, address user) public view returns (uint256) {
+        return orders[pool][user].investAmount;
     }
 
     function getWithdrawAmount(address pool, address user) public view returns (uint256) {

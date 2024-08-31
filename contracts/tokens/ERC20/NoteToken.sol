@@ -129,7 +129,7 @@ contract NoteToken is Initializable, PausableUpgradeable, INoteToken {
     }
 
     function balanceOf(address account) public view returns (uint256) {
-        return (capitalBalance[account] * 10 ** _decimals) / getPrice();
+        return capitalBalance[account];
     }
 
     function decimals() public view returns (uint256) {
@@ -138,6 +138,10 @@ contract NoteToken is Initializable, PausableUpgradeable, INoteToken {
 
     function pool() public view returns (address) {
         return _pool;
+    }
+
+    function manager() public view returns (address) {
+        return _noteTokenManager;
     }
 
     function calcUserIncome(address user) public view returns (uint256) {

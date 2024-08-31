@@ -15,6 +15,7 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
             },
         },
         log: true,
+        skipIfAlreadyDeployed: false,
     });
 
     await execute('Registry', { from: deployer, log: true }, 'setSeniorTokenManager', seniorTokenManager.address);

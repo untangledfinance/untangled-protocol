@@ -46,19 +46,19 @@ async function createSecuritizationPool(
                 {
                     type: 'tuple',
                     components: [
+                        { name: 'debtCeiling', type: 'uint256' },
                         { name: 'currency', type: 'address' },
                         { name: 'minFirstLossCushion', type: 'uint32' },
                         { name: 'validatorRequired', type: 'bool' },
-                        { name: 'debtCeiling', type: 'uint256' },
                     ],
                 },
             ],
             [
                 {
+                    debtCeiling: parseEther(debtCeiling.toString()).toString(),
                     currency: getTokenAddressFromSymbol.call(this, currency),
                     minFirstLossCushion: BigNumber.from(minFirstLossCushion * RATE_SCALING_FACTOR),
                     validatorRequired: validatorRequired,
-                    debtCeiling: parseEther(debtCeiling.toString()).toString(),
                 },
             ]
         )

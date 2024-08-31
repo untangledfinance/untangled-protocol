@@ -30,9 +30,8 @@ interface IEpochExecutor {
         OrderSummary bestSubmission;
     }
 
-    function setupPool() external;
-    function setParam(address pool, bytes32 name, uint256 value) external;
-    function setParam(address pool, bytes32 name, bool value) external;
+    function setupPool(address pool) external;
+    function setParams(address pool, uint256 challengeTime, uint256 minimumEpochTime) external;
     function closeEpoch(address pool) external returns (bool epochExecuted);
     function validate(
         address pool,

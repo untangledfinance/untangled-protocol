@@ -16,7 +16,6 @@ import {IGo} from '../interfaces/IGo.sol';
 import {INoteTokenManager} from '../interfaces/INoteTokenManager.sol';
 import {IEpochExecutor} from '../interfaces/IEpochExecutor.sol';
 import {OWNER_ROLE} from './DataTypes.sol';
-import {INoteTokenVault} from '../interfaces/INoteTokenVault.sol';
 
 /**
  * @title ConfigHelper

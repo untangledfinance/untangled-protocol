@@ -53,6 +53,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
         _poolStorage.underlyingCurrency = newPoolParams.currency;
         _poolStorage.validatorRequired = newPoolParams.validatorRequired;
         _poolStorage.pot = address(this);
+        _poolStorage.beneficiary = address(this);
 
         setMinFirstLossCushion(newPoolParams.minFirstLossCushion);
         setDebtCeiling(newPoolParams.debtCeiling);
@@ -295,6 +296,7 @@ contract Pool is IPool, PoolStorage, UntangledBase {
 
     function setPot(address _pot) external whenNotPaused nonReentrant requirePoolAdminOrOwner {
         GenericLogic.setPot(_poolStorage, _pot);
+        _poolStorage.beneficiary = _pot;
         registry.getSecuritizationManager().registerPot(_pot);
     }
 

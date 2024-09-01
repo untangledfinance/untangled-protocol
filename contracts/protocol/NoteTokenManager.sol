@@ -153,16 +153,13 @@ contract NoteTokenManager is
             );
         }
 
-        if (endEpoch > epochExecutor.lastEpochExecuted(pool)) {
-            endEpoch = epochExecutor.lastEpochExecuted(pool);
-        }
         uint256 epochIdx = orders[pool][user].orderedInEpoch;
 
         remainingInvest = orders[pool][user].investAmount;
         remainingWithdraw = orders[pool][user].withdrawAmount;
         uint256 amount = 0;
 
-        while (epochIdx <= endEpoch && (remainingInvest != 0 || remainingWithdraw != 0)) {
+        while (epochIdx <= endEpoch && (remainingInvest > 0 || remainingWithdraw > 0)) {
             if (remainingInvest != 0) {
                 amount = (remainingInvest * epochs[pool][epochIdx].investFulfillment) / ONE_HUNDRED_PERCENT;
                 fulfilledInvest += amount;
@@ -175,7 +172,6 @@ contract NoteTokenManager is
             }
             epochIdx = epochIdx + 1;
         }
-
         return (fulfilledInvest, fulfilledWithdraw, remainingInvest, remainingWithdraw);
     }
 

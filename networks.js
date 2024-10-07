@@ -18,21 +18,6 @@ if (!isTestEnvironment && !PRIVATEKEY) {
 }
 
 const networks = {
-    sepolia: {
-        url: 'https://rpc-sepolia.rockx.com',
-        gasPrice: undefined,
-        accounts: PRIVATEKEY !== undefined ? [PRIVATEKEY] : [],
-        // verifyApiKey: "THIS HAS NOT BEEN SET",
-        chainId: 11155111,
-        confirmations: DEFAULT_VERIFICATION_BLOCK_CONFIRMATIONS,
-        nativeCurrencySymbol: 'ETH',
-
-        // https://docs.chain.link/ccip/supported-networks/
-        router: '0xd0daae2231e9cb96b94c8512223533293c3693bf',
-        chainSelector: '16015286601757825753',
-        linkToken: '0x779877A7B0D9E8603169DdbD7836e478b4624789',
-        bnmToken: '0xFd57b4ddBf88a4e07fF4e34C487b99af2Fe82a05', // LINK/SEPOLIA-ETH
-    },
     mumbai: {
         url: 'https://polygon-mumbai.blockpi.network/v1/rpc/public',
         gasPrice: undefined,
